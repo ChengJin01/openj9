@@ -510,9 +510,13 @@ areMethodsEquivalent(J9ROMMethod * method1, J9ROMClass * romClass1, J9ROMMethod 
 #define NEXT_U16(bytecodes) (((U_16 ) ((bytecodes)[index + alreadyCompared + 1])) + (((U_16 ) ((bytecodes)[index + alreadyCompared + 0])) << 8))
 #endif
 
-	/* Modifiers must match exactly */
-
-	if (method1->modifiers != method2->modifiers) {
+	/* Modifiers must match exactly
+	 * Note: no need to check the flag indicating whether the stackmap is stored in shared cache
+	 * as this flag is ignored during the class transformation.
+	 */
+	U_32 modifiers1 = method1->modifiers & (~J9AccMethodStackMapInSharedCache);
+	U_32 modifiers2 = method2->modifiers & (~J9AccMethodStackMapInSharedCache);
+	if (modifiers1 != modifiers2) {
 		return FALSE;
 	}
 

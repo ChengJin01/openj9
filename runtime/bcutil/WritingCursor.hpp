@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -42,6 +42,7 @@ public:
 	{
 	}
 
+	U_8 * getCurrentAddress();
 	void writeU8(U_8 u8Value, DataType dataType);
 	void writeU16(U_16 u16Value, DataType dataType);
 	void writeU32(U_32 u32Value, DataType dataType);

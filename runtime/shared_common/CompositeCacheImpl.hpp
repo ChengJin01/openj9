@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -62,6 +62,9 @@
 /* Need a value that has negligible impact on performance */
 #define J9SHR_CRC_MAX_SAMPLES 100000
 
+#define J9SHR_CC_ROMCLASS_TYPE  0
+#define J9SHR_CC_STACKMAP_TYPE  1
+
 /**
  * Represents view of the shared cache at the level of blocks of memory.
  * 
@@ -122,7 +125,9 @@ public:
 
 	BlockPtr allocateBlock(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 align, U_32 alignOffset);
 
-	BlockPtr allocateWithSegment(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 segBufSize, BlockPtr* segBuf);
+	BlockPtr allocateStackMap(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 align, U_32 alignOffset);
+
+	BlockPtr allocateWithSegment(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 segBufSize, BlockPtr* segBuf, bool isOrphanROMClass = false);
 
 	BlockPtr allocateAOT(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 dataBytes);
 
@@ -137,6 +142,8 @@ public:
 	void updateStoredSegmentUsedBytes(U_32 usedBytes);
 
 	void commitUpdate(J9VMThread* currentThread, bool isCachelet);
+
+	void updateMetaDataSRP(J9VMThread* currentThread, UDATA metaDataType);
 
 	void initBlockData(ShcItem** itemBuf, U_32 dataLen, U_16 dataType);
 
@@ -410,6 +417,10 @@ public:
 	
 	void increaseUnstoredBytes(U_32 blockBytes, U_32 aotBytes, U_32 jitBytes);
 
+	UDATA getStoredStackMapEntryCount();
+
+	J9VMThread* getWriteMutexThread();
+
 private:
 	J9SharedClassConfig* _sharedClassConfig;
 	SH_OSCache* _oscache;
@@ -428,12 +439,17 @@ private:
 	ShcItemHdr* _prevScan;
 	ShcItemHdr* _storedScan;
 	ShcItemHdr* _storedPrevScan;
+	ShcItemHdr* _headScan;
+	ShcItemHdr* _storedEndScan;
+	ShcItemHdr* _storedPrevHeadScan;
 	BlockPtr _romClassProtectEnd;
 
 	UDATA _oldUpdateCount;
+	UDATA _stackMapEntryCount;
 
 	U_32 _storedSegmentUsedBytes;
 	U_32 _storedMetaUsedBytes;
+	U_32 _storedStackMapMetaUsedBytes;
 	U_32 _storedAOTUsedBytes;
 	U_32 _storedJITUsedBytes;
 	U_32 _storedReadWriteUsedBytes;
@@ -552,9 +568,9 @@ private:
 	void commonInit(J9JavaVM* vm);
 	
 	BlockPtr allocate(J9VMThread* currentThread, U_8 type, ShcItem* itemToWrite, U_32 len2, U_32 segBufSize, 
-			BlockPtr* segBuf, BlockPtr* readWriteBuffer, U_32 align, U_32 alignOffset);
+			BlockPtr* segBuf, BlockPtr* readWriteBuffer, U_32 align, U_32 alignOffset, bool isOrphanROMClass=false);
 
-	BlockPtr allocateMetadataEntry(J9VMThread* currentThread, BlockPtr allocPtr, ShcItem *itemToWrite, U_32 itemLen);
+	BlockPtr allocateMetadataEntry(J9VMThread* currentThread, BlockPtr allocPtr, ShcItem *itemToWrite, U_32 itemLen, bool isOrphanROMClass=false);
 
 #if defined(J9SHR_CACHELETS_SAVE_READWRITE_AREA)
 	BlockPtr allocateReadWrite(U_32 separateBufferSize);

@@ -1100,6 +1100,7 @@ printModifiers(J9PortLibrary *portLib, U_32 modifiers, modifierScope modScope, m
 					{CFR_ACC_METHOD_FRAME_ITERATOR_SKIP, "(method frame iterator skip)"},
 					{CFR_ACC_METHOD_CALLER_SENSITIVE, "(caller sensitive)"},
 					{CFR_ACC_METHOD_HAS_STACK_MAP, "(has stack map)"},
+					{J9AccMethodStackMapInSharedCache, "(the stack map is stored in the shared cache)"},
 					{J9AccMethodHasBackwardBranches, "(has backward branches)"},
 					{J9AccMethodObjectConstructor, "(method object constructor)"},
 					{J9AccMethodHasMethodParameters, "(has method parameters)"},

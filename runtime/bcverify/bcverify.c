@@ -2364,6 +2364,7 @@ IDATA
 j9bcv_verifyBytecodes (J9PortLibrary * portLib, J9Class * clazz, J9ROMClass * romClass,
 		   J9BytecodeVerificationData * verifyData)
 {
+	J9JavaVM *vm = verifyData->javaVM;
 	UDATA i, j;
 	J9ROMMethod *romMethod;
 	UDATA argCount;
@@ -2396,7 +2397,7 @@ j9bcv_verifyBytecodes (J9PortLibrary * portLib, J9Class * clazz, J9ROMClass * ro
 	verifyData->romClass = romClass;
 	verifyData->errorPC = 0;
 	
-	verifyData->romClassInSharedClasses = j9shr_Query_IsAddressInCache(verifyData->javaVM, romClass, romClass->romSize);
+	verifyData->romClassInSharedClasses = j9shr_Query_IsAddressInCache(vm, romClass, romClass->romSize);
 
 	/* List is used for the whole class */
 	initializeClassNameList(verifyData);
@@ -2405,7 +2406,7 @@ j9bcv_verifyBytecodes (J9PortLibrary * portLib, J9Class * clazz, J9ROMClass * ro
 	romMethod = (J9ROMMethod *) J9ROMCLASS_ROMMETHODS(romClass);
 
 	if (verboseVerification) {
-		ALWAYS_TRIGGER_J9HOOK_VM_CLASS_VERIFICATION_START(verifyData->javaVM->hookInterface, verifyData, newFormat);
+		ALWAYS_TRIGGER_J9HOOK_VM_CLASS_VERIFICATION_START(vm->hookInterface, verifyData, newFormat);
 	}
 
 	/* For each method in the class */
@@ -2462,7 +2463,8 @@ _fallBack:
 				}
 			} else {
 				
-				U_32 *stackMapMethod = getStackMapInfoForROMMethod(romMethod);
+				/* Get the stackmap from the shared cache if exists */
+				U_32 *stackMapMethod = getStackMapInfoForROMMethod(vm, romMethod, romClass, 2);
 
 				verifyData->stackMapsCount = 0;
 				stackMapData = 0;
@@ -2541,7 +2543,7 @@ _fallBack:
 				}
 
 				if (newFormat && verboseVerification) {
-					ALWAYS_TRIGGER_J9HOOK_VM_METHOD_VERIFICATION_START(verifyData->javaVM->hookInterface, verifyData);
+					ALWAYS_TRIGGER_J9HOOK_VM_METHOD_VERIFICATION_START(vm->hookInterface, verifyData);
 				}
 
 				result = j9rtv_verifyBytecodes (verifyData);
@@ -2564,7 +2566,7 @@ _fallBack:
 					}
 
 					if (!willFailOver || (verifyData->stackMapsCount > 0)) {
-						ALWAYS_TRIGGER_J9HOOK_VM_STACKMAPFRAME_VERIFICATION(verifyData->javaVM->hookInterface, verifyData);
+						ALWAYS_TRIGGER_J9HOOK_VM_STACKMAPFRAME_VERIFICATION(vm->hookInterface, verifyData);
 					}
 				}
 			}
@@ -2595,7 +2597,7 @@ _fallBack:
 
 					if (verboseVerification) {
 						newFormat = FALSE;
-						ALWAYS_TRIGGER_J9HOOK_VM_CLASS_VERIFICATION_FALLBACK(verifyData->javaVM->hookInterface, verifyData, newFormat);
+						ALWAYS_TRIGGER_J9HOOK_VM_CLASS_VERIFICATION_FALLBACK(vm->hookInterface, verifyData, newFormat);
 					}
 
 					goto _fallBack;
@@ -2619,7 +2621,7 @@ _done:
 	}
 
 	if (verboseVerification) {
-		ALWAYS_TRIGGER_J9HOOK_VM_CLASS_VERIFICATION_END(verifyData->javaVM->hookInterface, verifyData, newFormat);
+		ALWAYS_TRIGGER_J9HOOK_VM_CLASS_VERIFICATION_END(vm->hookInterface, verifyData, newFormat);
 	}
 
 	Trc_BCV_j9bcv_verifyBytecodes_Exit(verifyData->vmStruct, result);

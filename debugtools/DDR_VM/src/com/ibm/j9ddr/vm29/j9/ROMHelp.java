@@ -49,6 +49,7 @@ import com.ibm.j9ddr.vm29.types.U16;
 import com.ibm.j9ddr.vm29.types.U32;
 import com.ibm.j9ddr.vm29.types.U8;
 import com.ibm.j9ddr.vm29.types.UDATA;
+import com.ibm.j9ddr.vm29.tools.ddrinteractive.commands.ShrCCommand;
 
 import static com.ibm.j9ddr.vm29.structure.J9JavaAccessFlags.*;
 
@@ -282,7 +283,7 @@ public class ROMHelp {
 			boolean hasParameterAnnotations = J9ROMMethodHelper.hasParameterAnnotations(romMethod);
 			boolean hasDefaultAnnotation = J9ROMMethodHelper.hasDefaultAnnotation(romMethod);
 			boolean hasDebugInfo = J9ROMMethodHelper.hasDebugInfo(romMethod);
-			boolean hasStackMap = J9ROMMethodHelper.hasStackMap(romMethod);
+			boolean skipStackMap = (J9ROMMethodHelper.hasStackMap(romMethod) && !J9ROMMethodHelper.isStackMapInSharedCache(romMethod));
 			boolean hasMethodParameters = J9ROMMethodHelper.hasMethodParameters(romMethod);
 			
 			J9ExceptionInfoPointer exceptionInfo = J9_EXCEPTION_DATA_FROM_ROM_METHOD(romMethod);
@@ -334,8 +335,12 @@ public class ROMHelp {
 				}
 			}
 
-			/* skip the stack map if there is one */
-			if (hasStackMap) {
+			/* Skip the stackmap if it is still stored in line with the ROMMethod with
+			 * the shared cache disabled; if not the case, then there is nothing to skip
+			 * as the corresponding stackamp is stored separately as meta data
+			 * in the shared cache.
+			 */
+			if (skipStackMap) {
 				result = result.addOffset(U32Pointer.cast(result).at(0));
 			}
 			
@@ -512,7 +517,11 @@ public class ROMHelp {
 		
 		public U32Pointer getStackMapFromROMMethod(J9ROMMethodPointer romMethod) throws CorruptDataException {
 			if (J9ROMMethodHelper.hasStackMap(romMethod)) {
-				return stackMapFromROMMethod(romMethod);	
+				if (J9ROMMethodHelper.isStackMapInSharedCache(romMethod)) {
+					return new ShrCCommand().findStackMapForROMMethod(romMethod);
+				} else {
+					return stackMapFromROMMethod(romMethod);
+				}
 			}
 			return U32Pointer.NULL;
 		}
@@ -522,9 +531,14 @@ public class ROMHelp {
 			U32Pointer stackMap = stackMapFromROMMethod(romMethod);
 			J9MethodParametersDataPointer result = J9MethodParametersDataPointer.cast(stackMap);
 			
-			if (J9ROMMethodHelper.hasStackMap(romMethod)) {
+			/* Skip the stackmap if it is still stored in line with the ROMMethod with
+			 * the shared cache disabled; if not the case, then there is nothing to skip
+			 * as the corresponding stackamp is stored separately as meta data
+			 * in the shared cache.
+			 */
+			if (J9ROMMethodHelper.hasStackMap(romMethod) && !J9ROMMethodHelper.isStackMapInSharedCache(romMethod)) {
 				U32 stackMapSize = stackMap.at(0);
-				result = result.addOffset(stackMapSize);				
+				result = result.addOffset(stackMapSize);
 			}
 			return result;
 		}

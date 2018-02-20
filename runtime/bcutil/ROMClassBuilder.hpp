@@ -100,6 +100,7 @@ private:
 	struct SizeInformation
 	{
 		UDATA rcWithOutUTF8sSize;
+		UDATA totalStackMapEntryHeadersSize;
 		UDATA lineNumberSize;
 		UDATA variableInfoSize;
 		UDATA utf8sSize;
@@ -135,6 +136,7 @@ private:
 			U_32 modifiers,
 			U_32 extraModifiers,
 			U_32 optionalFlags,
+			U_32 stateFlags,
 			bool sharingROMClass,
 			bool hasStringTableLock,
 			ClassFileOracle *classFileOracle,
@@ -145,14 +147,14 @@ private:
 			ConstantPoolMap *constantPoolMap);
 
 	void layDownROMClass(
-			ROMClassWriter *romClassWriter, SRPOffsetTable *srpOffsetTable, U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags,
+			ROMClassWriter *romClassWriter, SRPOffsetTable *srpOffsetTable, U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags, U_32 stateFlags,
 			ROMClassStringInternManager *internManager, ROMClassCreationContext *context, SizeInformation *sizeInformation);
 
 	bool compareROMClassForEquality(U_8 *romClass, bool romClassIsShared,
 			ROMClassWriter *romClassWriter, SRPOffsetTable *srpOffsetTable, SRPKeyProducer *srpKeyProducer, ClassFileOracle *classFileOracle,
-			U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags, ROMClassCreationContext * context);
+			U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags, U_32 stateFlags, ROMClassCreationContext * context);
 	SharedCacheRangeInfo getSharedCacheSRPRangeInfo(void *address);
-	void getSizeInfo(ROMClassCreationContext *context, ROMClassWriter *romClassWriter, SRPOffsetTable *srpOffsetTable, bool *countDebugDataOutOfLine, SizeInformation *sizeInformation);
+	void getSizeInfo(ROMClassCreationContext *context, ROMClassWriter *romClassWriter, SRPOffsetTable *srpOffsetTable, bool *countDebugDataOutOfLine, SizeInformation *sizeInformation, U_32 stateFlags);
 };
 
 #endif /* ROMCLASSBUILDER_HPP_ */

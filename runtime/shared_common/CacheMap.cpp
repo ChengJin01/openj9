@@ -25,6 +25,7 @@
 #include "ROMClassManagerImpl.hpp"
 #include "TimestampManagerImpl.hpp"
 #include "CompiledMethodManagerImpl.hpp"
+#include "StackMapManagerImpl.hpp"
 #include "ScopeManagerImpl.hpp"
 #include "ByteDataManagerImpl.hpp"
 #include "AttachedDataManagerImpl.hpp"
@@ -277,6 +278,9 @@ SH_CacheMap::initialize(J9JavaVM* vm, J9SharedClassConfig* sharedClassConfig, Bl
 	_maximumAccessedShrCacheMetadata = 0;
 	_metadataReleased = false;
 	
+	_totalStackMapSize = 0;
+	_totalStackMapCount = 0;
+
 	/* TODO: Need this function to be able to return pass/fail */
 #if defined(J9SHR_CACHELET_SUPPORT)
 	_ccPool = pool_new(SH_CompositeCacheImpl::getRequiredConstrBytes(true, startupForStats),  0, 0, 0, J9_GET_CALLSITE(), J9MEM_CATEGORY_CLASSES, POOL_FOR_PORT(_portlib));
@@ -302,6 +306,8 @@ SH_CacheMap::initialize(J9JavaVM* vm, J9SharedClassConfig* sharedClassConfig, Bl
 
 	_adm = SH_AttachedDataManagerImpl::newInstance(vm, this, (SH_AttachedDataManagerImpl*)(allocPtr += SH_ByteDataManagerImpl::getRequiredConstrBytes()));
 
+	_smm = SH_StackMapManagerImpl::newInstance(vm, this, (SH_StackMapManagerImpl*)(allocPtr += SH_AttachedDataManagerImpl::getRequiredConstrBytes()));
+
 	Trc_SHR_CM_initialize_Exit();
 }
 
@@ -324,6 +330,7 @@ SH_CacheMap::getRequiredConstrBytes(bool startupForStats)
 	reqBytes += SH_CompiledMethodManagerImpl::getRequiredConstrBytes();
 	reqBytes += SH_ByteDataManagerImpl::getRequiredConstrBytes();
 	reqBytes += SH_AttachedDataManagerImpl::getRequiredConstrBytes();
+	reqBytes += SH_StackMapManagerImpl::getRequiredConstrBytes();
 	reqBytes += SH_Managers::getRequiredConstrBytes();
 	reqBytes += sizeof(SH_CacheMap);
 	return reqBytes;
@@ -1831,7 +1838,7 @@ SH_CacheMap::allocateFromCache(J9VMThread* currentThread, U_32 sizeToAlloc, U_32
 	}
 
 	_ccHead->initBlockData(&itemPtr, wrapperSize, wrapperType);
-	itemInCache = (ShcItem*) localCacheAreaForAllocate->allocateWithSegment(currentThread, itemPtr, sizeToAllocPadded, &romClassBuffer);
+	itemInCache = (ShcItem*) localCacheAreaForAllocate->allocateWithSegment(currentThread, itemPtr, sizeToAllocPadded, &romClassBuffer, true);
 
 	if (itemInCache == NULL) {
 		/* TODO: With offline caches, this should never happen */
@@ -2680,6 +2687,11 @@ SH_CacheMap::addROMClassResourceToCache(J9VMThread* currentThread, const void* r
 		return (void*)J9SHR_RESOURCE_STORE_ERROR;
 	}
 	
+	/* Update SRPs for the metadata entry of the ROM class before dealing with the metadata entry of stackmaps */
+	if ((TYPE_STACKMAP == resourceType) && (0 == cacheAreaForAllocate->getStoredStackMapEntryCount())) {
+		cacheAreaForAllocate->updateMetaDataSRP(currentThread, J9SHR_CC_ROMCLASS_TYPE);
+	}
+
 	if ((romAddress < _cc->getBaseAddress()) || (romAddress > _cc->getCacheLastEffectiveAddress())) {
 		/* The address we've been given is in a different supercache - we can't use this for indexing, so we have to fail */
 		/* TODO: Tracepoint */
@@ -2700,6 +2712,9 @@ SH_CacheMap::addROMClassResourceToCache(J9VMThread* currentThread, const void* r
 			itemInCache = (ShcItem*)(cacheAreaForAllocate->allocateJIT(currentThread, itemPtr, dataLength));
 		}
 		break;
+	case TYPE_STACKMAP :
+		itemInCache = (ShcItem*)(cacheAreaForAllocate->allocateStackMap(currentThread, itemPtr, align, wrapperLength));
+		break;
 	default :
 		itemInCache = (ShcItem*)(cacheAreaForAllocate->allocateBlock(currentThread, itemPtr, align, wrapperLength));
 		break;
@@ -2719,7 +2734,15 @@ SH_CacheMap::addROMClassResourceToCache(J9VMThread* currentThread, const void* r
 	if (localRRM->storeNew(currentThread, itemInCache, cacheAreaForAllocate)) {
 		resultWrapper = (void*)ITEMDATA(itemInCache);
 	}
-	cacheAreaForAllocate->commitUpdate(currentThread, false);
+	
+	/* Only update SRPs in the case of the metadata entry of stackmap;
+	 * otherwise do the normal commit operation.
+	 */
+	if (TYPE_STACKMAP == resourceType) {
+		cacheAreaForAllocate->updateMetaDataSRP(currentThread, J9SHR_CC_STACKMAP_TYPE);
+	} else {
+		cacheAreaForAllocate->commitUpdate(currentThread, false);
+	}
 
 	Trc_SHR_CM_addROMClassResourceToCache_Exit(currentThread, resultWrapper);
 
@@ -2747,7 +2770,12 @@ SH_CacheMap::storeROMClassResource(J9VMThread* currentThread, const void* romAdd
 		return (void*)J9SHR_RESOURCE_STORE_ERROR;
 	}
 	
-	if (_ccHead->enterWriteMutex(currentThread, false, fnName) != 0) {
+	/* No need to get the write mutex as the current thread already holds the mutex when
+	 * storing the ROM class to the share ache.
+	 */
+	if (!_ccHead->hasWriteMutex(currentThread)
+	&& (0 != _ccHead->enterWriteMutex(currentThread, false, fnName))
+	) {
 		if (p_subcstr) {
 			*p_subcstr = j9nls_lookup_message((J9NLS_INFO | J9NLS_DO_NOT_PRINT_MESSAGE_TAG), J9NLS_SHRC_CM_ENTER_WRITE_MUTEX, "enterWriteMutex failed");
 		}
@@ -2789,7 +2817,11 @@ SH_CacheMap::storeROMClassResource(J9VMThread* currentThread, const void* romAdd
 		result = resourceDescriptor->unWrap(resourceWrapper);
 	}
 
-	_ccHead->exitWriteMutex(currentThread, fnName);
+	/* No need to exit the write mutex as it is not acquired here when storing the stakmap */
+	if (TYPE_STACKMAP != resourceDescriptor->getResourceType()) {
+		_ccHead->exitWriteMutex(currentThread, fnName);
+	}
+
 	Trc_SHR_CM_storeROMClassResource_Exit4(currentThread, result);
 	return result;
 }
@@ -3034,6 +3066,114 @@ SH_CacheMap::findCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* ro
 				J9UTF8* romMethodName = J9ROMMETHOD_NAME(romMethod);
 				J9UTF8* romMethodSig = J9ROMMETHOD_SIGNATURE(romMethod);
 				Trc_SHR_CM_findCompiledMethod_metadataAccess(
+						currentThread,
+						J9UTF8_LENGTH(romClassName),
+						J9UTF8_DATA(romClassName),
+						J9UTF8_LENGTH(romMethodName),
+						J9UTF8_DATA(romMethodName),
+						J9UTF8_LENGTH(romMethodSig),
+						J9UTF8_DATA(romMethodSig),
+						result
+				);
+			}
+		}
+	} else
+#if defined(LINUX)
+		if (J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_PERSISTENT_CACHE))
+#endif
+		{
+			updateAccessedShrCacheMetadataBounds(currentThread, (uintptr_t *) result);
+		}
+#endif /* !defined(J9ZOS390) && !defined(AIXPPC) */
+	return result;
+}
+
+/**
+ * This method adds the stackmap of a ROM method to the shared cache.
+ * The stackmap defined by dataStart and dataSize are copied to the cache as a single
+ * contiguous block. The stored stackmap is indexed by the romMethod's address.
+ * The return value is a pointer to the stored data or null in case of an error.
+ *
+ * @param [in] currentThread Pointer to J9VMThread structure for the current thread
+ * @param [in] romMethod Pointer to the J9ROMMethod structure
+ * @param [in] dataStart Pointer to the start of the stackmap to be stored
+ * @param [in] dataSize Length of the stackmap to be stored
+ *
+ * @return Pointer to the stackmap if it was successfully stored
+ * @return J9SHR_RESOURCE_STORE_EXISTS if the stackmap already exists in the cache
+ * @return J9SHR_RESOURCE_STORE_ERROR if an error occurs when storing the stackmap
+ * @return J9SHR_RESOURCE_STORE_FULL if the cache is full
+ * @return NULL otherwise
+ *
+ * THREADING: This function can be called multi-threaded
+ */
+const U_8*
+SH_CacheMap::storeStackMap(struct J9VMThread* currentThread, const J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize)
+{
+	const U_8* result;
+	SH_StackMapManager::SH_StackMapResourceDescriptor descriptor(dataStart, (U_32)dataSize);
+	SH_StackMapManager* localCMM = getStackMapManager(currentThread);
+
+	if (NULL == localCMM) {
+		return NULL;
+	}
+
+	_totalStackMapSize += dataSize;
+	_totalStackMapCount += 1;
+	Trc_SHR_SM_storeStackMap_StackMapSize(currentThread, _totalStackMapSize, _totalStackMapCount);
+
+	result = (const U_8*)storeROMClassResource(currentThread, romMethod, localCMM, &descriptor, false, NULL);
+	return result;
+}
+
+/**
+ * This method finds the stackmap of a ROM method.
+ * The stored stackmap is indexed by the romMethod's address. The return value is a
+ * pointer to the stored stackmap or null if no matching stackmap exists in the cache.
+ *
+ * @param [in] currentThread Pointer to J9VMThread structure for the current thread
+ * @param [in] romMethod Pointer to the J9ROMMethod structure for which the stored stackmap is required
+ *
+ * @return If found, pointer to the stored stackmap, NULL if not found.
+ *
+ * THREADING: This function can be called multi-threaded
+ */
+const U_8*
+SH_CacheMap::findStackMap(J9VMThread* currentThread, const J9ROMMethod* romMethod)
+{
+	const U_8* result;
+	SH_StackMapManager::SH_StackMapResourceDescriptor descriptor;
+	SH_StackMapManager* localCMM = getStackMapManager(currentThread);
+
+	if (NULL == localCMM) {
+		return NULL;
+	}
+
+	/* To avoid potential dead-lock, there is no need to acquire the read mutex
+	 * to locate the stackmap data in the shared cache as the current thread
+	 * already holds write mutex.
+	 */
+	bool useReadMutex = ((currentThread != _ccHead->getWriteMutexThread()) ? true : false);
+
+	result = (const U_8*)findROMClassResource(currentThread, romMethod, localCMM, &descriptor, useReadMutex, NULL, NULL);
+#if (!defined(J9ZOS390) && !defined(AIXPPC))
+	if (_metadataReleased
+#if defined(LINUX)
+	&& J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_PERSISTENT_CACHE)
+#endif
+	) {
+		if (TrcEnabled_Trc_SHR_SM_findStackMap_metadataAccess
+		&& ((uintptr_t) result >= _minimumAccessedShrCacheMetadata)
+		&& ((uintptr_t) result <= _maximumAccessedShrCacheMetadata)
+		) {
+			J9InternalVMFunctions* vmFunctions = currentThread->javaVM->internalVMFunctions;
+			J9ClassLoader* loader = NULL;
+			J9ROMClass* romClass = vmFunctions->findROMClassFromPC(currentThread, (UDATA)romMethod, &loader);
+			if (NULL != romClass) {
+				J9UTF8* romClassName = J9ROMCLASS_CLASSNAME(romClass);
+				J9UTF8* romMethodName = J9ROMMETHOD_NAME(romMethod);
+				J9UTF8* romMethodSig = J9ROMMETHOD_SIGNATURE(romMethod);
+				Trc_SHR_SM_findStackMap_metadataAccess(
 						currentThread,
 						J9UTF8_LENGTH(romClassName),
 						J9UTF8_DATA(romClassName),
@@ -4138,6 +4278,14 @@ SH_CacheMap::getJavacoreData(J9JavaVM *vm, J9SharedClassJavacoreDataDescriptor* 
 	} else {
 		descriptor->numAOTMethods = 0;
 	}
+
+	if (_smm && (MANAGER_STATE_STARTED == _smm->getState())) {
+		_smm->getNumItems(NULL, &nonstale, &stale);
+		descriptor->numStackMaps = stale + nonstale;
+	} else {
+		descriptor->numStackMaps = 0;
+	}
+
 	if (_cpm && (_cpm->getState() == MANAGER_STATE_STARTED)) {
 		_cpm->getNumItemsByType(&(descriptor->numClasspaths), &(descriptor->numURLs), &(descriptor->numTokens));
 	}
@@ -4726,6 +4874,40 @@ SH_CacheMap::printAllCacheStats(J9VMThread* currentThread, UDATA showFlags, SH_C
 					}
 				}
 				break;
+
+			case TYPE_STACKMAP :
+				if ((J9_ARE_ALL_BITS_SET(showFlags, PRINTSTATS_SHOW_STACKMAP) && (TYPE_STACKMAP == ITEMTYPE(it)))
+					|| (showAllStaleFlag && isStale)
+				) {
+					StackMapWrapper* smw = (StackMapWrapper*)ITEMDATA(it);
+					J9ROMMethod* romMethod = (J9ROMMethod*)SMWROMMETHOD(smw);
+					J9ClassLoader* loader;
+					J9ROMClass* romClass = vmFunctions->findROMClassFromPC(currentThread, (UDATA)romMethod, &loader);
+					J9UTF8* romClassName = (NULL != romClass) ? J9ROMCLASS_CLASSNAME(romClass) : NULL;
+ 					J9UTF8* romMethodName = J9ROMMETHOD_GET_NAME(romClass, romMethod);
+					J9UTF8* romMethodSig = J9ROMMETHOD_GET_SIGNATURE(romClass, romMethod);
+
+ 					if (romMethodName) {
+ 						CACHEMAP_PRINT4((J9NLS_DO_NOT_PRINT_MESSAGE_TAG | J9NLS_DO_NOT_APPEND_NEWLINE),
+								J9NLS_SHRC_CM_PRINTSTATS_STACKMAP_DISPLAY, ITEMJVMID(it), (UDATA)it, J9UTF8_LENGTH(romMethodName), J9UTF8_DATA(romMethodName));
+ 					}
+					if (romMethodSig) {
+						CACHEMAP_PRINT3((J9NLS_DO_NOT_PRINT_MESSAGE_TAG | J9NLS_DO_NOT_APPEND_NEWLINE),
+								J9NLS_SHRC_CM_PRINTSTATS_STACKMAP_DISPLAY_SIG_ADDR, J9UTF8_LENGTH(romMethodSig), J9UTF8_DATA(romMethodSig), romMethod);
+					}
+					if (isStale) {
+						j9tty_printf(_portlib, " ");
+						CACHEMAP_PRINT((J9NLS_DO_NOT_PRINT_MESSAGE_TAG | J9NLS_DO_NOT_APPEND_NEWLINE), J9NLS_SHRC_CM_PRINTSTATS_STALE);
+					}
+
+					j9tty_printf(_portlib, "\n");
+
+					if (romClassName) {
+						CACHEMAP_PRINT3(J9NLS_DO_NOT_PRINT_MESSAGE_TAG,
+								J9NLS_SHRC_CM_PRINTSTATS_STACKMAP_FROM_ROMCLASS, J9UTF8_LENGTH(romClassName), J9UTF8_DATA(romClassName), romClass);
+					}
+				}
+				break;
 			default :
 				break;
 			}
@@ -4924,6 +5106,7 @@ SH_CacheMap::printCacheStats(J9VMThread* currentThread, UDATA showFlags, U_64 ru
 		j9tty_printf(_portlib, "\n");
 
 		CACHEMAP_FMTPRINT1(J9NLS_DO_NOT_PRINT_MESSAGE_TAG, J9NLS_SHRC_CM_PRINTSTATS_SUMMARY_NUM_ROMCLASSES_V2, javacoreData.numROMClasses);
+		CACHEMAP_FMTPRINT1(J9NLS_DO_NOT_PRINT_MESSAGE_TAG, J9NLS_SHRC_CM_PRINTSTATS_SUMMARY_NUM_STACKMAP, javacoreData.numStackMaps);
 		CACHEMAP_FMTPRINT1(J9NLS_DO_NOT_PRINT_MESSAGE_TAG, J9NLS_SHRC_CM_PRINTSTATS_SUMMARY_NUM_AOT_V2, javacoreData.numAOTMethods);
 		if (runtimeFlags & J9SHR_RUNTIMEFLAG_ENABLE_DETAILED_STATS) {
 			CACHEMAP_FMTPRINT1(J9NLS_DO_NOT_PRINT_MESSAGE_TAG, J9NLS_SHRC_CM_PRINTSTATS_SUMMARY_NUM_AOT_DATA, javacoreData.numAotDataEntries);
@@ -5351,6 +5534,15 @@ SH_CacheMap::getCompiledMethodManager(J9VMThread* currentThread)
 {
 	if (startManager(currentThread, _cmm) == 1) {
 		return _cmm;
+	}
+	return NULL;
+}
+
+SH_StackMapManager*
+SH_CacheMap::getStackMapManager(J9VMThread* currentThread)
+{
+	if (1 == startManager(currentThread, _smm)) {
+		return _smm;
 	}
 	return NULL;
 }

@@ -3037,6 +3037,11 @@ JavaCoreDumpWriter::writeSharedClassSection(void)
 		_OutputStream.writeInteger(javacoreData.numROMClasses, "%zu");
 
 		_OutputStream.writeCharacters(
+			"\n2SCLTEXTNSM        Number StackMaps                        = "
+		);
+		_OutputStream.writeInteger(javacoreData.numStackMaps, "%zu");
+
+		_OutputStream.writeCharacters(
 			"\n2SCLTEXTNAM        Number AOT Methods                        = "
 		);
 		_OutputStream.writeInteger(javacoreData.numAOTMethods, "%zu");

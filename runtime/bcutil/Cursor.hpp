@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -106,12 +106,17 @@ public:
 	Cursor(UDATA tag, SRPOffsetTable *srpOffsetTable, ROMClassCreationContext * context) :
 		_srpOffsetTable(srpOffsetTable),
 		_count(0),
+		_prevCount(0),
 		_tag(tag),
-		_context(context)
+		_context(context),
+		_stackMapEntryHeadersSize(0)
 	{
 	}
 
 	virtual UDATA getCount() { return _count; }
+	virtual U_8 * getCurrentAddress() {return NULL; }
+	virtual void setCurrentAddress(U_8 * newBaseAddress) { /* do nothing */ }
+	virtual void restoreCurrentAddress() { /* do nothing */ }
 
 	/* Note: WritingCursor's versions of the methods below do not call these ones for
 	 * performance reasons on Linux PPC (since XLC fails to inline them). If you make
@@ -165,15 +170,40 @@ public:
 	J9WSRP computeWSRP(UDATA key, J9WSRP *wsrpAddr) { return _srpOffsetTable->computeWSRP(key, wsrpAddr); }
 	UDATA getOffsetForSRPKey(UDATA srpKey) { return _srpOffsetTable->get(srpKey); }
 
-protected:
-	/*
-	 * This functionality supports the ComparingCursor/ComparingCursorHelper model.
-	 * Allowing the helpers to be re-based with a new baseAddress, which requires the 
-	 * count to also be reset.
+	/* This functionality is only used to restore the previous address
+	 * without the J9Format stackmaps (converted from the class file)
+	 * after copying the converted stackmaps to the shared cache.
 	 */
-	void resetCount() { _count = 0; }
+	void setCount(UDATA countValue) { _count = countValue; }
+
+	/* This functionality is to accumulate the header size of a meta data entry
+	 * used by the stackmap, which is used to calcuate the total ROM class size
+	 * to be allocated in the shared cache.
+	 */
+	void addStackMapEntryHeaderSize(UDATA entryHeaderSize) {
+		_stackMapEntryHeadersSize += entryHeaderSize;
+	}
+	
+	UDATA getStackMapEntryHeadersSize() { return _stackMapEntryHeadersSize; }
+
+protected:
+	/* This functionality supports the ComparingCursor/ComparingCursorHelper model.
+	 * Allowing the helpers to be re-based with a new baseAddress, which requires the 
+	 * count to be reset.
+	 */
+	void resetCount() {
+		_prevCount = _count;
+		_count = 0;
+	}
+
+	/* This functionality is to restore the previous location of cursor
+	 * without the stackmaps after moving the stackmaps out of the ROM method.
+	 */
+	void restoreCount() { _count = _prevCount; }
 
 	UDATA _count;
+	UDATA _prevCount;
+	UDATA _stackMapEntryHeadersSize;
 	ROMClassCreationContext * _context;
 
 private:

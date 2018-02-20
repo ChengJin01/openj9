@@ -47,6 +47,7 @@ import com.ibm.j9ddr.vm29.pointer.generated.*;
 import com.ibm.j9ddr.vm29.pointer.helper.*;
 import com.ibm.j9ddr.vm29.structure.*;
 import com.ibm.j9ddr.vm29.types.*;
+import com.ibm.j9ddr.vm29.pointer.helper.StackMapWrapperHelper;
 
 public class ShrCCommand extends Command 
 {
@@ -63,11 +64,12 @@ public class ShrCCommand extends Command
 	private static final long FIND_METHOD = 0x1000L;
 	private static final long JITPROFILE_STATS = 0x2000L;
 	private static final long JITHINT_STATS = 0x4000L;
-	private static final long ALL_STALE_STATS = 0x8000L;
+	private static final long STACKMAP_STATS = 0x8000L;
+	private static final long ALL_STALE_STATS = 0x10000L;
 	private static final long ALL_STATS = ORPHAN_STATS | ROMCLASS_STATS
 			| CLASSPATH_STATS | AOT_STATS | SCOPE_STATS | BYTE_STATS
 			| UNINDEXED_BYTE_STATS | INV_AOT_STATS | CACHELET_STATS
-			| JITPROFILE_STATS | JITHINT_STATS | ALL_STALE_STATS;
+			| JITPROFILE_STATS | JITHINT_STATS | STACKMAP_STATS | ALL_STALE_STATS;
 	private static final int J9SHR_ATTACHED_DATA_TYPE_JITPROFILE = 1;
 	private static final int J9SHR_ATTACHED_DATA_TYPE_JITHINT = 2;
 	
@@ -152,6 +154,8 @@ public class ShrCCommand extends Command
 					dbgShrcPrintAllStats(out, vm, sharedClassConfig, metaStart, metaEnd, CACHELET_STATS, null, false, VoidPointer.NULL, false);
 				} else if (args[0].equals("stalestats")) {
 					dbgShrcPrintAllStats(out, vm, sharedClassConfig, metaStart, metaEnd, ALL_STALE_STATS, null, false, VoidPointer.NULL, false);
+				} else if (args[0].equals("stackmapstats")) {
+					dbgShrcPrintAllStats(out, vm, sharedClassConfig, metaStart, metaEnd, STACKMAP_STATS, null, false, VoidPointer.NULL, false);
 				} else if (args[0].equals("classpath")) {
 					if (args.length != 2) {
 						CommandUtils.dbgPrint(out, "Usage: !shrc classpath <address>\n");
@@ -344,6 +348,35 @@ public class ShrCCommand extends Command
 		} catch (CorruptDataException e) {
 			throw new DDRInteractiveCommandException(e);
 		}
+	}
+	
+	public U32Pointer findStackMapForROMMethod(J9ROMMethodPointer romMethod) throws CorruptDataException {
+		J9JavaVMPointer vm = J9RASHelper.getVM(DataType.getJ9RASPointer());
+		J9SharedClassConfigPointer sharedClassConfig = vm.sharedClassConfig();
+		if (sharedClassConfig.isNull()) {
+			return U32Pointer.NULL;
+		}
+		
+		PrintStream psOut = new PrintStream(System.out);
+		U8Pointer metaStartInCache = getSharedCacheMetadataStart(vm, psOut);
+		U8Pointer metaEndInCache = getSharedCacheMetadataEnd(vm, psOut);
+		SharedClassMetadataIterator iterator = new SharedClassMetadataIterator(vm, metaStartInCache, metaEndInCache, 0, true, psOut);
+
+		while (iterator.hasNext()) {
+			ShcItemPointer it = iterator.next();
+			U16 itemType = it.dataType();
+			
+			if (itemType.eq(TYPE_STACKMAP)) {
+				StackMapWrapperPointer smw = StackMapWrapperPointer.cast(ShcItemHelper.ITEMDATA(it));
+				J9ROMMethodPointer currentRomMethod = J9ROMMethodPointer.cast(StackMapWrapperHelper.SMWROMMETHOD(smw));
+				
+				if (currentRomMethod.eq(romMethod)) {
+					return U32Pointer.cast(StackMapWrapperHelper.SMWDATA(smw));
+				}
+			}
+		}
+		
+		return U32Pointer.NULL;
 	}
 	
 	private void printShCFlags(PrintStream out, UScalar flags, String type) {
@@ -576,6 +609,7 @@ public class ShrCCommand extends Command
 		CommandUtils.dbgPrint(out, "!shrc ubytestats [range]             -- Print unindexed byte data cache contents\n");
 		CommandUtils.dbgPrint(out, "!shrc stalestats [range]             -- Print all the stale cache contents\n");
 		CommandUtils.dbgPrint(out, "!shrc clstats [range]                -- Print cachelet cache contents\n");
+		CommandUtils.dbgPrint(out, "!shrc stackmapstats [range]          -- Print stackmap cache contents\n");
 		CommandUtils.dbgPrint(out, "!shrc classpath <address>            -- Print classpath at address\n");
 		CommandUtils.dbgPrint(out, "!shrc findclass <name>               -- Find named class\n");
 		CommandUtils.dbgPrint(out, "!shrc findclassp <name>              -- Find named class prefix\n");
@@ -626,6 +660,7 @@ public class ShrCCommand extends Command
 		int numJITProfile = 0;
 		int numJITHint = 0;
 		int[] numByteOfType = new int[(int) J9SHR_DATA_TYPE_MAX + 1];
+		int numStackMap = 0;
 		int aotDataLen = 0;
 		int aotCodeLen = 0;
 		int aotMetaLen = 0;
@@ -644,6 +679,8 @@ public class ShrCCommand extends Command
 		int jitProfileMetaLen = 0;
 		int jitHintDataLen = 0;
 		int jitHintMetaLen = 0;
+		int stackMapDataLen = 0;
+		int stackMapMetaLen = 0;
 		long totalROMClassBytes = 0;
 		long totalStaleBytes = 0;
 		boolean showAllStaleFlag = ((statTypes & ALL_STALE_STATS) != 0);
@@ -685,6 +722,7 @@ public class ShrCCommand extends Command
 			CharArrayWrapperPointer caw;
 			CacheletWrapperPointer cachelet;
 			AttachedDataWrapperPointer adw;
+			StackMapWrapperPointer smw;
 			boolean isStale = ShcItemHdrHelper.CCITEMSTALE(ShcItemHdrPointer.cast(ShcItemHelper.ITEMEND(it)));
 			
 			if (isStale) {
@@ -952,7 +990,30 @@ public class ShrCCommand extends Command
 					++numCacheletsNoSegments;
 				}
 				++numCachelets;
-			} else {
+			} else if (itemType.eq(TYPE_STACKMAP)) {
+				smw = StackMapWrapperPointer.cast(ShcItemHelper.ITEMDATA(it));
+				romMethod = J9ROMMethodPointer.cast(StackMapWrapperHelper.SMWROMMETHOD(smw));
+				dataLen = new UDATA(smw.dataLength());
+				stackMapDataLen += dataLen.longValue();
+				stackMapMetaLen += StackMapWrapper.SIZEOF + ShcItem.SIZEOF + ShcItemHdr.SIZEOF;
+				if (0 != (statTypes & STACKMAP_STATS)) {
+					String methodName = J9ROMMethodHelper.getName(romMethod) + J9ROMMethodHelper.getSignature(romMethod);
+					
+					CommandUtils.dbgPrint(out, "%d: %s STACKMAP data: !j9x %s", it.jvmID().longValue(), it.getHexAddress(), StackMapWrapperHelper.SMWDATA(smw).getHexAddress());
+					CommandUtils.dbgPrint(out, "\n\t%s !j9rommethod %s\n", methodName, romMethod.getHexAddress());
+
+					ListIterator<J9ROMClassPointer> iter = romClassList.listIterator(romClassList.size());
+					while (iter.hasPrevious()) {
+						J9ROMClassPointer lastRomClass = iter.previous();
+						if (romMethod.gt(lastRomClass) && romMethod.lt(lastRomClass.addOffset(lastRomClass.romSize()))) {
+							CommandUtils.dbgPrint(out, "\t%s !j9romclass %s\n", J9UTF8Helper.stringValue(lastRomClass.className()), lastRomClass.getHexAddress());
+							break;
+						}
+					}
+				}
+				++numStackMap;
+			}
+			else {
 				continue;
 			}
 		}
@@ -985,10 +1046,11 @@ public class ShrCCommand extends Command
 
 		if (searchAddress.isNull() && searchName == null) {
 			CommandUtils.dbgPrint(out, "\nCache contains %d classes, %d orphans, %d classpaths, %d URLs, %d tokens\n", numRC, numOrphans, numCP, numURL, numToken);
-			CommandUtils.dbgPrint(out, "%d AOT, %d SCOPES, %d BYTE data, %d UNINDEXED DATA, %d CHARARRAY, %d stale\n", numAOT, numScope, numByte, numUnindexed, numChararray, numStale);
+			CommandUtils.dbgPrint(out, "%d STACKMAPS, %d AOT, %d SCOPES, %d BYTE data, %d UNINDEXED DATA, %d CHARARRAY, %d stale\n", numStackMap, numAOT, numScope, numByte, numUnindexed, numChararray, numStale);
 			CommandUtils.dbgPrint(out, "stale bytes %d\n", totalStaleBytes);
 			
 			CommandUtils.dbgPrint(out, "%d JITPROFILE, %d JITHINT\n", numJITProfile, numJITHint);
+			CommandUtils.dbgPrint(out, "STACKMAP data length %d metadata %d total %d\n", stackMapDataLen, stackMapMetaLen, stackMapDataLen + stackMapMetaLen);
 			CommandUtils.dbgPrint(out, "AOT data length %d code length %d metadata %d total %d\n", aotDataLen, aotCodeLen, aotMetaLen, aotDataLen + aotCodeLen, aotMetaLen);
 			CommandUtils.dbgPrint(out, "JITPROFILE data length %d metadata %d \n", jitProfileDataLen, jitProfileMetaLen);
 			CommandUtils.dbgPrint(out, "JITHINT data length %d metadata %d \n", jitHintDataLen, jitHintMetaLen);

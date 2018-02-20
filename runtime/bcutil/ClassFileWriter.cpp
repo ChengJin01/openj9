@@ -1504,7 +1504,8 @@ void
 ClassFileWriter::writeStackMapTableAttribute(J9ROMMethod * romMethod)
 {
 	U_16 numEntries = 0;
-	U_8 * stackMap = (U_8 *)stackMapFromROMMethod(romMethod);
+	/* Get the stackmap data from the shared cache if enabled */
+	U_8 * stackMap = (U_8 *)getStackMapInfoForROMMethod(_javaVM, romMethod, _romClass, 1);
 
 	writeU16(indexForUTF8((J9UTF8 *) &STACK_MAP_TABLE));
 	U_8 * attributeLenAddr = _classFileCursor;

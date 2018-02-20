@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -34,6 +34,7 @@
 #include "CompiledMethodManager.hpp"
 #include "ByteDataManager.hpp"
 #include "AttachedDataManager.hpp"
+#include "StackMapManager.hpp"
 
 #define CM_READ_CACHE_FAILED -1
 #define CM_CACHE_CORRUPT -2
@@ -92,6 +93,12 @@ public:
 
 	/* @see SharedCache.hpp */
 	virtual const U_8* findCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* romMethod, UDATA* flags);
+
+	/* @see SharedCache.hpp */
+	virtual const U_8* storeStackMap(struct J9VMThread* currentThread, const struct J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize);
+
+	/* @see SharedCache.hpp */
+	virtual const U_8* findStackMap(struct J9VMThread* currentThread, const struct J9ROMMethod* romMethod);
 
 	/* @see SharedCache.hpp */
 	virtual IDATA findSharedData(J9VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool);
@@ -281,6 +288,7 @@ private:
 	SH_ROMClassManager* _rcm;
 	SH_ScopeManager* _scm;
 	SH_CompiledMethodManager* _cmm;
+	SH_StackMapManager* _smm;
 	SH_ByteDataManager* _bdm;
 	SH_AttachedDataManager* _adm;
 	J9PortLibrary* _portlib;
@@ -322,6 +330,9 @@ private:
 	 */
 	bool _growEnabled;
 	
+	UDATA _totalStackMapSize;
+	UDATA _totalStackMapCount;
+
 	/* For growable caches, the cache can only be serialized once, because serialization "corrupts"
 	 * the original cache and renders it unusable. e.g. We fix up offsets in AOT methods.
 	 * This flag indicates whether the cache has already been serialized.
@@ -405,6 +416,8 @@ private:
 
 	SH_CompiledMethodManager* getCompiledMethodManager(J9VMThread* currentThread);
 	
+	SH_StackMapManager* getStackMapManager(J9VMThread* currentThread);
+
 	SH_AttachedDataManager* getAttachedDataManager(J9VMThread* currentThread);
 
 	void updateAverageWriteHashTime(UDATA actualTimeMicros);

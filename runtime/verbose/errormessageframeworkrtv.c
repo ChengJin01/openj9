@@ -145,7 +145,7 @@ constructRtvMethodContextInfo(MethodContextInfo* methodInfo, J9BytecodeVerificat
 {
 	J9ROMClass * romClass = verifyData->romClass;
 	J9ROMMethod *romMethod = verifyData->romMethod;
-	U_32 *stackMapMethod = getStackMapInfoForROMMethod(romMethod);
+	U_32 *stackMapMethod = getStackMapInfoForROMMethod(verifyData->javaVM, romMethod, romClass, 0);
 	J9ExceptionInfo *exceptionInfo = J9_EXCEPTION_DATA_FROM_ROM_METHOD(romMethod);
 
 	methodInfo->portLib = verifyData->portLib;

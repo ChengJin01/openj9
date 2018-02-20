@@ -202,6 +202,7 @@ J9SharedClassesHelpText J9SHAREDCLASSESHELPTEXT[] = {
 	{OPTION_VERBOSE_IO, J9NLS_SHRC_SHRINIT_HELPTEXT_VERBOSE_IO, 0, 0},
 	{OPTION_VERBOSE_HELPER, J9NLS_SHRC_SHRINIT_HELPTEXT_VERBOSE_HELPER, 0, 0},
 	{OPTION_VERBOSE_AOT, J9NLS_SHRC_SHRINIT_HELPTEXT_VERBOSE_AOT, 0, 0},
+	{OPTION_VERBOSE_STACKMAP, J9NLS_SHRC_SHRINIT_HELPTEXT_VERBOSE_STACKMAP, 0, 0},
 	{OPTION_VERBOSE_JITDATA, 0, 0, J9NLS_SHRC_SHRINIT_HELPTEXT_VERBOSE_JITDATA},
 	/* Note that this is private for now */
 	{OPTION_VERBOSE_DATA, 0, 0, J9NLS_SHRC_SHRINIT_HELPTEXT_VERBOSE_DATA},
@@ -269,6 +270,8 @@ J9SharedClassesHelpText J9SHAREDCLASSESHELPTEXT[] = {
 	{OPTION_DISABLE_CORRUPT_CACHE_DUMPS, 0, 0, J9NLS_SHRC_SHRINIT_HELPTEXT_DISABLE_CORRUPT_CACHE_DUMPS},
 	{OPTION_CHECK_STRINGTABLE_RESET, 0, 0, J9NLS_SHRC_SHRINIT_HELPTEXT_CHECK_STRINGTABLE_RESET},
 	{OPTION_ADDTESTJITHINT, 0, 0, J9NLS_SHRC_SHRINIT_HELPTEXT_ADD_JIT_HINTS},
+	{OPTION_ENABLE_STACKMAP_METADATA, 0, 0, J9NLS_SHRC_SHRINIT_HELPTEXT_ENABLE_STACKMAP_METADATA},
+	{OPTION_DISABLE_STACKMAP_METADATA, 0, 0, J9NLS_SHRC_SHRINIT_HELPTEXT_DISABLE_STACKMAP_METADATA},
 	{NULL, 0, 0, 0, 0}
 };
 
@@ -292,6 +295,7 @@ J9SharedClassesOptions J9SHAREDCLASSESOPTIONS[] = {
 	{ OPTION_VERBOSE_IO, PARSE_TYPE_EXACT, RESULT_DO_ADD_VERBOSEFLAG, J9SHR_VERBOSEFLAG_ENABLE_VERBOSE_IO},
 	{ OPTION_VERBOSE_HELPER, PARSE_TYPE_EXACT, RESULT_DO_ADD_VERBOSEFLAG, J9SHR_VERBOSEFLAG_ENABLE_VERBOSE_HELPER},
 	{ OPTION_VERBOSE_AOT, PARSE_TYPE_EXACT, RESULT_DO_ADD_VERBOSEFLAG, J9SHR_VERBOSEFLAG_ENABLE_VERBOSE_AOT},
+	{ OPTION_VERBOSE_STACKMAP, PARSE_TYPE_EXACT, RESULT_DO_ADD_VERBOSEFLAG, J9SHR_VERBOSEFLAG_ENABLE_VERBOSE_STACKMAP},
 	{ OPTION_VERBOSE_JITDATA, PARSE_TYPE_EXACT, RESULT_DO_ADD_VERBOSEFLAG, J9SHR_VERBOSEFLAG_ENABLE_VERBOSE_JITDATA},
 	{ OPTION_MODIFIED_EQUALS, PARSE_TYPE_STARTSWITH, RESULT_DO_MODIFIED_EQUALS, 0},
 	{ OPTION_NO_BYTECODEFIX, PARSE_TYPE_EXACT, RESULT_DO_REMOVE_RUNTIMEFLAG, J9SHR_RUNTIMEFLAG_ENABLE_BYTECODEFIX},
@@ -357,6 +361,8 @@ J9SharedClassesOptions J9SHAREDCLASSESOPTIONS[] = {
 	{ OPTION_INVALIDATE_AOT_METHODS_EQUALS, PARSE_TYPE_STARTSWITH, RESULT_DO_INVALIDATE_AOT_METHODS_EQUALS, J9SHR_RUNTIMEFLAG_DO_NOT_CREATE_CACHE},
 	{ OPTION_REVALIDATE_AOT_METHODS_EQUALS, PARSE_TYPE_STARTSWITH, RESULT_DO_REVALIDATE_AOT_METHODS_EQUALS, J9SHR_RUNTIMEFLAG_DO_NOT_CREATE_CACHE},
 	{ OPTION_FIND_AOT_METHODS_EQUALS, PARSE_TYPE_STARTSWITH, RESULT_DO_FIND_AOT_METHODS_EQUALS, J9SHR_RUNTIMEFLAG_DO_NOT_CREATE_CACHE},
+	{ OPTION_ENABLE_STACKMAP_METADATA, PARSE_TYPE_EXACT, RESULT_DO_ADD_RUNTIMEFLAG, J9SHR_RUNTIMEFLAG_ENABLE_STACKMAP_METADATA},
+	{ OPTION_DISABLE_STACKMAP_METADATA, PARSE_TYPE_EXACT, RESULT_DO_REMOVE_RUNTIMEFLAG, J9SHR_RUNTIMEFLAG_ENABLE_STACKMAP_METADATA},
 	{ NULL, 0, 0 }
 };
 
@@ -570,6 +576,9 @@ parseArgs(J9JavaVM* vm, char* options, U_64* runtimeFlags, UDATA* verboseFlags, 
 	UDATA lastAction = UDATA_MAX;
 #endif
 	
+	/* Enable the stackmaps to be stored as metadata in the shared cache by default */
+	*runtimeFlags |= J9SHR_RUNTIMEFLAG_ENABLE_STACKMAP_METADATA;
+
 	while (*options) {
 		IDATA i=0;
 
@@ -891,7 +900,10 @@ parseArgs(J9JavaVM* vm, char* options, U_64* runtimeFlags, UDATA* verboseFlags, 
 		         } else if ((filterLength == sizeof(SUB_OPTION_PRINTSTATS_MOREHELP))
 		        		 && (0 != try_scan(&filter, SUB_OPTION_PRINTSTATS_MOREHELP))) {
 		        	 *printStatsOptions |= PRINTSTATS_SHOW_MOREHELP;
-		         } else {
+	             } else if ((filterLength == sizeof(SUB_OPTION_PRINTSTATS_STACKMAP))
+	            		 && (0 != try_scan(&filter, SUB_OPTION_PRINTSTATS_STACKMAP))) {
+	            	 *printStatsOptions |=  PRINTSTATS_SHOW_STACKMAP;
+	             } else {
 		        	 if (RESULT_DO_PRINTALLSTATS_EQUALS == J9SHAREDCLASSESOPTIONS[i].action) {
 		        		 SHRINIT_ERR_TRACE(1, J9NLS_SHRC_SHRINIT_PRINTALLSTATS_UNRECOGNISED);
 		        	 } else {
@@ -1622,6 +1634,143 @@ j9shr_storeCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* romMetho
 	}
 
 	Trc_SHR_INIT_storeCompiledMethod_exit(currentThread, returnVal);
+
+	return returnVal;
+}
+
+/**
+ * Store a ROM mathod's stackmap as metadata in shared classes cache
+ *
+ * @param[in] currentThread  The current VM thread
+ * @param[in] romMethod  A pointer to the J9ROMMethod that the code belongs to
+ * @param[in] dataStart  A pointer to the starting address of the stackmap
+ * @param[in] dataSize  The size of the stackmap
+ *
+ * @return Pointer to the shared data if it was successfully stored
+ * @return J9SHR_RESOURCE_STORE_EXISTS if the stackmap already exists in the cache
+ * @return J9SHR_RESOURCE_STORE_ERROR if an error occurs in storing the stackmap
+ * @return J9SHR_RESOURCE_STORE_FULL if the cache is full
+ * @return NULL otherwise
+ */
+const U_8*
+j9shr_storeStackMap(J9VMThread* currentThread, const J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize)
+{
+	J9JavaVM* vm = currentThread->javaVM;
+	J9SharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	UDATA* currentState = &(currentThread->omrVMThread->vmState);
+	U_64 localRuntimeFlags = 0;
+	UDATA localVerboseFlags = 0;
+	UDATA oldState = (UDATA)-1;
+	const U_8* returnVal = 0;
+	SH_CacheMap* cm = NULL;
+
+	PORT_ACCESS_FROM_JAVAVM(vm);
+
+	Trc_SHR_INIT_storeStackMap_entry(currentThread);
+
+	if (NULL == sharedClassConfig) {
+		Trc_SHR_INIT_storeStackMap_exit_Noop(currentThread);
+		return NULL;
+	}
+	cm = (SH_CacheMap*)(sharedClassConfig->sharedClassCache);
+	cm->updateRuntimeFullFlags(currentThread);
+
+	localRuntimeFlags = sharedClassConfig->runtimeFlags;
+	if (J9_ARE_NO_BITS_SET(localRuntimeFlags, J9SHR_RUNTIMEFLAG_CACHE_INITIALIZATION_COMPLETE)
+	||	J9_ARE_ALL_BITS_SET(localRuntimeFlags, J9SHR_RUNTIMEFLAG_DENY_CACHE_UPDATES)
+	) {
+		Trc_SHR_INIT_storeStackMap_exit_Noop(currentThread);
+		return NULL;
+	}
+
+	if (J9_ARE_ALL_BITS_SET(localRuntimeFlags, J9SHR_RUNTIMEFLAG_AVAILABLE_SPACE_FULL)) {
+		return (U_8*)J9SHR_RESOURCE_STORE_FULL;
+	}
+
+	if (!J9_ARE_ALL_BITS_SET(*currentState, J9VMSTATE_SHAREDSTACKMAP_STORE)) {
+		oldState = *currentState;
+		*currentState = J9VMSTATE_SHAREDSTACKMAP_STORE;
+	}
+
+	returnVal = (U_8*)(cm->storeStackMap(currentThread, romMethod, dataStart, dataSize));
+
+	localVerboseFlags = sharedClassConfig->verboseFlags;
+	if (J9_ARE_ALL_BITS_SET(localVerboseFlags, J9SHR_VERBOSEFLAG_ENABLE_VERBOSE_STACKMAP)) {
+		if (returnVal) {
+			SHRINIT_TRACE1_NOTAG(localVerboseFlags, J9NLS_SHRC_SHRINIT_STORED_VERBOSE_STACKMAP_MSG, romMethod);
+		} else {
+			SHRINIT_TRACE1_NOTAG(localVerboseFlags, J9NLS_SHRC_SHRINIT_STORED_FAILED_VERBOSE_STACKMAP_MSG, romMethod);
+		}
+	}
+
+	if ((UDATA)-1 != oldState) {
+		*currentState = oldState;
+	}
+
+	Trc_SHR_INIT_storeStackMap_exit(currentThread, returnVal);
+
+	return returnVal;
+}
+
+/**
+ * Find the stackmap of a method in shared cache.
+ *
+ * @param[in] currentThread  The current VM thread
+ * @param[in] romMethod  A pointer to the J9ROMMethod to find the corresponding stackmap
+ *
+ * @return A pointer to the starting address of the stackmap in the J9ROMMethod
+ * @return NULL if non-stale, the stackmap cannot be found for the J9ROMMethod
+ */
+const U_8*
+j9shr_findStackMap(J9VMThread* currentThread, const J9ROMMethod* romMethod)
+{
+	J9JavaVM* vm = currentThread->javaVM;
+	J9SharedClassConfig* sharedClassConfig = vm->sharedClassConfig;
+	UDATA* currentState = &(currentThread->omrVMThread->vmState);
+	U_64 localRuntimeFlags = 0;
+	UDATA localVerboseFlags = 0;
+	UDATA oldState = (UDATA)-1;
+	const U_8* returnVal = 0;
+
+	PORT_ACCESS_FROM_JAVAVM(vm);
+
+	Trc_SHR_INIT_findStackMap_entry(currentThread);
+
+	if (NULL == sharedClassConfig) {
+		Trc_SHR_INIT_findStackMap_exit_Noop(currentThread);
+		return NULL;
+	}
+
+	localRuntimeFlags = sharedClassConfig->runtimeFlags;
+	localVerboseFlags = sharedClassConfig->verboseFlags;
+
+	if (J9_ARE_NO_BITS_SET(localRuntimeFlags, J9SHR_RUNTIMEFLAG_CACHE_INITIALIZATION_COMPLETE)
+	|| J9_ARE_ALL_BITS_SET(localRuntimeFlags, J9SHR_RUNTIMEFLAG_DENY_CACHE_ACCESS)
+	) {
+		Trc_SHR_INIT_findStackMap_exit_Noop(currentThread);
+		return NULL;
+	}
+
+	if (J9VMSTATE_SHAREDSTACKMAP_FIND != *currentState) {
+		oldState = *currentState;
+		*currentState = J9VMSTATE_SHAREDSTACKMAP_FIND;
+	}
+
+	returnVal = (U_8*)(((SH_CacheMap*)(sharedClassConfig->sharedClassCache))->findStackMap(currentThread, romMethod));
+
+	if (J9_ARE_ALL_BITS_SET(localVerboseFlags, J9SHR_VERBOSEFLAG_ENABLE_VERBOSE_STACKMAP)) {
+		if (returnVal) {
+			SHRINIT_TRACE1_NOTAG(localVerboseFlags, J9NLS_SHRC_SHRINIT_FOUND_VERBOSE_STACKMAP_MSG, romMethod);
+		} else {
+			SHRINIT_TRACE1_NOTAG(localVerboseFlags, J9NLS_SHRC_SHRINIT_FOUND_FAILED_VERBOSE_STACKMAP_MSG, romMethod);
+		}
+	}
+
+	if ((UDATA)-1 != oldState) {
+		*currentState = oldState;
+	}
+
+	Trc_SHR_INIT_findStackMap_exit(currentThread, returnVal);
 
 	return returnVal;
 }
@@ -3307,6 +3456,8 @@ j9shr_init(J9JavaVM *vm, UDATA loadFlags, UDATA* nonfatal)
 		config->storeSharedData = j9shr_storeSharedData;
 		config->findCompiledMethodEx1 = j9shr_findCompiledMethodEx1;
 		config->storeCompiledMethod = j9shr_storeCompiledMethod;
+		config->storeStackMap = j9shr_storeStackMap;
+		config->findStackMap = j9shr_findStackMap;
 		config->storeAttachedData = j9shr_storeAttachedData;
 		config->findAttachedData = j9shr_findAttachedData;
 		config->updateAttachedData = j9shr_updateAttachedData;

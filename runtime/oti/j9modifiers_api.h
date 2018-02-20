@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2017 IBM Corp. and others
+ * Copyright (c) 2009, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -114,6 +114,7 @@
 #define J9ROMMETHOD_HAS_BACKWARDS_BRANCHES(romMethod)	_J9ROMMETHOD_J9MODIFIER_IS_SET((romMethod), J9AccMethodHasBackwardBranches)
 #define J9ROMMETHOD_HAS_GENERIC_SIGNATURE(romMethod)	_J9ROMMETHOD_J9MODIFIER_IS_SET((romMethod), J9AccMethodHasGenericSignature)
 #define J9ROMMETHOD_HAS_STACK_MAP(romMethod)			_J9ROMMETHOD_J9MODIFIER_IS_SET((romMethod), J9AccMethodHasStackMap)
+#define J9ROMMETHOD_STACKMAP_IN_SHARED_CACHE(romMethod)		_J9ROMMETHOD_J9MODIFIER_IS_SET((romMethod), J9AccMethodStackMapInSharedCache)
 #define J9ROMMETHOD_HAS_ANNOTATIONS_DATA(romMethod)		_J9ROMMETHOD_J9MODIFIER_IS_SET((romMethod), J9AccMethodHasMethodAnnotations)
 #define J9ROMMETHOD_HAS_PARAMETER_ANNOTATIONS(romMethod)	_J9ROMMETHOD_J9MODIFIER_IS_SET((romMethod), J9AccMethodHasParameterAnnotations)
 #define J9ROMMETHOD_HAS_METHOD_PARAMETERS(romMethod)	_J9ROMMETHOD_J9MODIFIER_IS_SET((romMethod), J9AccMethodHasMethodParameters)

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2014 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -75,6 +75,24 @@ ComparingCursor::getCount()
 	 * counts.
 	 */
 	return _mainHelper.getCount();
+}
+
+U_8 *
+ComparingCursor::getCurrentAddress()
+{
+	return (U_8 *)(_mainHelper.getBaseAddress() + getCount());
+}
+
+void
+ComparingCursor::setCurrentAddress(U_8 * newBaseAddress)
+{
+	_mainHelper.resetBaseMemoryLocation(newBaseAddress);
+}
+
+void
+ComparingCursor::restoreCurrentAddress()
+{
+	_mainHelper.restoreBaseMemoryCurrentLocation();
 }
 
 void

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2018, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,50 +20,44 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-/*
- * ComparingCursorHelper.hpp
- */
+package StackMap;
+import java.util.Arrays;
 
-#ifndef COMPARINGCURSORHELPER_HPP_
-#define COMPARINGCURSORHELPER_HPP_
-
-/* @ddr_namespace: default */
-#include "Cursor.hpp"
-
-class SRPKeyProducer;
-class ClassFileOracle;
-
-class ComparingCursorHelper : public Cursor
-{
-private:
-	U_8 *_baseAddress;
-	U_8 *_prevBaseAddress;
-public:
-	ComparingCursorHelper(SRPOffsetTable *srpOffsetTable, U_8 *baseAddress, ROMClassCreationContext * context) :
-		Cursor(0, srpOffsetTable, context),
-		_baseAddress(baseAddress),
-		_prevBaseAddress(baseAddress)
-	{
-	}
-
-	void resetBaseMemoryLocation( U_8 *baseAddress )
-	{
-		_prevBaseAddress = _baseAddress;
-		_baseAddress = baseAddress;
-		resetCount();
+public class StackMapMetaDataEntryTest2 {
+	public static void CheckStackMapMetaDataEntry2(String args[]) {
+		if ((1 != args.length) && (1 != args[0].length())) {
+			return;
+		}
+		
+		switch (args[0].charAt(0)) {
+		case 'B':
+			byte arr1[] = new byte[] {0xA, 0xB, 0xC, 0xD, 0xE};
+			byte arr2[] = new byte[arr1.length];
+			for (int index = 0; index < arr1.length; index++) {
+				arr2[index] = arr1[index];
+			}
+			System.out.println(Arrays.toString(arr2));
+			break;
+		case 'Z':
+			boolean arr3[] = new boolean[] {true, false, true, false, true};
+			boolean arr4[] = new boolean[arr3.length];
+			for (int index = 0; index < arr3.length; index++) {
+				arr4[index] = arr3[index];
+			}
+			System.out.println(Arrays.toString(arr4));
+			break;
+		default:
+			int arr5[] = new int[] {1, 2, 3, 4, 5};
+			int arr6[] = new int[arr5.length];
+			for (int index = 0; index < arr5.length; index++) {
+				arr6[index] = arr5[index];
+			}
+			System.out.println(Arrays.toString(arr6));
+			break;
+		}
 	}
 	
-	void restoreBaseMemoryCurrentLocation()
-	{
-		_baseAddress = _prevBaseAddress;
-		restoreCount();
+	public static void main(String args[]) {
+		CheckStackMapMetaDataEntry2(args);
 	}
-
-	U_8 * getBaseAddress() 
-	{ 
-		return _baseAddress;
-	};
-
-};
-
-#endif /* COMPARINGCURSORHELPER_HPP_ */
+}

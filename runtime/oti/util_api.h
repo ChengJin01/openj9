@@ -1315,12 +1315,22 @@ getLineNumberForROMClassFromROMMethod(J9JavaVM *vm, J9ROMMethod *romMethod, J9RO
 
 /**
 * @brief
+* @param *vm
 * @param *romMethod
 * @return U_32 *
 */
 U_32 *
-getStackMapInfoForROMMethod(J9ROMMethod *romMethod);
+getStackMapInfoForROMMethod(J9JavaVM *vm, J9ROMMethod *romMethod, J9ROMClass * romClass, UDATA statusCode);
 
+
+/**
+* @brief
+* @param *vm
+* @param *romMethod
+* @return U_32 *
+*/
+U_32 *
+getStackMapInfoForROMMethodFromSharedCache(J9JavaVM *vm, J9ROMMethod *romMethod, J9ROMClass * romClass);
 
 
 /**

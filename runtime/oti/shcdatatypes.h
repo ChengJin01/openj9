@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -75,8 +75,9 @@ extern "C" {
 #define TYPE_INVALIDATED_COMPILED_METHOD 9
 #define TYPE_CACHELET 10
 #define TYPE_ATTACHED_DATA 11
+#define TYPE_STACKMAP 12
 /* This macro should have same value as the last valid macro defining a type of cache data */
-#define MAX_DATA_TYPES 11
+#define MAX_DATA_TYPES 12
 
 typedef struct ShcItemHdr {
 	U_32 itemLen; 		/* lower bit set means item is stale */
@@ -175,6 +176,16 @@ typedef struct CompiledMethodWrapper {
 #define CMWDATA(cmw) (((U_8*)(cmw)) + sizeof(CompiledMethodWrapper))
 #define CMWCODE(cmw) (((U_8*)(cmw)) + sizeof(CompiledMethodWrapper) + J9SHR_READMEM((cmw)->dataLength))
 #define CMWITEM(cmw) (((U_8*)(cmw)) - sizeof(ShcItem))
+
+typedef struct StackMapWrapper {
+	J9SRP romMethodOffset;
+	U_32 dataLength;
+} StackMapWrapper;
+
+#define SMWROMMETHOD(smw) (((U_8*)(smw)) + J9SHR_READSRP((smw)->romMethodOffset))
+#define SMWDATA(smw) (((U_8*)(smw)) + sizeof(StackMapWrapper))
+#define SMWITEM(smw) (((U_8*)(smw)) - sizeof(ShcItem))
+#define SMWHEADERSIZE() (sizeof(ShcItemHdr) + sizeof(ShcItem) + sizeof(StackMapWrapper))
 
 typedef struct CharArrayWrapper {
 	J9SRP romStringOffset;

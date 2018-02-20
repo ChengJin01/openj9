@@ -302,7 +302,8 @@ static J9ROMMethod* allSlotsInROMMethodDo(J9ROMClass* romClass, J9ROMMethod* met
 		cursor += allSlotsInMethodDebugInfoDo(romClass, (U_32 *)cursor, callbacks, userData);
 	}
 
-	if (J9ROMMETHOD_HAS_STACK_MAP(method)) {
+	/* Don't count the stackmap if stored as metadata in the shared cache */
+	if (J9ROMMETHOD_HAS_STACK_MAP(method) && !J9ROMMETHOD_STACKMAP_IN_SHARED_CACHE(method)) {
 		U_32 stackMapSize = *cursor;
 		rangeValid = callbacks->validateRangeCallback(romClass, cursor, stackMapSize, userData);
 		if (rangeValid) {

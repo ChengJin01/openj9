@@ -156,6 +156,10 @@ public class J9ROMMethodHelper
 	public static boolean hasStackMap(J9ROMMethodPointer method) throws CorruptDataException {
 		return method.modifiers().allBitsIn(J9AccMethodHasStackMap);
 	}
+	
+	public static boolean isStackMapInSharedCache(J9ROMMethodPointer method) throws CorruptDataException {
+		return method.modifiers().allBitsIn(J9AccMethodStackMapInSharedCache);
+	}
 
 	public static boolean hasMethodParameters(J9ROMMethodPointer method) throws CorruptDataException {
 		return method.modifiers().allBitsIn(J9AccMethodHasMethodParameters);

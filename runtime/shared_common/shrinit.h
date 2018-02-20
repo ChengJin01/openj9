@@ -33,6 +33,9 @@ UDATA j9shr_updateAttachedData(J9VMThread* currentThread, const void* addressInC
 UDATA j9shr_updateAttachedUDATA(J9VMThread* currentThread, const void* addressInCache, UDATA type, I_32 updateAtOffset, UDATA value);
 void j9shr_freeAttachedDataDescriptor(J9VMThread* currentThread, J9SharedDataDescriptor* data);
 const U_8* j9shr_storeCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize, const U_8* codeStart, UDATA codeSize, UDATA forceReplace);
+const U_8* j9shr_storeStackMap(J9VMThread* currentThread, const J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize);
+const U_8* j9shr_findStackMap(J9VMThread* currentThread, const J9ROMMethod* romMethod);
+
 UDATA j9shr_getJavacoreData(J9JavaVM *vm, J9SharedClassJavacoreDataDescriptor* descriptor);
 IDATA j9shr_init(J9JavaVM *vm, UDATA loadFlags, UDATA* nonfatal);
 IDATA j9shr_lateInit(J9JavaVM *vm, UDATA* nonfatal);
@@ -102,6 +105,7 @@ typedef struct J9SharedClassesOptions {
 #define OPTION_VERBOSE_IO "verboseIO"
 #define OPTION_VERBOSE_HELPER "verboseHelper"
 #define OPTION_VERBOSE_AOT "verboseAOT"
+#define OPTION_VERBOSE_STACKMAP "verboseStackMap"
 #define OPTION_VERBOSE_JITDATA "verboseJITData"
 #define OPTION_MODIFIED_EQUALS "modified="
 #define OPTION_GROUP_ACCESS "groupAccess"
@@ -177,6 +181,8 @@ typedef struct J9SharedClassesOptions {
 #define OPTION_ADJUST_MAXAOT_EQUALS "adjustmaxaot="
 #define OPTION_ADJUST_MINJITDATA_EQUALS "adjustminjitdata="
 #define OPTION_ADJUST_MAXJITDATA_EQUALS "adjustmaxjitdata="
+#define OPTION_ENABLE_STACKMAP_METADATA "enableStackMapMetaData"
+#define OPTION_DISABLE_STACKMAP_METADATA "disableStackMapMetaData"
 
 /* public options for printallstats= and printstats=  */
 #define SUB_OPTION_PRINTSTATS_ALL "all"
@@ -191,6 +197,7 @@ typedef struct J9SharedClassesOptions {
 #define SUB_OPTION_PRINTSTATS_ZIPCACHE "zipcache"
 #define SUB_OPTION_PRINTSTATS_JITHINT "jithint"
 #define SUB_OPTION_PRINTSTATS_STALE "stale"
+#define SUB_OPTION_PRINTSTATS_STACKMAP "stackmap"
 /* private options for printallstats= and printstats= */
 #define SUB_OPTION_PRINTSTATS_EXTRA "extra"
 #define SUB_OPTION_PRINTSTATS_ORPHAN "orphan"

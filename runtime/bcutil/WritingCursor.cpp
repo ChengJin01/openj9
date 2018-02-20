@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2014 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -28,6 +28,12 @@
 #include <stdlib.h>
 #include "ut_j9bcu.h"
 #include "j9.h"
+
+U_8 *
+WritingCursor::getCurrentAddress()
+{
+	return (U_8 *)(_baseAddress + getCount());
+}
 
 void
 WritingCursor::writeU8(U_8 u8Value, DataType dataType)

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -98,6 +98,7 @@
 #define ALLOCATE_TYPE_BLOCK 1
 #define ALLOCATE_TYPE_AOT 2
 #define ALLOCATE_TYPE_JIT 3
+#define ALLOCATE_TYPE_STACKMAP 4
 
 #define DIRECTION_FORWARD 1
 #define DIRECTION_BACKWARD 2
@@ -237,7 +238,12 @@ SH_CompositeCacheImpl::commonInit(J9JavaVM* vm)
 	_prevScan = NULL;
 	_storedScan = NULL;
 	_storedPrevScan = NULL;
+	_headScan = NULL;
+	_storedEndScan = NULL;
+	_storedPrevHeadScan = NULL;
 	_oldUpdateCount = 0;
+	_stackMapEntryCount = 0;
+	_storedStackMapMetaUsedBytes = 0;
 	_totalStoredBytes = _storedMetaUsedBytes = _storedSegmentUsedBytes = _storedAOTUsedBytes = _storedJITUsedBytes = _storedReadWriteUsedBytes = 0;
 	_softmxUnstoredBytes = 0;
 	_maxAOTUnstoredBytes = 0;
@@ -527,12 +533,18 @@ SH_CompositeCacheImpl::reset(J9VMThread* currentThread)
 	_oldUpdateCount = 0;
 	_storedSegmentUsedBytes = 0;
 	_storedMetaUsedBytes = 0;
+	_stackMapEntryCount = 0;
+	_storedStackMapMetaUsedBytes = 0;
 	_storedAOTUsedBytes = 0;
 	_storedJITUsedBytes = 0;
 	_storedReadWriteUsedBytes = 0;
 	_softmxUnstoredBytes = 0;
 	_maxAOTUnstoredBytes = 0;
 	_maxJITUnstoredBytes = 0;
+	
+	_headScan = NULL;
+	_storedEndScan = NULL;
+	_storedPrevHeadScan = NULL;
 
 	/* If cache is locked, unlock it */
 	doUnlockCache(currentThread);
@@ -1461,6 +1473,10 @@ SH_CompositeCacheImpl::startup(J9VMThread* currentThread, J9SharedClassPreinitCo
 				}
 
 				_prevScan = _scan = (ShcItemHdr*)CCFIRSTENTRY(_theca);
+
+				/* The header is used to record the starting location of a ROM class before the commit operation */
+				_headScan = NULL;
+
 				/* For unit testing, there may not be a sharedClassConfig */
 				if (_sharedClassConfig && isFirstStart) {
 					_sharedClassConfig->cacheDescriptorList->cacheStartAddress = _theca;
@@ -1877,7 +1893,7 @@ SH_CompositeCacheImpl::checkUpdates(J9VMThread* currentThread)
 	result = (*updateCountAddress - _oldUpdateCount);
 	returnVal = (UDATA)((result < 0) ? 0 : result);		/* Ensure that checkUpdates cannot go negative */
 
-	Trc_SHR_CC_checkUpdates_Event_result(result, returnVal);
+	Trc_SHR_CC_checkUpdates_Event_result(*updateCountAddress, _oldUpdateCount, result, returnVal);
 
 	return returnVal; 
 }
@@ -2561,6 +2577,25 @@ SH_CompositeCacheImpl::allocateBlock(J9VMThread* currentThread, ShcItem* itemToW
 }
 
 /**
+ * Allocate a block of memory for stackmap in the shared classes cache.
+ *
+ * Allocate a block of memory for stackmap in the cache. Memory is of len size
+ * and memory is allocated backwards from end of the cache.
+ *
+ * @param [in] currentThread The current thread
+ * @param [in] itemToWrite ShcItem struct describing the stackmap, including the length which will be written as a header to the stackmap
+ * @param [in] align Bytes alignment for the start of the stackmap
+ * @param [in] alignOffset Offset from the starting address of the stackmap to align
+ *
+ * @return Address of item header allocated, NULL if cache is full
+ */
+SH_CompositeCacheImpl::BlockPtr
+SH_CompositeCacheImpl::allocateStackMap(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 align, U_32 alignOffset)
+{
+	return allocate(currentThread, ALLOCATE_TYPE_STACKMAP, itemToWrite, 0, 0, NULL, NULL, align, alignOffset);
+}
+
+/**
  * Allocate a block of AOT memory in the shared classes cache
  *
  * Allocates a block of memory in the cache. Memory is of len total size
@@ -2610,14 +2645,15 @@ SH_CompositeCacheImpl::allocateJIT(J9VMThread* currentThread, ShcItem* itemToWri
  * @param [in] currentThread  The current thread
  * @param [in] itemToWrite  ShcItem struct describing the data, including the length which will be written as a header to the data
  * @param [in] segBufSize  Size of segment buffer to allocate
+ * @param [in] isOrphanROMClass a flag indicating whether a Orphan ROMClass is allocated
  * @param [out] segBuf  	Address of segment buffer allocated
  *
  * @return Address of item header allocated, NULL if cache is full
  */
 SH_CompositeCacheImpl::BlockPtr
-SH_CompositeCacheImpl::allocateWithSegment(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 segmentBufferSize, BlockPtr* segmentBuffer)
+SH_CompositeCacheImpl::allocateWithSegment(J9VMThread* currentThread, ShcItem* itemToWrite, U_32 segmentBufferSize, BlockPtr* segmentBuffer, bool isOrphanROMClass)
 {
-	return allocate(currentThread, ALLOCATE_TYPE_BLOCK, itemToWrite, 0, segmentBufferSize, segmentBuffer, NULL, SHC_WORDALIGN, 0);
+	return allocate(currentThread, ALLOCATE_TYPE_BLOCK, itemToWrite, 0, segmentBufferSize, segmentBuffer, NULL, SHC_WORDALIGN, 0, isOrphanROMClass);
 }
 
 /**
@@ -2665,7 +2701,7 @@ SH_CompositeCacheImpl::getBytesRequiredForItem(ShcItem* itemToWrite)
 
 SH_CompositeCacheImpl::BlockPtr
 SH_CompositeCacheImpl::allocate(J9VMThread* currentThread, U_8 type, ShcItem* itemToWrite, U_32 codeDataLen, U_32 separateBufferSize,
-		BlockPtr* segmentBuffer, BlockPtr* readWriteBuffer, U_32 align, U_32 alignOffset)
+		BlockPtr* segmentBuffer, BlockPtr* readWriteBuffer, U_32 align, U_32 alignOffset, bool isOrphanROMClass)
 {
 	BlockPtr result = 0;
 	U_32 itemLen;
@@ -2702,15 +2738,21 @@ SH_CompositeCacheImpl::allocate(J9VMThread* currentThread, U_8 type, ShcItem* it
 		itemLen = 0;
 	}
 
-	Trc_SHR_Assert_False(_storedSegmentUsedBytes | _storedReadWriteUsedBytes | _storedMetaUsedBytes | _storedAOTUsedBytes | _storedJITUsedBytes);
-
+	/* Only check _storedSegmentUsedBytes once when allocating the ROM class as the variable
+	 * remains unchanged before committing the ROM class with the stackmap.
+	 */
+	 if (ALLOCATE_TYPE_STACKMAP != type) {
+		Trc_SHR_Assert_False(_storedSegmentUsedBytes);
+	}
+	 Trc_SHR_Assert_False(_storedReadWriteUsedBytes | _storedMetaUsedBytes | _storedAOTUsedBytes | _storedJITUsedBytes);
+	
 	if (segmentBuffer) {
 		*segmentBuffer = NULL;
 	}
 	if (readWriteBuffer) {
 		*readWriteBuffer = NULL;
 	}
-	if (type == ALLOCATE_TYPE_BLOCK) {
+	if ((ALLOCATE_TYPE_BLOCK == type) || (ALLOCATE_TYPE_STACKMAP == type)) {
 		freeBytes = getFreeBlockBytes();
 		/* _debugData->getStoredDebugDataBytes() is the debug bytes that have been allocated but not yet committed.
 		 * It should also be counted as bytes to be used.
@@ -2778,7 +2820,7 @@ SH_CompositeCacheImpl::allocate(J9VMThread* currentThread, U_8 type, ShcItem* it
 			} else {
 				_storedMetaUsedBytes = itemLen;
 			}
-			result = allocateMetadataEntry(currentThread, UPDATEPTR(_theca), itemToWrite, itemLen);
+			result = allocateMetadataEntry(currentThread, UPDATEPTR(_theca), itemToWrite, itemLen, isOrphanROMClass);
 		} else {
 			_storedMetaUsedBytes = 0;
 		}
@@ -2872,11 +2914,12 @@ SH_CompositeCacheImpl::allocate(J9VMThread* currentThread, U_8 type, ShcItem* it
  * @param [in] allocPtr  Pointer to next entry in metadata area
  * @param [in] itemToWrite	Metadata item to be written
  * @param [in] itemLen	Length of metadata entry. It includes size of ShcItem, ShcItemHdr, actual data length, and padding.
+ * @param [in] isOrphanROMClass a flag indicating whether a Orphan ROMClass is allocated
  *
  * @return pointer to allocated metadata item.
  */
 SH_CompositeCacheImpl::BlockPtr
-SH_CompositeCacheImpl::allocateMetadataEntry(J9VMThread* currentThread, BlockPtr allocPtr, ShcItem *itemToWrite, U_32 itemLen)
+SH_CompositeCacheImpl::allocateMetadataEntry(J9VMThread* currentThread, BlockPtr allocPtr, ShcItem *itemToWrite, U_32 itemLen, bool isOrphanROMClass)
 {
 	BlockPtr result = NULL;
 	ShcItemHdr* ih = (ShcItemHdr*)(allocPtr - sizeof(ShcItemHdr));
@@ -2902,9 +2945,23 @@ SH_CompositeCacheImpl::allocateMetadataEntry(J9VMThread* currentThread, BlockPtr
 	result = (BlockPtr)CCITEM(ih);
 	itemToWrite->dataLen = (itemLen - sizeof(ShcItemHdr));
 	memcpy(result, itemToWrite, sizeof(ShcItem));
+
 	_storedScan = _scan;
 	_storedPrevScan = _prevScan;
+
+	/* Only set once for rollback during the creation of ROM class */
+	if (isOrphanROMClass) {
+		_storedEndScan = _storedScan;
+		_storedPrevHeadScan = _storedPrevScan;
+	}
+
 	_prevScan = _scan;
+
+/* Only set once for later commit during the creation of ROM class */
+	if (isOrphanROMClass) {
+		_headScan = _prevScan;
+	}
+
 	_scan = CCITEMNEXT(ih);
 
 	return result;
@@ -3028,8 +3085,16 @@ SH_CompositeCacheImpl::rollbackUpdate(J9VMThread* currentThread)
 	Trc_SHR_CC_rollbackUpdate_Event2(currentThread, _scan, _storedMetaUsedBytes, _storedSegmentUsedBytes, _storedReadWriteUsedBytes, _storedAOTUsedBytes,  _storedJITUsedBytes);
 
 	_storedMetaUsedBytes = _storedSegmentUsedBytes = _storedAOTUsedBytes = _storedJITUsedBytes = _storedReadWriteUsedBytes = 0;
-	_prevScan = _storedPrevScan;
-	_scan = _storedScan;
+	_storedStackMapMetaUsedBytes = 0;
+	_stackMapEntryCount = 0;
+
+	if (NULL == _headScan) {
+		_prevScan = _storedPrevScan;
+		_scan = _storedScan;
+	} else {
+		_prevScan = _storedPrevHeadScan;
+		_scan = _storedEndScan;
+	}
 
 #if defined(J9SHR_CACHELETS_SAVE_READWRITE_AREA)
 #if defined(J9SHR_CACHELET_SUPPORT)
@@ -3053,7 +3118,9 @@ SH_CompositeCacheImpl::rollbackUpdate(J9VMThread* currentThread)
 
 void
 SH_CompositeCacheImpl::updateStoredSegmentUsedBytes(U_32 usedBytes) {
-	Trc_SHR_Assert_True(_storedMetaUsedBytes > 0);
+	U_32 metaUsedBytes = (_stackMapEntryCount > 0) ? _storedStackMapMetaUsedBytes : _storedMetaUsedBytes;
+	Trc_SHR_Assert_True(metaUsedBytes > 0);
+
 	_storedSegmentUsedBytes = usedBytes;
 }
 
@@ -3091,7 +3158,8 @@ SH_CompositeCacheImpl::commitUpdateHelper(J9VMThread* currentThread, bool isCach
 	if (_storedSegmentUsedBytes) {
 		BlockPtr startAddress = SEGUPDATEPTR(_theca);
 
-		Trc_SHR_Assert_True((_storedMetaUsedBytes > 0) || isCachelet);
+		U_32 metaUsedBytes = (_stackMapEntryCount > 0) ? _storedStackMapMetaUsedBytes : _storedMetaUsedBytes;
+		Trc_SHR_Assert_True((metaUsedBytes > 0) || isCachelet);
 
 		oldNum = _theca->segmentSRP;
 		_theca->segmentSRP += _storedSegmentUsedBytes;
@@ -3132,21 +3200,24 @@ SH_CompositeCacheImpl::commitUpdateHelper(J9VMThread* currentThread, bool isCach
 	/* If we crash here, romclass/readwrite will exist without any reference to it. 
 	Result: Duplicate ROMClass in ROMClass segment or node data which can't be found by other VMs */
 	
-	oldNum = _theca->updateSRP;
-	/* Store the ShcItem->dataType and jvmID */
-	_theca->lastMetadataType = *(U_32 *)&((ShcItem *)((UDATA)_theca + oldNum - (_storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes)))->dataType;
+	/* The SRP-related location is calculated only in the case of the ROM class without stackmap in ROM methods
+	 * as the calculation intended for stackmaps is specially handled in updateMetaDataSRP().
+	 */
+	if (0 == _stackMapEntryCount) {
+		oldNum = _theca->updateSRP;
+		/* Store the ShcItem->dataType and jvmID */
+		_theca->lastMetadataType = *(U_32 *)&((ShcItem *)((UDATA)_theca + oldNum - (_storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes)))->dataType;
+		_theca->updateSRP -= _storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes;
 
-	_theca->updateSRP -= _storedMetaUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes;
+		Trc_SHR_Assert_True((IDATA)(_theca->updateSRP - _theca->segmentSRP) >= (IDATA)J9SHR_MIN_GAP_BEFORE_METADATA);
+		Trc_SHR_CC_CRASH4_commitUpdate_Event2(currentThread, oldNum, _theca->updateSRP);
+	}
 
-	Trc_SHR_Assert_True((IDATA)(_theca->updateSRP - _theca->segmentSRP) >= (IDATA)J9SHR_MIN_GAP_BEFORE_METADATA);
-
-	Trc_SHR_CC_CRASH4_commitUpdate_Event2(currentThread, oldNum, _theca->updateSRP);
-
-	/* If we crash here, metadata and romclass will exist, but no update count change, so other VMs not aware of update 
+	/* If we crash here, metadata and romclass will exist, but no update count change, so other VMs not aware of update
 	Result: JVMs should re-populate their hashtables */
-
 	UDATA* updateCountAddress = WSRP_GET(_theca->updateCountPtr, UDATA*);
-	*updateCountAddress = *updateCountAddress + 1;
+	/* The count of metadata entries include the ROM class plus the stackmap entries if exists */
+	*updateCountAddress += (_stackMapEntryCount > 0) ? (_stackMapEntryCount + 1) : 1;
 	Trc_SHR_CC_incCacheUpdateCount_Event(*updateCountAddress);
 	_oldUpdateCount = *updateCountAddress;
 
@@ -3164,6 +3235,9 @@ SH_CompositeCacheImpl::commitUpdateHelper(J9VMThread* currentThread, bool isCach
 			|| _doMetaSync
 #endif
 	) {
+		/* Ensure the commit operation cover both the metadata entry of the ROM class and the metadata entries of stackmaps */
+		ShcItemHdr* startScan = (NULL == _headScan) ? _prevScan : _headScan;
+
 		/* Note that _scan always points to the next available ShcItemHdr, 
 		 * so the memory between _scan and (_scan + sizeof(ShcItemHdr)) can be modified */
 		if ((J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_MPROTECT_PARTIAL_PAGES_ON_STARTUP) || (J9VM_PHASE_NOT_STARTUP == vm->phase)) 
@@ -3173,21 +3247,32 @@ SH_CompositeCacheImpl::commitUpdateHelper(J9VMThread* currentThread, bool isCach
 			 * but if we are already on page boundary then no need to subtract the page size.
 			 */
 			if (((UDATA)_scan + sizeof(ShcItemHdr)) % _osPageSize) {
-				notifyPagesCommitted((BlockPtr)_prevScan + sizeof(ShcItemHdr), (BlockPtr)_scan + sizeof(ShcItemHdr) - _osPageSize, DIRECTION_BACKWARD);
+				notifyPagesCommitted((BlockPtr)startScan + sizeof(ShcItemHdr), (BlockPtr)_scan + sizeof(ShcItemHdr) - _osPageSize, DIRECTION_BACKWARD);
 			} else {
-				notifyPagesCommitted((BlockPtr)_prevScan + sizeof(ShcItemHdr), (BlockPtr)_scan + sizeof(ShcItemHdr), DIRECTION_BACKWARD);
+				notifyPagesCommitted((BlockPtr)startScan + sizeof(ShcItemHdr), (BlockPtr)_scan + sizeof(ShcItemHdr), DIRECTION_BACKWARD);
 			}
 		} else {
-			notifyPagesCommitted((BlockPtr)_prevScan + sizeof(ShcItemHdr), (BlockPtr)_scan + sizeof(ShcItemHdr), DIRECTION_BACKWARD);
+			notifyPagesCommitted((BlockPtr)startScan + sizeof(ShcItemHdr), (BlockPtr)_scan + sizeof(ShcItemHdr), DIRECTION_BACKWARD);
 		}
+	}
+
+	_headScan = NULL;
+	_storedEndScan = NULL;
+	_storedPrevHeadScan = NULL;
+
+	if (0 == _stackMapEntryCount) {
+		_totalStoredBytes += (_storedMetaUsedBytes + _storedSegmentUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes + _storedReadWriteUsedBytes);
+	} else {
+		_totalStoredBytes += (_storedStackMapMetaUsedBytes + _storedSegmentUsedBytes);
 	}
 
 	Trc_SHR_CC_CRASH5_commitUpdate_EndingCritical(currentThread);
 
 	endCriticalUpdate(currentThread);		/* Note that this re-protects the header */
 
-	_totalStoredBytes += (_storedMetaUsedBytes + _storedSegmentUsedBytes + _storedAOTUsedBytes + _storedJITUsedBytes + _storedReadWriteUsedBytes);
 	_storedMetaUsedBytes = _storedSegmentUsedBytes = _storedAOTUsedBytes = _storedJITUsedBytes = _storedReadWriteUsedBytes = 0;
+	_storedStackMapMetaUsedBytes = 0;
+	_stackMapEntryCount = 0;
 
 	updateMetadataSegment(currentThread);
 
@@ -3232,6 +3317,57 @@ SH_CompositeCacheImpl::commitUpdate(J9VMThread* currentThread, bool isCachelet)
 		 */
 		fillCacheIfNearlyFull(currentThread);
 	}
+}
+
+
+/**
+ * Update the related SPRs for a metadata entry in the shared cache.
+ * 
+ * The code is partially similar to commitUpdateHelper() but it only focuses on the SRP calculation
+ * after storing each metadata entry (whether a ROM class or a stackmap table)
+ *
+ * @param [in] currentThread Pointer to J9VMThread structure for the current thread
+ * @param [in] metaDataType a flag indicating whether the metadata entry is a ROM Class or a stackmap table
+ *
+ * @pre The caller MUST hold the shared cache write mutex
+ */
+void
+SH_CompositeCacheImpl::updateMetaDataSRP(J9VMThread* currentThread, UDATA metaDataType)
+{
+	UDATA oldNum = 0;
+
+	if (!_started || _readOnlyOSCache) {
+		Trc_SHR_Assert_ShouldNeverHappen();
+		return;
+	}
+	Trc_SHR_CC_updateMetaDataSRP_Entry(currentThread, _scan, _storedMetaUsedBytes);
+	Trc_SHR_Assert_Equals(currentThread, _commonCCInfo->hasWriteMutexThread);
+
+	startCriticalUpdate(currentThread);		/* Note that this un-protects the header */
+	Trc_SHR_CC_updateMetaDataSRP_EnteredCritical(currentThread);
+
+	/* Store the ShcItem->dataType and jvmID */
+	oldNum = _theca->updateSRP;
+	_theca->lastMetadataType = *(U_32 *)&((ShcItem *)((UDATA)_theca + oldNum - _storedMetaUsedBytes))->dataType;
+	_theca->updateSRP -= _storedMetaUsedBytes;
+
+	Trc_SHR_Assert_True((IDATA)(_theca->updateSRP - _theca->segmentSRP) >= (IDATA)J9SHR_MIN_GAP_BEFORE_METADATA);
+	Trc_SHR_CC_updateMetaDataSRP_Event(currentThread, oldNum, _theca->updateSRP);
+
+	Trc_SHR_CC_updateMetaDataSRP_EndingCritical(currentThread);
+	endCriticalUpdate(currentThread);		/* Note that this re-protects the header */
+
+	if (J9SHR_CC_STACKMAP_TYPE == metaDataType) {
+		_storedStackMapMetaUsedBytes += _storedMetaUsedBytes;
+		_stackMapEntryCount += 1;
+	}
+
+	_totalStoredBytes += _storedMetaUsedBytes;
+	_storedMetaUsedBytes = 0;
+
+	updateMetadataSegment(currentThread);
+
+	Trc_SHR_CC_updateMetaDataSRP_Exit(currentThread);
 }
 
 /**
@@ -6860,4 +6996,24 @@ SH_CompositeCacheImpl::increaseUnstoredBytes(U_32 blockBytes, U_32 aotBytes, U_3
 	}
 
 	Trc_SHR_CC_increaseUnstoredBytes_Exit();
+}
+
+/* Get the count of the stored stackmap metadata entry
+ *
+ * @return UDATA
+ */
+UDATA
+SH_CompositeCacheImpl::getStoredStackMapEntryCount()
+{
+	return _stackMapEntryCount;
+}
+
+/* Get the thread with the write mutex
+ *
+ * @return J9VMThread holding the write mutex for the shared cache
+ */
+J9VMThread *
+SH_CompositeCacheImpl::getWriteMutexThread()
+{
+	return _commonCCInfo->hasWriteMutexThread;
 }

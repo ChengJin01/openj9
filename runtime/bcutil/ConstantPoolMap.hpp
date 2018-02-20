@@ -165,7 +165,26 @@ public:
 
 	U_32 getMethodTypeCount() const { return _methodTypeCount; }
 	U_32 getVarHandleMethodTypeCount() const { return _varHandleMethodTypeCount; }
-	U_32 getVarHandleMethodTypePaddedCount() const { return _varHandleMethodTypeCount + (_varHandleMethodTypeCount & 0x1); /* Rounding up to an even number */ }
+	U_32 getVarHandleMethodTypePaddedCount() const {
+		/* The reason for this adjustment is because we need to shrink the size of ROM classes after
+		 * moving the stackmaps of ROM methods to the metadata area in the shared cache. In such case,
+		 * updateSharedClassSize() checks whether the total size of a ROM class is aligned to 8 bytes
+		 * before finalizing the ROM size.
+		 * 
+		 * Given that the other fields/parts of ROM class are aligned to U_64(8) bytes except
+		 * varHandleMethodTypeLookupTableSize (which is aligned to U_16(2) bytes as the lookup
+		 * table is a U_16[]), rounding up this padded count to U_32(4) ensures the length of
+		 * the LookupTable satisfies the alignment size (8 bytes) required by the shared cache.
+		 * 
+		 * Please see the following code for more details:
+		 * 1) getVarHandleMethodTypePaddedSize() at /bcutil/ROMClassWriter.hpp
+		 * 2) writeVarHandleMethodTypeLookupTable() at /runtime/bcutil/ROMClassWriter.cpp
+		 * 3) j9shr_classStoreTransaction_updateSharedClassSize() at /shared_common/SCImplementedAPI.cpp
+		 */
+		U_32 modValue = _varHandleMethodTypeCount & 0x3;
+		U_32 roundValue = (_varHandleMethodTypeCount & ~0x3) + 0x4;
+		return ((0 == modValue) ? _varHandleMethodTypeCount : roundValue);
+	}
 	U_16 *getVarHandleMethodTypeLookupTable() const { return _varHandleMethodTypeLookupTable; }
 	U_32 getCallSiteCount() const { return _callSiteCount; }
 	U_16 getRAMConstantPoolCount() const { return _ramConstantPoolCount; }

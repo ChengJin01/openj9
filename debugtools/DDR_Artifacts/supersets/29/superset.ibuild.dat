@@ -360,6 +360,9 @@ F|_romClass|_romClass|U8*|U8*
 F|_srpKeyProducer|_srpKeyProducer|class SRPKeyProducer*|class SRPKeyProducer*
 F|_storePointerToVariableInfo|_storePointerToVariableInfo|U8*|U8*
 F|_varInfoHelper|_varInfoHelper|class ComparingCursorHelper|class ComparingCursorHelper
+S|StackMapWrapper|StackMapWrapperPointer|
+F|dataLength|dataLength|U32|U32
+F|romMethodOffset|romMethodOffset|I32|I32
 S|CompiledMethodWrapper|CompiledMethodWrapperPointer|
 F|codeLength|codeLength|U32|U32
 F|dataLength|dataLength|U32|U32

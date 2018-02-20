@@ -34,8 +34,12 @@ methodParametersFromROMMethod(J9ROMMethod *romMethod)
 
 	stackMap = stackMapFromROMMethod(romMethod);
 
-	/* skip the StackMap section if there is one */
-	if (J9ROMMETHOD_HAS_STACK_MAP(romMethod)) {
+	/* Skip the StackMap section if there is one which
+	 * is not stored in the shared cache.
+	 */
+	if (J9ROMMETHOD_HAS_STACK_MAP(romMethod)
+	&& !J9ROMMETHOD_STACKMAP_IN_SHARED_CACHE(romMethod)
+	) {
 		U_32 stackMapSize = *stackMap;
 		return (J9MethodParametersData *)((UDATA)stackMap + stackMapSize);
 	}
@@ -320,10 +324,52 @@ stackMapFromROMMethod(J9ROMMethod *romMethod)
 
 
 U_32 *
-getStackMapInfoForROMMethod(J9ROMMethod *romMethod)
+getStackMapInfoForROMMethod(J9JavaVM *vm, J9ROMMethod *romMethod, J9ROMClass * romClass, UDATA statusCode)
 {
 	if (J9ROMMETHOD_HAS_STACK_MAP(romMethod)) {
-		return stackMapFromROMMethod(romMethod);
+		/* Get the stackmap data from the shared cache if stored in there */
+		J9SharedClassConfig * scConfig = ((NULL != vm) ? vm->sharedClassConfig : NULL);
+		if ((NULL != scConfig) && J9ROMMETHOD_STACKMAP_IN_SHARED_CACHE(romMethod)) {
+			if (1 == statusCode) {
+				Trc_VMUtil_writeStackMapTableAttribute_writeStackMap(
+					(UDATA) J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(romClass)),
+					J9UTF8_DATA(J9ROMCLASS_CLASSNAME(romClass)),
+					(UDATA) J9UTF8_LENGTH(J9ROMMETHOD_GET_NAME(romClass, romMethod)),
+					J9UTF8_DATA(J9ROMMETHOD_GET_NAME(romClass, romMethod))
+					);
+			}
+
+			if (2 == statusCode) {
+				Trc_VMUtil_verifyBytecodes_findStackMap(
+					(UDATA) J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(romClass)),
+					J9UTF8_DATA(J9ROMCLASS_CLASSNAME(romClass)),
+					(UDATA) J9UTF8_LENGTH(J9ROMMETHOD_GET_NAME(romClass, romMethod)),
+					J9UTF8_DATA(J9ROMMETHOD_GET_NAME(romClass, romMethod))
+					);
+			}
+			return (U_32 *)(scConfig->findStackMap(vm->internalVMFunctions->currentVMThread(vm), romMethod));
+		} else {
+			return stackMapFromROMMethod(romMethod);
+		}
+	}
+	return NULL;
+}
+
+U_32 *
+getStackMapInfoForROMMethodFromSharedCache(J9JavaVM *vm, J9ROMMethod *romMethod, J9ROMClass * romClass)
+{
+	if (J9ROMMETHOD_HAS_STACK_MAP(romMethod)) {
+		/* Get the stackmap data from the shared cache if stored in there */
+		J9SharedClassConfig * scConfig = ((NULL != vm) ? vm->sharedClassConfig : NULL);
+		if ((NULL != scConfig) && J9ROMMETHOD_STACKMAP_IN_SHARED_CACHE(romMethod)) {
+			Trc_VMUtil_writeMethods_compareStackMap(
+				(UDATA) J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(romClass)),
+				J9UTF8_DATA(J9ROMCLASS_CLASSNAME(romClass)),
+				(UDATA) J9UTF8_LENGTH(J9ROMMETHOD_GET_NAME(romClass, romMethod)),
+				J9UTF8_DATA(J9ROMMETHOD_GET_NAME(romClass, romMethod))
+				);
+			return (U_32 *)(scConfig->findStackMap(vm->internalVMFunctions->currentVMThread(vm), romMethod));
+		}
 	}
 	return NULL;
 }

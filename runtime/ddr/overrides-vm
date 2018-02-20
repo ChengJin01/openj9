@@ -388,6 +388,7 @@ typeoverride.ScopedROMClassWrapper.modContextOffset=I_32
 typeoverride.ScopedROMClassWrapper.partitionOffset=I_32
 typeoverride.ScopedROMClassWrapper.romClassOffset=I_32
 typeoverride.ScopedROMClassWrapper.theCpOffset=I_32
+typeoverride.StackMapWrapper.romMethodOffset=I_32
 
 typeoverride.J9MethodDebugInfo.srpToVarInfo=J9SRP(U_8)
 

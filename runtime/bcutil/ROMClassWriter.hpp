@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -95,6 +95,7 @@ public:
 			U_32 modifiers,
 			U_32 extraModifiers,
 			U_32 optionalFlags,
+			U_32 stateFlags,
 			MarkOrWrite markOrWrite );
 
 	/*
@@ -129,7 +130,7 @@ private:
 	void writeInnerClasses(Cursor *cursor, bool markAndCountOnly);
 	void writeNestMembers(Cursor *cursor, bool markAndCountOnly);
 	void writeNameAndSignatureBlock(Cursor *cursor);
-	void writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool markAndCountOnly);
+	void writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, U_32 stateFlags, bool markAndCountOnly, J9ROMClass * romClass);
 	void writeMethodDebugInfo(ClassFileOracle::MethodIterator *methodIterator,  Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool markAndCountOnly, bool existHasDebugInformation);
 	void writeConstantPoolShapeDescriptions(Cursor *cursor, bool markAndCountOnly);
 	void writeAnnotationInfo(Cursor *cursor);

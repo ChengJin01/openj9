@@ -108,7 +108,7 @@
 #define J9AccInterface 0x200
 #define J9AccMandated 0x8000
 #define J9AccMethodCallerSensitive 0x100000
-#define J9AccMethodUnused0x1000000 0x1000000
+#define J9AccMethodStackMapInSharedCache 0x1000000
 #define J9AccMethodFrameIteratorSkip 0x80000
 #define J9AccMethodHasBackwardBranches 0x200000
 #define J9AccMethodHasDebugInfo 0x40000
@@ -335,6 +335,10 @@
 #define J9_ROMCLASS_OPTINFO_IS_FILTER_CLASS 0x100000
 #define J9_ROMCLASS_OPTINFO_UNUSED 0x200000
 #define J9_ROMCLASS_OPTINFO_TYPE_ANNOTATION_INFO 0x400000
+
+/* The flags indicating the status for a ROM class when the shared cache is enabled */
+#define J9_ROMCLASS_STATE_SHARED_CLASS_COMPARED 0x1
+#define J9_ROMCLASS_STATE_SHARED_CLASS_CREATED 0x2
 
 /* Constants for checkVisibility return results */
 #define J9_VISIBILITY_ALLOWED 1
@@ -1194,6 +1198,7 @@ typedef struct J9SharedClassJavacoreDataDescriptor {
 	UDATA numROMClasses;
 	UDATA numStaleClasses;
 	UDATA numAOTMethods;
+	UDATA numStackMaps;
 	UDATA numClasspaths;
 	UDATA numURLs;
 	UDATA numTokens;
@@ -1385,6 +1390,8 @@ typedef struct J9SharedClassConfig {
 	void  ( *freeAttachedDataDescriptor)(struct J9VMThread* vmThread, struct J9SharedDataDescriptor* data) ;
 	const U_8*  ( *findCompiledMethodEx1)(struct J9VMThread* vmThread, const struct J9ROMMethod* romMethod, UDATA* flags);
 	const U_8*  ( *storeCompiledMethod)(struct J9VMThread* vmThread, const struct J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize, const U_8* codeStart, UDATA codeSize, UDATA forceReplace) ;
+	const U_8*  ( *storeStackMap)(struct J9VMThread* currentThread, const struct J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize);
+	const U_8*  ( *findStackMap)(struct J9VMThread* currentThread, const struct J9ROMMethod* romMethod);
 	UDATA  ( *existsCachedCodeForROMMethod)(struct J9VMThread* vmThread, const struct J9ROMMethod* romMethod) ;
 	UDATA  ( *acquirePrivateSharedData)(struct J9VMThread* vmThread, const struct J9SharedDataDescriptor* data) ;
 	UDATA  ( *releasePrivateSharedData)(struct J9VMThread* vmThread, const struct J9SharedDataDescriptor* data) ;
@@ -5052,6 +5059,8 @@ typedef struct J9VMThread {
 #define J9VMSTATE_ATTACHEDDATA_STORE  0x8000A
 #define J9VMSTATE_ATTACHEDDATA_FIND  0x8000B
 #define J9VMSTATE_ATTACHEDDATA_UPDATE  0x8000C
+#define J9VMSTATE_SHAREDSTACKMAP_STORE  0x8000D
+#define J9VMSTATE_SHAREDSTACKMAP_FIND  0x8000E
 #define J9VMSTATE_SNW_STACK_VALIDATE  0x110000
 #define J9VMSTATE_GP  0xFFFF0000
 #define J9VMTHREAD_OBJECT_MONITOR_CACHE_SIZE  J9VM_OBJECT_MONITOR_CACHE_SIZE

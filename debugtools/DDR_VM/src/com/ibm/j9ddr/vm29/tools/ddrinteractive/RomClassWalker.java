@@ -266,9 +266,11 @@ public class RomClassWalker extends ClassWalker {
 		if (J9ROMMethodHelper.hasDebugInfo(method)) {
 			cursor = cursor.add(allSlotsInMethodDebugInfoDo(cursor));
 		}
-
-
-		if (J9ROMMethodHelper.hasStackMap(method)) {
+		
+		/* Walk through the stackmap only when it is stored in line with the ROMMethod
+		 * with the shared cache disabled.
+		 */
+		if (J9ROMMethodHelper.hasStackMap(method) && !J9ROMMethodHelper.isStackMapInSharedCache(method)) {
 			long stackMapSize = cursor.at(0).longValue();
 			U8Pointer stackMap = U8Pointer.cast(cursor.add(1));
 			classWalkerCallback.addSection(clazz, cursor, stackMapSize, "stackMap", true);

@@ -56,3 +56,7 @@ TraceEntry=Trc_VMUtil_getOriginalROMMethodUnchecked_Entry Overhead=1 Level=3 Noe
 TraceExit=Trc_VMUtil_getOriginalROMMethodUnchecked_Exit Overhead=1 Level=3 Noenv Template="getOriginalROMMethodUnchecked (result=%p)"
 
 TraceException=Trc_VMUtil_getOriginalROMMethodUnchecked_getMethodIndexFailed Overhead=1 Level=1 Noenv Template="getOriginalROMMethodUnchecked: Unable to get methodIndex for method=%p"
+
+TraceEvent=Trc_VMUtil_writeMethods_compareStackMap NoEnv Overhead=1 Level=1 Template="Compare the stackmap stored in the shared cache, ROMClass.ROMMethod = %.*s.%.*s"
+TraceEvent=Trc_VMUtil_writeStackMapTableAttribute_writeStackMap NoEnv Overhead=1 Level=1 Template="Write back the stored stackmap for transformation, ROMClass.ROMMethod = %.*s.%.*s"
+TraceEvent=Trc_VMUtil_verifyBytecodes_findStackMap NoEnv Overhead=1 Level=1 Template="Fetch the stored stackmap for verification, ROMClass.ROMMethod = %.*s.%.*s"

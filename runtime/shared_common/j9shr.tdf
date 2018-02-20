@@ -2907,3 +2907,27 @@ TraceExit=Trc_SHR_CM_allocateROMClass_Exit3 Overhead=1 Level=3 Template="CM allo
 TraceEvent=Trc_SHR_INIT_isClassFromPatchedModule_ClassFromPatchedModule_Event Test Overhead=1 Level=3 Template="INIT isClassFromPatchedModule: Class (classname=%.*s) is from a patched module (URL=%.*s)."
 TraceEvent=Trc_SHR_INIT_hookFindSharedClass_classFromUnresolvedModule Overhead=1 Level=3 Template="INIT hookFindSharedClass: Class (classname=%.*s) is from an unresolved module. Returning NULL."
 TraceExit=Trc_SHR_OSC_checkOSCacheHeader_wrongBuildID_3 NoEnv Overhead=1 Level=1 Template="OSCache::checkOSCacheHeader: Exit - wrong build ID. VM OpenJ9 SHA: %llx . Shared Cache OpenJ9 SHA: %llx"
+
+TraceEntry=Trc_SHR_SMMI_initialize_Entry Noenv Overhead=1 Level=1 Template="SMMI initialize: Initializing StackMapManager"
+TraceExit=Trc_SHR_SMMI_initialize_Exit Noenv Overhead=1 Level=1 Template="SMMI initialize: Done initializing StackMapManager"
+
+TraceEntry=Trc_SHR_SMMI_newInstance_Entry Noenv Overhead=1 Level=1 Template="SMMI newInstance: Creating new StackMapManager. vm=0x%p. cache=0x%p"
+TraceExit=Trc_SHR_SMMI_newInstance_Exit Noenv Overhead=1 Level=1 Template="SMMI newInstance: Created StackMapManager at address 0x%p"
+
+TraceEntry=Trc_SHR_INIT_storeStackMap_entry Overhead=1 Level=2 Template="INIT HOOK STORE STACKMAP: Entering j9shr_storeStackMap"
+TraceExit=Trc_SHR_INIT_storeStackMap_exit_Noop Overhead=1 Level=2 Template="INIT HOOK STORE STACKMAP: Exiting j9shr_storeStackMap because the store operation should not happen"
+TraceExit=Trc_SHR_INIT_storeStackMap_exit Overhead=1 Level=2 Template="INIT HOOK STORE STACKMAP: Exiting j9shr_storeStackMap with returnVal=0x%p"
+
+TraceExit=Trc_SHR_SM_storeStackMap_StackMapSize Overhead=1 Level=2 Template="STORE STACKMAP: the accumulated stackmap Size = %u, Count = %u"
+
+TraceEntry=Trc_SHR_INIT_findStackMap_entry Overhead=1 Level=2 Template="INIT HOOK FIND STACKMAP: Entering j9shr_findStackMap"
+TraceExit=Trc_SHR_INIT_findStackMap_exit_Noop Overhead=1 Level=2 Template="INIT HOOK FIND STACKMAP: Exiting j9shr_findStackMap because the find operation should not happen"
+TraceExit=Trc_SHR_INIT_findStackMap_exit Overhead=1 Level=2 Template="INIT HOOK FIND STACKMAP: Exiting j9shr_findStackMap with returnVal=0x%p"
+
+TraceEvent=Trc_SHR_SM_findStackMap_metadataAccess Test Overhead=1 Level=2 Template="SH_CacheMap::findStackMap: metadata for %.*s.%.*s%.*s at %p"
+
+TraceEntry=Trc_SHR_CC_updateMetaDataSRP_Entry Overhead=1 Level=2 Template="CC updateMetaDataSRP: updating for _scan=%p, _storedMetaUsedBytes=%d"
+TraceEvent=Trc_SHR_CC_updateMetaDataSRP_EnteredCritical Overhead=1 Level=3 Template="CC updateMetaDataSRP: entering the critical section"
+TraceEvent=Trc_SHR_CC_updateMetaDataSRP_Event Overhead=1 Level=3 Template="CC updateMetaDataSRP: theca->updateSRP from %d to %d"
+TraceEvent=Trc_SHR_CC_updateMetaDataSRP_EndingCritical Overhead=1 Level=3 Template="CC updateMetaDataSRP: exiting the critical section"
+TraceExit=Trc_SHR_CC_updateMetaDataSRP_Exit Overhead=1 Level=2 Template="CC updateMetaDataSRP: Done updating"

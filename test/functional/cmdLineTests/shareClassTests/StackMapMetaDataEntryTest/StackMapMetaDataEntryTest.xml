@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+
+<!--
+  Copyright (c) 2018, 2018 IBM Corp. and others
+
+  This program and the accompanying materials are made available under
+  the terms of the Eclipse Public License 2.0 which accompanies this
+  distribution and is available at https://www.eclipse.org/legal/epl-2.0/
+  or the Apache License, Version 2.0 which accompanies this distribution and
+  is available at https://www.apache.org/licenses/LICENSE-2.0.
+
+  This Source Code may also be made available under the following
+  Secondary Licenses when the conditions for such availability set
+  forth in the Eclipse Public License, v. 2.0 are satisfied: GNU
+  General Public License, version 2 with the GNU Classpath
+  Exception [1] and GNU General Public License, version 2 with the
+  OpenJDK Assembly Exception [2].
+
+  [1] https://www.gnu.org/software/classpath/license.html
+  [2] http://openjdk.java.net/legal/assembly-exception.html
+
+  SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
+-->
+
+<!DOCTYPE suite SYSTEM "cmdlinetester.dtd">
+
+<suite id="StackMap MetaData Entry Test"  timeout="300">
+	<variable name="CP" value="-cp $TESTSJARPATH$" />
+	<variable name="PROGRAM1" value="StackMap.StackMapMetaDataEntryTest1" />
+	<variable name="PROGRAM2" value="StackMap.StackMapMetaDataEntryTest2" />
+	<variable name="CACHENAME" value="sharedstackmap" />
+	<variable name="DUMPFILE" value="j9stackmapcore.dmp" />
+	<variable name="DUMPDIR" value="dumpdir" />
+	<variable name="XDUMP" value="-Xdump:system:file=$DUMPFILE$,events=vmstop" />
+
+	<test id="Initial cleanup to destroy any shared class cache">
+		<command>$EXE$ -Xshareclasses:destroyAll</command>
+		<return type="success" value="1" />
+	</test>
+
+	<test id="Test 1-a: Implicitly enable the stackmaps to be stored as metadata in the shared cache by default">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$ $CP$ $PROGRAM1$ Z</command>
+		<output type="success" caseSensitive="yes" regex="no">[true, false, true, false, true]</output>	
+		<output type="failure" caseSensitive="no" regex="no">Unhandled Exception</output>
+		<output type="failure" caseSensitive="yes" regex="no">Exception:</output>
+		<output type="failure" caseSensitive="no" regex="no">corrupt</output>
+		<output type="failure" caseSensitive="yes" regex="no">Processing dump event</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Java dump</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Snap dump</output>
+	</test>
+
+	<test id="Test 1-b: Check whether the stored stackmaps exist in the shared cache">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$,printStats=stackmap</command>
+		<output type="success" caseSensitive="yes" regex="no">CheckStackMapMetaDataEntry1</output>
+		<output type="required" caseSensitive="yes" regex="no">StackMapMetaDataEntryTest1</output>
+		<output type="required" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 6%</output>
+		<output type="failure" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 0%</output>
+		<output type="failure" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes"># StackMaps[\s]*= 0</output>
+	</test>
+
+	<test id="Test 2-a: Explicitly enable the stackmap to be stored as metadata by specifying the enableStackMapMetaData option">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$,reset,enableStackMapMetaData $CP$ $PROGRAM1$ B</command>
+		<output type="success" caseSensitive="yes" regex="no">has been destroyed</output>
+		<output type="required" caseSensitive="yes" regex="no">[10, 11, 12, 13, 14]</output>	
+		<output type="failure" caseSensitive="no" regex="no">Unhandled Exception</output>
+		<output type="failure" caseSensitive="yes" regex="no">Exception:</output>
+		<output type="failure" caseSensitive="no" regex="no">corrupt</output>
+		<output type="failure" caseSensitive="yes" regex="no">Processing dump event</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Java dump</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Snap dump</output>
+	</test>
+
+	<test id="Test 2-b: Check whether the stored stackmaps exits in the shared cache">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$,printStats=stackmap</command>
+		<output type="success" caseSensitive="yes" regex="no">CheckStackMapMetaDataEntry1</output>
+		<output type="required" caseSensitive="yes" regex="no">StackMapMetaDataEntryTest1</output>
+		<output type="required" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 6%</output>
+		<output type="failure" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 0%</output>
+		<output type="failure" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes"># StackMaps[\s]*= 0</output>
+	</test>
+	
+	<test id="Test 3-a: Disable the stackmaps to be stored as metadata by specifying the disableStackMapMetaData option">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$,reset,disableStackMapMetaData $CP$ $PROGRAM1$ I</command>
+		<output type="success" caseSensitive="yes" regex="no">[1, 2, 3, 4, 5]</output>		
+		<output type="failure" caseSensitive="no" regex="no">Unhandled Exception</output>
+		<output type="failure" caseSensitive="yes" regex="no">Exception:</output>
+		<output type="failure" caseSensitive="no" regex="no">corrupt</output>
+		<output type="failure" caseSensitive="yes" regex="no">Processing dump event</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Java dump</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Snap dump</output>
+	</test>
+
+	<test id="Test 3-b: Check whether the stackmaps are not stored as metadata in the shared cache">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$,printStats=stackmap</command>
+		<output type="success" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 0%</output>
+		<output type="required" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes"># StackMaps[\s]*= 0</output>
+		<output type="failure" caseSensitive="yes" regex="no">CheckStackMapMetaDataEntry1</output>
+		<output type="failure" caseSensitive="yes" regex="no">StackMapMetaDataEntryTest1</output>
+		<output type="failure" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 6%</output>
+	</test>
+	
+	<test id="Test 4-a: Stop the stackmaps of ROM methods in StackMapMetaDataEntryTest2 from being stored as metadata by specifying the readOnly option">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$,readOnly $CP$ $PROGRAM2$ B</command>
+		<output type="success" caseSensitive="yes" regex="no">[10, 11, 12, 13, 14]</output>		
+		<output type="failure" caseSensitive="no" regex="no">Unhandled Exception</output>
+		<output type="failure" caseSensitive="yes" regex="no">Exception:</output>
+		<output type="failure" caseSensitive="no" regex="no">corrupt</output>
+		<output type="failure" caseSensitive="yes" regex="no">Processing dump event</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Java dump</output>
+		<output type="failure" caseSensitive="yes" regex="no">JVM requested Snap dump</output>
+	</test>
+
+	<test id="Test 4-c: Check whether the stackmaps of ROM methods in StackMapMetaDataEntryTest2 are not stored as metadata in the shared cache">
+		<command>$EXE$ -Xshareclasses:name=$CACHENAME$,printStats=stackmap</command>
+		<output type="success" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 0%</output>
+		<output type="required" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes"># StackMaps[\s]*= 0</output>
+		<output type="failure" caseSensitive="yes" regex="no">CheckStackMapMetaDataEntry2</output>
+		<output type="failure" caseSensitive="yes" regex="no">StackMapMetaDataEntryTest2</output>
+		<output type="failure" caseSensitive="yes" regex="yes" javaUtilPattern="yes" showMatch="yes">Metadata % used[\s]*= 6%</output>
+	</test>
+	
+</suite>

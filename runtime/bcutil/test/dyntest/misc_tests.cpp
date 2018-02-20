@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -87,8 +87,10 @@ testGetNextStackMapFrame(J9PortLibrary *portLib, const char *classFileName)
 	UDATA romMethodCount = 0;
 
 	while (romMethodCount < romClass->romMethodCount) {
-		/* get stack map */
-		U_32 *stackMap = getStackMapInfoForROMMethod(romMethod);
+		/* get the stack map directly from ROMMethod.
+		 * Note: the shared cache don't exist in the test.
+		 */
+		U_32 *stackMap = getStackMapInfoForROMMethod(NULL, romMethod, romClass, 0);
 
 		/* if stack map exists, walk frames */
 		if (NULL != stackMap) {

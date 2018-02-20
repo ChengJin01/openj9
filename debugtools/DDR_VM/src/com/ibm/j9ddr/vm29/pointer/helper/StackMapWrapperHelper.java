@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2018, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,50 +19,27 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
+package com.ibm.j9ddr.vm29.pointer.helper;
 
-/**
- * @file
- * @ingroup Shared_Common
- */
+import com.ibm.j9ddr.CorruptDataException;
+import com.ibm.j9ddr.vm29.pointer.U8Pointer;
+import com.ibm.j9ddr.vm29.pointer.generated.StackMapWrapperPointer;
+import com.ibm.j9ddr.vm29.structure.StackMapWrapper;
+import com.ibm.j9ddr.vm29.structure.ShcItem;
 
-#if !defined(MANAGERS_HPP_INCLUDED)
-#define MANAGERS_HPP_INCLUDED
-
-/* @ddr_namespace: default */
-#include "Manager.hpp"
-#include "j9.h"
-
-#define NUM_MANAGERS 7
-
-class SH_Managers
-{
-public:
-	class ManagerWalkState
-	{
-	public :
-		J9VMThread* currentThread;
-		UDATA limitState;
-		UDATA index;
-	};
-
-	static SH_Managers* newInstance(J9JavaVM* vm, SH_Managers* memForConstructor);
-	static UDATA getRequiredConstrBytes();
-
-	SH_Manager* getManager(UDATA index);
-	SH_Manager* addManager(SH_Manager* manager);
-	SH_Manager* startDo(J9VMThread* vmthread, UDATA limitState, ManagerWalkState* walkState);
-	SH_Manager* nextDo(ManagerWalkState* walkState);
-	SH_Manager* getManagerForDataType(UDATA dataType);
-
-
-protected:
-	void *operator new(size_t size, void *memoryPtr) { return memoryPtr; };
-
-private:
-	SH_Manager* _initializedManagers[NUM_MANAGERS];
-	UDATA _initializedManagersCntr;
-
-	void initialize();
-};
-
-#endif /* !defined(MANAGERS_HPP_INCLUDED) */
+public class StackMapWrapperHelper {
+	// #define SMWROMMETHOD(smw) (((U_8*)(smw)) + J9SHR_READSRP((smw)->romMethodOffset))
+	public static U8Pointer SMWROMMETHOD(StackMapWrapperPointer ptr) throws CorruptDataException {
+		return U8Pointer.cast(ptr).add(ptr.romMethodOffset());
+	}
+	
+	//	#define SMWDATA(smw) (((U_8*)(smw)) + sizeof(StackMapWrapper))
+	public static U8Pointer SMWDATA(StackMapWrapperPointer ptr) {
+		return U8Pointer.cast(ptr).add(StackMapWrapper.SIZEOF);
+	}
+	
+	//	#define SMWITEM(smw) (((U_8*)(smw)) - sizeof(ShcItem))	
+	public static U8Pointer SMWITEM(StackMapWrapperPointer ptr) {
+		return U8Pointer.cast(ptr).sub(ShcItem.SIZEOF);
+	}
+}

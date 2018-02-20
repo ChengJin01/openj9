@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -55,6 +55,10 @@ public:
 	virtual const U_8* storeCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize, const U_8* codeStart, UDATA codeSize, UDATA forceReplace) = 0;
 
 	virtual const U_8* findCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* romMethod, UDATA* flags) = 0;
+
+	virtual const U_8* storeStackMap(struct J9VMThread* currentThread, const struct J9ROMMethod* romMethod, const U_8* dataStart, UDATA dataSize) = 0;
+
+	virtual const U_8* findStackMap(struct J9VMThread* currentThread, const struct J9ROMMethod* romMethod) = 0;
 
 	virtual IDATA findSharedData(J9VMThread* currentThread, const char* key, UDATA keylen, UDATA limitDataType, UDATA includePrivateData, J9SharedDataDescriptor* firstItem, const J9Pool* descriptorPool) = 0;
 

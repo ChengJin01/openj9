@@ -36,6 +36,7 @@
 #include "j9.h"
 #include "j9protos.h"
 #include "ut_j9bcu.h"
+#include "shcdatatypes.h"
 
 const U_8 PARAM_VOID	= 0;
 const U_8 PARAM_BOOLEAN	= 1;
@@ -329,10 +330,11 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 		Cursor *variableInfoCursor,
 		Cursor *utf8Cursor,
 		Cursor *classDataCursor,
-		U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags,
+		U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags, U_32 stateFlags,
 		MarkOrWrite markOrWrite)
 {
 	bool markAndCountOnly = (MARK_AND_COUNT_ONLY== markOrWrite);
+	J9ROMClass * romClass = NULL;
 	/*
 	 * Write the J9ROMClass structure (AKA Header).
 	 */
@@ -350,6 +352,16 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 		cursor->skip(sizeof(J9ROMClass));
 	} else {
 		CheckSize _(cursor, sizeof(J9ROMClass));
+
+		J9JavaVM * vm = _context->javaVM();
+		J9SharedClassConfig * scConfig = ((NULL != vm) ? vm->sharedClassConfig : NULL);
+		bool sharedClassCompared =
+				((NULL != scConfig) && J9_ARE_ALL_BITS_SET(stateFlags, J9_ROMCLASS_STATE_SHARED_CLASS_COMPARED) ? true : false);
+
+		if (sharedClassCompared) {
+			romClass = (J9ROMClass*)(cursor->getCurrentAddress());
+		}
+
 		cursor->writeU32(romSize, Cursor::ROM_SIZE);
 		cursor->writeU32(_classFileOracle->getSingleScalarStaticCount(), Cursor::GENERIC);
 		cursor->writeSRP(_srpKeyProducer->mapCfrConstantPoolIndexToKey(_classFileOracle->getClassNameIndex()), Cursor::SRP_TO_UTF8);
@@ -419,7 +431,7 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 	writeNestMembers(cursor, markAndCountOnly);
 #endif /* J9VM_OPT_VALHALLA_NESTMATES */
 	writeNameAndSignatureBlock(cursor);
-	writeMethods(cursor, lineNumberCursor, variableInfoCursor, markAndCountOnly);
+	writeMethods(cursor, lineNumberCursor, variableInfoCursor, stateFlags, markAndCountOnly, romClass);
 	writeConstantPoolShapeDescriptions(cursor, markAndCountOnly);
 	writeAnnotationInfo(cursor);
 	writeSourceDebugExtension(cursor);
@@ -1098,7 +1110,7 @@ ROMClassWriter::writeUTF8s(Cursor *cursor)
 }
 
 void
-ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool markAndCountOnly)
+ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, U_32 stateFlags, bool markAndCountOnly, J9ROMClass * romClass)
 {
 	/*
 	 * ****************************** PLEASE READ ***********************************
@@ -1112,6 +1124,24 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 	 * All the above are involved in walking or walking over ROMMethods.
 	 *
 	 */
+	 
+	J9JavaVM * vm = _context->javaVM();
+	/* The shared cache doesn't exist if the ROM class is built externally
+	 * via j9bcutil_buildRomClassIntoBuffer() in tests.
+	 */
+	J9SharedClassConfig * scConfig = ((NULL != vm) ? vm->sharedClassConfig : NULL);
+	/* This flag indicates the current ROM class is compared against an ROM class existing in the shared class */
+	bool sharedClassCompared =
+			((NULL != scConfig) && J9_ARE_ALL_BITS_SET(stateFlags, J9_ROMCLASS_STATE_SHARED_CLASS_COMPARED) ? true : false);
+	/* The option of storing the stackmap in the share cahce is activated only when
+	 * the space for the ROM class is successfully allocated in the shared cache;
+	 * otherwise the stackmap remains in line with the corresponding ROM method.
+	 */
+	bool stackMapMetaDataOptEnabled =
+			(((NULL != scConfig)
+			&& J9_ARE_ALL_BITS_SET(scConfig->runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_STACKMAP_METADATA)
+			&& J9_ARE_ALL_BITS_SET(stateFlags, J9_ROMCLASS_STATE_SHARED_CLASS_CREATED)) ?
+			true : false);
 
 	cursor->mark(_methodsSRPKey);
 	for (ClassFileOracle::MethodIterator iterator = _classFileOracle->getMethodIterator();
@@ -1121,6 +1151,7 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 		U_16 tempCount = iterator.getMaxLocals();
 		U_32 modifiers = iterator.getModifiers();
 		U_32 extendedModifiers = iterator.getExtendedModifiers();
+		bool hasStackMap = iterator.hasStackMap();
 		bool writeDebugInfo =
 				((iterator.getLineNumbersCount() > 0) || (iterator.getLocalVariablesCount() > 0)) &&
 				(_context->shouldPreserveLineNumbers() || _context->shouldPreserveLocalVariablesInfo());
@@ -1182,7 +1213,7 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 			 *            + AccMethodObjectConstructor
 			 *           + AccMethodHasMethodParameters
 			 *
-			 *         + UNUSED
+			 *         + AccMethodStackMapInSharedCache
 			 *        + AccMethodHasGenericSignature
 			 *       + AccMethodHasExtendedModifiers
 			 *      + AccMethodHasMethodHandleInvokes
@@ -1204,6 +1235,13 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 			if (iterator.hasMethodParameters()) {
 				modifiers |= J9AccMethodHasMethodParameters;
 			}
+
+			/* This flag indicates whether the stackmap of this ROM method
+			 * is stored as metadata in the share cache.
+			 */
+			if (stackMapMetaDataOptEnabled && hasStackMap) {
+				modifiers |= J9AccMethodStackMapInSharedCache;
+			}
 		}
 
 		U_32 byteCodeSize = 0;
@@ -1215,6 +1253,7 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 			byteCodeSize = iterator.getCodeLength();
 		}
 
+		J9ROMMethod * romMethod = (J9ROMMethod*)(cursor->getCurrentAddress());
 		if (markAndCountOnly) {
 			cursor->skip(sizeof(J9ROMMethod));
 		} else {
@@ -1328,7 +1367,7 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 			cursor->notifyDebugDataWriteEnd();
 		}
 
-		if ( iterator.hasStackMap() ) {
+		if (hasStackMap) {
 			/*
 			 * Write out Stack Map
 			 *
@@ -1345,15 +1384,32 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 			 * padding for u4 alignment
 			 *
 			 */
+			U_8 * newBaseAddress = NULL;
+			/* Reset the base address of cursor to the address of stackmap stored in the share cache for comparsion */
+			if (sharedClassCompared) {
+				newBaseAddress = (U_8 *)getStackMapInfoForROMMethodFromSharedCache(vm, romMethod, romClass);
+				if (NULL != newBaseAddress) {
+					cursor->setCurrentAddress(newBaseAddress);
+				}
+				/* If newBaseAddress is set to NULL, then there are two cases for the situation:
+				 * 1) the romMethod to be compared does't hold a stackmap table
+				 * 2) the romMethod holds a stackmap table stored in line with the romMethod itself
+				 * For both case above, the comparison should start from the current base address
+				 * and there is no need to adjust that.
+				 */
+			}
 
 			UDATA start = cursor->getCount();
+			U_8 * StackmapStart = cursor->getCurrentAddress();
+
 			/* output the length of the stack map */
 			cursor->writeU32(_methodNotes[iterator.getIndex()].stackMapSize, Cursor::GENERIC);
 			/* output the number of frames */
 			cursor->writeBigEndianU16(iterator.getStackMapFramesCount(), Cursor::GENERIC); /* TODO: don't write this stuff in BigEndian??? */
-
 			Helper(cursor, false, _classFileOracle, _srpKeyProducer, _srpOffsetTable, _constantPoolMap, 0).writeStackMap(&iterator);
 			cursor->padToAlignment(sizeof(U_32), Cursor::GENERIC);
+
+			U_32 stackMapSize = U_32(cursor->getCount() - start);
 			if (markAndCountOnly) {
 				/* Following is adding PAD to stackmap size. First round is always markAndCountOnly.
 				 * This logic is very difficult to catch. Cause of the padded stackmapsize, we dont use padding in nextROMMethod() in mthutil.
@@ -1362,9 +1418,25 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 				 * It should be used properly, either always or never.
 				 * 2. Also when it is counting, it is a counting cursor and it actually do not write (see Cursor.hpp).
 				 * Therefore, markAndCountOnly flag is not needed at all and extra checks for it just makes it slower.
-				 *
-				 *  */
-				_methodNotes[iterator.getIndex()].stackMapSize = U_32(cursor->getCount() - start);
+				 */
+				_methodNotes[iterator.getIndex()].stackMapSize = stackMapSize;
+				/* Accumulate the header size of metadata intended for the stackmap so as to calculate
+				 * the total memory of a ROM class to be alloated in the shared cache.
+				 */
+				cursor->addStackMapEntryHeaderSize(SMWHEADERSIZE());
+
+				if (stackMapMetaDataOptEnabled) {
+					/* Exclude the stackmap's section here as it will be stored in the metadata entry */
+					cursor->setCount(start);
+				}
+			} else if (sharedClassCompared && (NULL != newBaseAddress)) {
+				/* Restore the current address of cursor after comparing the stackmap stored in the shared cache */
+				cursor->restoreCurrentAddress();
+			} else if (stackMapMetaDataOptEnabled) {
+				/* Store the converted stackmap as metadata to the shared cache if enabled */
+				scConfig->storeStackMap(_context->currentVMThread(), romMethod, StackmapStart, stackMapSize);
+				/* Exclude the stackmap's section here as it has been stored in the metadata entry */
+				cursor->setCount(start);
 			}
 		}
 		
