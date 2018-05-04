@@ -2988,6 +2988,13 @@ SH_CacheMap::storeCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* r
 
 	result = (const U_8*)storeROMClassResource(currentThread, romMethod, localCMM, &descriptor, forceReplace, NULL);
 	
+	#if defined(LINUX)
+			if (J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_PERSISTENT_CACHE))
+	#endif
+			{
+				updateAccessedShrCacheMetadataBounds(currentThread, (uintptr_t *) result);
+			}
+
 	return result;
 }
 
