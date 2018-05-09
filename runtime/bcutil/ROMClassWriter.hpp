@@ -95,6 +95,7 @@ public:
 			U_32 modifiers,
 			U_32 extraModifiers,
 			U_32 optionalFlags,
+			bool compareROMClass,
 			MarkOrWrite markOrWrite );
 
 	/*
@@ -129,7 +130,7 @@ private:
 	void writeInnerClasses(Cursor *cursor, bool markAndCountOnly);
 	void writeNestMembers(Cursor *cursor, bool markAndCountOnly);
 	void writeNameAndSignatureBlock(Cursor *cursor);
-	void writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool markAndCountOnly);
+	void writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool compareROMClass, bool markAndCountOnly);
 	void writeMethodDebugInfo(ClassFileOracle::MethodIterator *methodIterator,  Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool markAndCountOnly, bool existHasDebugInformation);
 	void writeConstantPoolShapeDescriptions(Cursor *cursor, bool markAndCountOnly);
 	void writeAnnotationInfo(Cursor *cursor);

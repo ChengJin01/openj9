@@ -329,7 +329,7 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 		Cursor *variableInfoCursor,
 		Cursor *utf8Cursor,
 		Cursor *classDataCursor,
-		U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags,
+		U_32 romSize, U_32 modifiers, U_32 extraModifiers, U_32 optionalFlags, bool compareROMClass,
 		MarkOrWrite markOrWrite)
 {
 	bool markAndCountOnly = (MARK_AND_COUNT_ONLY== markOrWrite);
@@ -419,7 +419,7 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 	writeNestMembers(cursor, markAndCountOnly);
 #endif /* J9VM_OPT_VALHALLA_NESTMATES */
 	writeNameAndSignatureBlock(cursor);
-	writeMethods(cursor, lineNumberCursor, variableInfoCursor, markAndCountOnly);
+	writeMethods(cursor, lineNumberCursor, variableInfoCursor, compareROMClass, markAndCountOnly);
 	writeConstantPoolShapeDescriptions(cursor, markAndCountOnly);
 	writeAnnotationInfo(cursor);
 	writeSourceDebugExtension(cursor);
@@ -1098,7 +1098,7 @@ ROMClassWriter::writeUTF8s(Cursor *cursor)
 }
 
 void
-ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool markAndCountOnly)
+ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *variableInfoCursor, bool compareROMClass, bool markAndCountOnly)
 {
 	/*
 	 * ****************************** PLEASE READ ***********************************
@@ -1354,6 +1354,11 @@ ROMClassWriter::writeMethods(Cursor *cursor, Cursor *lineNumberCursor, Cursor *v
 
 			Helper(cursor, false, _classFileOracle, _srpKeyProducer, _srpOffsetTable, _constantPoolMap, 0).writeStackMap(&iterator);
 			cursor->padToAlignment(sizeof(U_32), Cursor::GENERIC);
+
+			if (compareROMClass) {
+				Trc_BCU_writeMethods_compareStackMap();
+			}
+
 			if (markAndCountOnly) {
 				/* Following is adding PAD to stackmap size. First round is always markAndCountOnly.
 				 * This logic is very difficult to catch. Cause of the padded stackmapsize, we dont use padding in nextROMMethod() in mthutil.

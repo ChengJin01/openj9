@@ -384,7 +384,7 @@ ROMClassBuilder::getSizeInfo(ROMClassCreationContext *context, ROMClassWriter *r
 					&variableInfoCursor,
 					&utf8Cursor,
 					(context->isIntermediateDataAClassfile()) ? &classDataCursor : NULL,
-					0, 0, 0, 0,
+					0, 0, 0, 0, false,
 					ROMClassWriter::MARK_AND_COUNT_ONLY);
 		} else {
 			context->forceDebugDataInLine();
@@ -394,7 +394,7 @@ ROMClassBuilder::getSizeInfo(ROMClassCreationContext *context, ROMClassWriter *r
 					&mainAreaCursor,
 					&utf8Cursor,
 					(context->isIntermediateDataAClassfile()) ? &classDataCursor : NULL,
-					0, 0, 0, 0,
+					0, 0, 0, 0, false,
 					ROMClassWriter::MARK_AND_COUNT_ONLY);
 		}
 		sizeInformation->rcWithOutUTF8sSize = mainAreaCursor.getCount();
@@ -1000,7 +1000,7 @@ ROMClassBuilder::finishPrepareAndLaydown(
 									&mainAreaCursor,
 									&utf8Cursor,
 									(context->isIntermediateDataAClassfile()) ? &classDataCursor : NULL,
-									0, 0, 0, 0,
+									0, 0, 0, 0, false,
 									ROMClassWriter::MARK_AND_COUNT_ONLY);
 
 		sizeInformation->rcWithOutUTF8sSize = mainAreaCursor.getCount();
@@ -1258,7 +1258,7 @@ ROMClassBuilder::layDownROMClass(
 			variableInfoCursorPtr,
 			&utf8Cursor,
 			(context->isIntermediateDataAClassfile()) ? &classDataCursor : NULL,
-			romSize, modifiers, extraModifiers, optionalFlags,
+			romSize, modifiers, extraModifiers, optionalFlags, false,
 			ROMClassWriter::WRITE);
 }
 
@@ -1275,7 +1275,7 @@ ROMClassBuilder::compareROMClassForEquality(U_8 *romClass,bool romClassIsShared,
 			&compareCursor,
 			NULL,
 			NULL,
-			0, modifiers, extraModifiers, optionalFlags,
+			0, modifiers, extraModifiers, optionalFlags, romClassIsShared,
 			ROMClassWriter::WRITE);
 
 	return compareCursor.isEqual();

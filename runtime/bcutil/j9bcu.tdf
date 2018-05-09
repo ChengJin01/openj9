@@ -372,3 +372,6 @@ TraceEvent=Trc_BCU_searchClassInCPEntry_UnexpectedCPE Noenv Overhead=1 Level=3 T
 TraceException=Trc_BCU_j9bcutil_readClassFileBytes_MaxCPCount NoEnv Overhead=1 Level=1 Template="No new cpEntry can be allocated for Unsafe.defineAnonClass because constantPoolCount is at MAX_CONSTANT_POOL_SIZE"
 
 TraceException=Trc_BCU_internalDefineClass_orphanNotFound Overhead=1 Level=1 Template="orphan ROM class %p not found in table, table entry was %p"
+
+TraceEvent=Trc_BCU_writeMethods_compareStackMap NoEnv Overhead=1 Level=1 Template="Compare the stackmap of ROM Method stored in the shared cache"
+TraceEvent=Trc_BCU_writeStackMapTableAttribute_writeStackMap NoEnv Overhead=1 Level=1 Template="Write back the stackmap of ROM Method for transformation"
