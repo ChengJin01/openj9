@@ -2907,3 +2907,5 @@ TraceExit=Trc_SHR_CM_allocateROMClass_Exit3 Overhead=1 Level=3 Template="CM allo
 TraceEvent=Trc_SHR_INIT_isClassFromPatchedModule_ClassFromPatchedModule_Event Test Overhead=1 Level=3 Template="INIT isClassFromPatchedModule: Class (classname=%.*s) is from a patched module (URL=%.*s)."
 TraceEvent=Trc_SHR_INIT_hookFindSharedClass_classFromUnresolvedModule Overhead=1 Level=3 Template="INIT hookFindSharedClass: Class (classname=%.*s) is from an unresolved module. Returning NULL."
 TraceExit=Trc_SHR_OSC_checkOSCacheHeader_wrongBuildID_3 NoEnv Overhead=1 Level=1 Template="OSCache::checkOSCacheHeader: Exit - wrong build ID. VM OpenJ9 SHA: %llx . Shared Cache OpenJ9 SHA: %llx"
+
+TraceEvent=Trc_SHR_CM_j9shr_dontNeedMetadata_setMinMaxBoundary  Overhead=1 Level=1 Template="SH_CacheMap::dontNeedMetadata: minimum = %p, maximum = %p, length = %d"

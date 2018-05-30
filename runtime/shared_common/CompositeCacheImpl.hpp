@@ -410,6 +410,9 @@ public:
 	
 	void increaseUnstoredBytes(U_32 blockBytes, U_32 aotBytes, U_32 jitBytes);
 
+	uintptr_t getMinimumAccessedShrCacheMetadata(void);
+	uintptr_t getMaximumAccessedShrCacheMetadata(void);
+
 private:
 	J9SharedClassConfig* _sharedClassConfig;
 	SH_OSCache* _oscache;

@@ -219,9 +219,12 @@ SH_CacheMap::dontNeedMetadata(J9VMThread* currentThread)
 	Trc_SHR_CM_j9shr_dontNeedMetadata(currentThread);
 
 	_metadataReleased = true;
-	uintptr_t  min = _minimumAccessedShrCacheMetadata;
-	uintptr_t  max = _maximumAccessedShrCacheMetadata;
+	/* Disclaim all stored meta data when exiting the startup stage */
+	uintptr_t  min = _ccHead->getMinimumAccessedShrCacheMetadata();
+	uintptr_t  max = _ccHead->getMaximumAccessedShrCacheMetadata();
 	size_t length = (size_t) (max - min);
+	Trc_SHR_CM_j9shr_dontNeedMetadata_setMinMaxBoundary(currentThread, min, max, length);
+
 	_ccHead->dontNeedMetadata(currentThread, (const void *) min, length);
 }
 
@@ -2988,13 +2991,6 @@ SH_CacheMap::storeCompiledMethod(J9VMThread* currentThread, const J9ROMMethod* r
 
 	result = (const U_8*)storeROMClassResource(currentThread, romMethod, localCMM, &descriptor, forceReplace, NULL);
 	
-	#if defined(LINUX)
-			if (J9_ARE_ALL_BITS_SET(*_runtimeFlags, J9SHR_RUNTIMEFLAG_ENABLE_PERSISTENT_CACHE))
-	#endif
-			{
-				updateAccessedShrCacheMetadataBounds(currentThread, (uintptr_t *) result);
-			}
-
 	return result;
 }
 

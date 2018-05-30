@@ -6861,3 +6861,23 @@ SH_CompositeCacheImpl::increaseUnstoredBytes(U_32 blockBytes, U_32 aotBytes, U_3
 
 	Trc_SHR_CC_increaseUnstoredBytes_Exit();
 }
+
+/* Get the left boundary of the latest stored meta data in the shared cache.
+ *
+ * @return uintptr_t
+ */
+uintptr_t
+SH_CompositeCacheImpl::getMinimumAccessedShrCacheMetadata(void)
+{
+	return (uintptr_t)UPDATEPTR(_theca);
+}
+
+/* Get the right boundary of the first stored meta data in the shared cache.
+ *
+ * @return uintptr_t
+ */
+uintptr_t
+SH_CompositeCacheImpl::getMaximumAccessedShrCacheMetadata(void)
+{
+	return (uintptr_t)CADEBUGSTART(_theca);
+}
