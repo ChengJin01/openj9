@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -6102,11 +6102,19 @@ SH_CompositeCacheImpl::restoreFromSnapshot(J9JavaVM* vm, const char* cacheName, 
 }
 
 /**
- * Advise the OS to release resources used by a section of the shared classes cache
+ * Advise the OS to release resources used by the meta data section of the shared classes cache
  */
 void
-SH_CompositeCacheImpl::dontNeedMetadata(J9VMThread *currentThread, const void* startAddress, size_t length) {
-	_oscache->dontNeedMetadata(currentThread, startAddress, length);
+SH_CompositeCacheImpl::dontNeedMetadata(J9VMThread *currentThread) {
+	/* Disclaim all meta data entries currently stored in the meta data section
+	 * when exiting the startup stage.
+	 */
+	uintptr_t startAddress = (uintptr_t)UPDATEPTR(_theca);
+	uintptr_t endAddress = (uintptr_t)CADEBUGSTART(_theca);
+	size_t metaDataLength = (size_t)(endAddress - startAddress);
+
+	Trc_SHR_CC_dontNeedMetadata_setMinMaxBoundary_Event(currentThread, startAddress, endAddress, metaDataLength);
+	_oscache->dontNeedMetadata(currentThread, (const void *)startAddress, metaDataLength);
 }
 /**
  * This function changes the permission of the page containing given address by marking the page as read-only or read-write.

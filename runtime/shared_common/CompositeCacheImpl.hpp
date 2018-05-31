@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2017 IBM Corp. and others
+ * Copyright (c) 2001, 2018 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -396,7 +396,8 @@ public:
 	bool canStoreClasspaths(void) const;
 
 	IDATA restoreFromSnapshot(J9JavaVM* vm, const char* cacheName, bool* cacheExist);
-	void dontNeedMetadata(J9VMThread *currentThread, const void* startAddress, size_t length);
+
+	void dontNeedMetadata(J9VMThread *currentThread);
 
 	void changePartialPageProtection(J9VMThread *currentThread, void *addr, bool readOnly, bool phaseCheck = true);
 

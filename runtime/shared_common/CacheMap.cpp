@@ -209,20 +209,14 @@ SH_CacheMap::newInstance(J9JavaVM* vm, J9SharedClassConfig* sharedClassConfig, S
 }
 
 /**
- * Advise the OS to release resources associated with
- * the metadata which have been accessed to date.
+ * Advise the OS to release all stored meta data in the shared cache.
  */
 void
 SH_CacheMap::dontNeedMetadata(J9VMThread* currentThread) 
 {
-	/* Local copies to avoid race condition */
 	Trc_SHR_CM_j9shr_dontNeedMetadata(currentThread);
-
 	_metadataReleased = true;
-	uintptr_t  min = _minimumAccessedShrCacheMetadata;
-	uintptr_t  max = _maximumAccessedShrCacheMetadata;
-	size_t length = (size_t) (max - min);
-	_ccHead->dontNeedMetadata(currentThread, (const void *) min, length);
+	_ccHead->dontNeedMetadata(currentThread);
 }
 
 /**
