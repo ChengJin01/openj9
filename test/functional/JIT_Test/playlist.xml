@@ -35,6 +35,7 @@
 	-testnames finalizerTest -groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -58,6 +59,7 @@
 	-testnames stringConcatOptTest -groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -106,6 +108,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -253,6 +256,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -295,7 +299,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -321,7 +325,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -351,7 +355,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
@@ -377,7 +381,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
-		<platformRequirements>os.linux,^vm.cmprssptrs,^arch.arm</platformRequirements>
+		<platformRequirements>os.linux,^vm.cmprssptrs,^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
@@ -406,7 +410,7 @@
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
 		</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -451,6 +455,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>

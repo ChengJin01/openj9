@@ -290,6 +290,10 @@
 	<test name="VmArgumentTests">
 		<classes>
 			<class name="org.openj9.test.vmArguments.VmArgumentTests">
+				<methods>
+					<exclude name="testMappedOptions" />
+					<exclude name="testXprod" />
+				</methods>
 			</class>
 		</classes>
 	</test>

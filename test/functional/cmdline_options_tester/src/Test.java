@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2019 IBM Corp. and others
+ * Copyright (c) 2004, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -409,7 +409,9 @@ class Test {
 
 	public static int getUnixPID(Process process) throws Exception {
 		Class<?> cl = process.getClass();
-		if (!cl.getName().equals("java.lang.UNIXProcess")) {
+		if (!cl.getName().equals("java.lang.UNIXProcess") 
+		|| !cl.getName().equals("java.lang.ProcessImpl")  /* intended for Fedora_Linux/RISC-V */
+		) {
 			return 0;
 		}
 		Field field = cl.getDeclaredField("pid");
@@ -533,6 +535,8 @@ class Test {
 		private final Process _proc;
 		private final long _procTimeout;
 		private final String _exeToDebug;
+		String archName = System.getProperty("os.arch");
+		boolean isRiscv = archName.toLowerCase().contains("riscv");
 
 		public ProcessKiller(Process proc, long timeout, String exeToDebug) {
 			super();
@@ -546,7 +550,10 @@ class Test {
 		public synchronized void run() {
 			final long endTime = System.currentTimeMillis() + _procTimeout;
 			while (_proc.isAlive()) {
-				long currTimeout = endTime - System.currentTimeMillis();
+				/* There is no need to set up timer for test on RISC-V
+				 * as it is pretty slow without JIT support for now
+				 */
+				long currTimeout = (isRiscv) ? _procTimeout : (endTime - System.currentTimeMillis());
 				if (currTimeout > 0) {
 					try {
 						_proc.waitFor(currTimeout, TimeUnit.MILLISECONDS);
@@ -578,7 +585,7 @@ class Test {
 				// Make sure we are on linux, otherwise there is no gdb.
 				int pid = getUnixPID(_proc);
 
-				if (0 == pid) {
+				if ((0 == pid) && !isRiscv) {
 					System.out.print("INFO: getUnixPID() has failed indicating this is not a UNIX System.");
 					System.out.println("'Debug on timeout' is currently only supported on Linux.");
 					return;

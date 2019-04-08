@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -29,10 +29,15 @@ package com.ibm.tests.garbagecollector;
 public class SpinAllocate
 {
 	public static Object _objectHolder;
+	
+	/* Disable JIT on RISC-V for the moment till it is implemented */
+	private static String archName = System.getProperty("os.arch");
+	private static boolean isRiscv = archName.toLowerCase().contains("riscv");
+	private static int threshold = (isRiscv) ? 200 : 60;
 
 	/**
 	 * @param args Takes one argument:  number of seconds to spin for before terminating with a message that the test ran to completion.
-	 * This argument is required.  It must be in the range [1-60]
+	 * This argument is required.  It must be in the range [1-200]
 	 */
 	public static void main(String[] args)
 	{
@@ -40,7 +45,7 @@ public class SpinAllocate
 		{
 			int secondsToSpin = Integer.parseInt(args[0]);
 
-			if ((secondsToSpin >= 1) && (secondsToSpin <= 60))
+			if ((secondsToSpin >= 1) && (secondsToSpin <= threshold))
 			{
 				long finishTime = System.currentTimeMillis() + (secondsToSpin * 1000);
 				while (System.currentTimeMillis() < finishTime)

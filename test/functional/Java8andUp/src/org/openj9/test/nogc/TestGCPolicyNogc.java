@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2018 IBM Corp. and others
+ * Copyright (c) 2018, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -56,6 +56,11 @@ import com.sun.management.GcInfo;
 @Test(groups={ "level.extended" })
 public class TestGCPolicyNogc {
 	static Logger logger = Logger.getLogger(TestGCPolicyNogc.class);
+	
+	/* Disable JIT on RISC-V for the moment till it is implemented */
+	private static String archName = System.getProperty("os.arch");
+	private static boolean isRiscv = archName.toLowerCase().contains("riscv");
+	private static int threshold = (isRiscv) ? 200 : 5;
 	
 	static final class GCState 
 	{ 
@@ -118,7 +123,7 @@ public class TestGCPolicyNogc {
 		while (allocator.isAlive()) {
 			try {
 				count++;
-				if (count > 5) {
+				if (count > threshold) {
 					Allocator.bQuit = true;
 				}
 				Thread.sleep(2*1000);

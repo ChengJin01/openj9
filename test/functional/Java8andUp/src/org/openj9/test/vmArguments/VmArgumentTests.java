@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -128,6 +128,9 @@ public class VmArgumentTests {
 	private String testName;
 
 	protected static Logger logger = Logger.getLogger(VmArgumentTests.class);
+	
+	private static final String archName = System.getProperty("os.arch");
+	private static final boolean isRiscv = archName.toLowerCase().contains("riscv");
 
 	static {
 		boolean isIbm = System.getProperty("java.vm.vendor").equals("IBM Corporation");
@@ -465,6 +468,11 @@ public class VmArgumentTests {
 	/* test environment variables which map to JVM options */
 	@Test
 	public void testMappedOptions() {
+		/* Disable JIT related test on RISC-V for the moment till it is implemented */
+		if (isRiscv) {
+			return;
+		}
+		
 		ArrayList<String> actualArguments = null;
 		try {
 			ProcessBuilder pb = makeProcessBuilder(new String[] {}, CLASSPATH);
@@ -554,6 +562,10 @@ public class VmArgumentTests {
 	/* verify that -Xprod is removed from the command line */
 	@Test
 	public void testXprod() {
+		/* Disable JIT related test on RISC-V for the moment till it is implemented */
+		if (isRiscv) {
+			return;
+		}
 
 		ArrayList<String> cmdlineArgsBuffer = new ArrayList<String>(1);
 		try {

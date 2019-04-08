@@ -186,7 +186,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
@@ -216,7 +216,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
@@ -357,6 +357,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
@@ -451,7 +452,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
