@@ -2483,6 +2483,9 @@ static UtProcessorInfo * getProcessorInfo(void)
 		} else if (strcmp(osarch, J9PORT_ARCH_X86) == 0) {
 			ret->architecture = UT_X86;
 			ret->procInfo.subtype = UT_PIV;
+		} else if (0 == strcmp(osarch, J9PORT_ARCH_RISCV)) {
+			ret->architecture = UT_RISCV;
+			ret->procInfo.subtype = UT_RV64G;
 		} else {
 			ret->architecture = UT_UNKNOWN;
 		}

@@ -462,6 +462,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>

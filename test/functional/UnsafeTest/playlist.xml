@@ -52,9 +52,36 @@
 	</test>
 
 	<test>
-		<testCaseName>UnsafeTests</testCaseName>
+		<testCaseName>UnsafeTests_Regular</testCaseName>
 		<variations>
 			<variation>-DScenario=Regular</variation>
+		</variations>
+		<command>$(JAVA_COMMAND) $(JVM_OPTIONS) \
+	--add-opens java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED \
+	-cp $(Q)$(RESOURCES_DIR)$(P)$(TESTNG)$(P)$(TEST_RESROOT)$(D)OpenJ9Unsafe.jar$(P).$(Q) \
+	org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng.xml$(Q) \
+	-testnames UnsafeTests \
+	-groups $(TEST_GROUP) \
+	-excludegroups $(DEFAULT_EXCLUDE); \
+	$(TEST_STATUS)</command>
+		<levels>
+			<level>sanity</level>
+		</levels>
+		<groups>
+			<group>functional</group>
+		</groups>
+		<subsets>
+			<subset>9+</subset>
+		</subsets>
+		<impls>
+			<impl>openj9</impl>
+			<impl>ibm</impl>
+		</impls>
+	</test>
+	
+	<test>
+		<testCaseName>UnsafeTests_Compiled</testCaseName>
+		<variations>
 			<variation>-DScenario=Compiled</variation>
 		</variations>
 		<command>$(JAVA_COMMAND) $(JVM_OPTIONS) \
@@ -65,6 +92,7 @@
 	-groups $(TEST_GROUP) \
 	-excludegroups $(DEFAULT_EXCLUDE); \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>

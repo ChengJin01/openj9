@@ -146,6 +146,7 @@
 	-nonZeroExitWhenError \
 	-outputLimit 300; \
 	$(TEST_STATUS)</command>
+		<platformRequirements>^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
@@ -320,7 +321,7 @@
 	-nonZeroExitWhenError \
 	-outputLimit 300; \
 	$(TEST_STATUS)</command>
-	<platformRequirements>^os.win</platformRequirements>
+	<platformRequirements>^os.win,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>

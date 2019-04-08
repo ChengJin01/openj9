@@ -54,7 +54,8 @@ public class ELFDumpReaderFactory implements ICoreFileReader
 			return DumpTestResult.FILE_NOT_FOUND;
 		}
 		
-		return ELFFileReader.isELF(CoreReader.getFileHeader(path)) ? DumpTestResult.RECOGNISED_FORMAT : DumpTestResult.UNRECOGNISED_FORMAT;
+		byte[] signature = CoreReader.getFileHeader(path);
+		return ELFFileReader.isELF(signature) ? DumpTestResult.RECOGNISED_FORMAT : DumpTestResult.UNRECOGNISED_FORMAT;
 	}
 	
 	public DumpTestResult testDump(ImageInputStream in) throws IOException

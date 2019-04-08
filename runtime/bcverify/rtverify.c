@@ -479,6 +479,22 @@ verifyBytecodes (J9BytecodeVerificationData * verifyData)
 			(UDATA) J9UTF8_LENGTH(J9ROMMETHOD_SIGNATURE(romMethod)),
 			J9UTF8_DATA(J9ROMMETHOD_SIGNATURE(romMethod)));
 
+	/*{
+		J9UTF8 *className1 = J9ROMCLASS_CLASSNAME(romClass);
+		J9UTF8* methodName1 = J9ROMNAMEANDSIGNATURE_NAME(&romMethod->nameAndSignature);
+		J9UTF8* sigName1 = J9ROMNAMEANDSIGNATURE_SIGNATURE(&romMethod->nameAndSignature);
+
+		if(0 == strncmp(J9UTF8_DATA(className1),"StackTest",strlen("StackTest"))
+		&& 0 == strncmp(J9UTF8_DATA(methodName1),"Stack3",strlen("Stack3"))
+		) {
+			printf("\nverifyBytecodes: Class.Method.Sig = %.*s.%.*s.%.*s\n", (UDATA)J9UTF8_LENGTH(className1),
+					J9UTF8_DATA(className1),(UDATA)J9UTF8_LENGTH(methodName1),
+					J9UTF8_DATA(methodName1),(UDATA)J9UTF8_LENGTH(sigName1),
+					J9UTF8_DATA(sigName1));
+			*((int *)0) = 5;
+		}
+	}*/
+
 	pc = 0;
 
 	liveStack = (J9BranchTargetStack *) verifyData->liveStack;

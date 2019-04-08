@@ -26,3 +26,15 @@ org.openj9.test.vm.Test_MsgHelp:test_loadMessages_EN																	AN-https://
 org.openj9.test.java.lang.management.TestRuntimeMXBean:testGetMBeanInfo													1626 generic-all
 org.openj9.test.java.lang.management.TestThreadMXBean:testGetMBeanInfo													1626 generic-all
 org.openj9.test.vmArguments.VmArgumentTests:testCrNocr																	244 generic-all
+org.openj9.test.java.lang.management.TestCompilationMXBean:testGetName													9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testGetTotalCompilationTime									9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testIsCompilationTimeMonitoringSupported						9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testGetAttribute												9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testSetAttribute												9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testGetAttributes											9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testSetAttributes											9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testInvoke													9999 arch.riscv64
+org.openj9.test.java.lang.management.TestCompilationMXBean:testGetMBeanInfo												9999 arch.riscv64
+org.openj9.test.java.lang.management.TestManagementFactory:testCompilationBeanRegisteredWithServer						9999 arch.riscv64
+org.openj9.test.java.lang.management.TestManagementFactory:testCompilationMXBeanProxy									9999 arch.riscv64
+org.openj9.test.java.lang.management.TestManagementFactory:testGetPlatformMXBeans										9999 arch.riscv64

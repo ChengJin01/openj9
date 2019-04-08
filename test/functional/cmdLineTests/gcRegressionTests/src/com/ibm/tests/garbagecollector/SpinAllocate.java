@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2018 IBM Corp. and others
+ * Copyright (c) 2001, 2019 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -32,7 +32,7 @@ public class SpinAllocate
 
 	/**
 	 * @param args Takes one argument:  number of seconds to spin for before terminating with a message that the test ran to completion.
-	 * This argument is required.  It must be in the range [1-60]
+	 * This argument is required.  It must be in the range [1-200]
 	 */
 	public static void main(String[] args)
 	{
@@ -40,7 +40,7 @@ public class SpinAllocate
 		{
 			int secondsToSpin = Integer.parseInt(args[0]);
 
-			if ((secondsToSpin >= 1) && (secondsToSpin <= 60))
+			if ((secondsToSpin >= 1) && (secondsToSpin <= 200))
 			{
 				long finishTime = System.currentTimeMillis() + (secondsToSpin * 1000);
 				while (System.currentTimeMillis() < finishTime)

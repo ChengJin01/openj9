@@ -93,11 +93,11 @@ public class IntermediateClassCreateTestRunner extends Runner {
 			/* reuse shared cache created for 'case 1' with retransformation capable agent. 
 			 * Note that this command is not expected to hit tracepoint j9bcu.210
 			 */
-			customOptions += "-Xnoaot -Xshareclasses:name=intermediateclasscreatetest" + " -javaagent:" + agentJar.getName();
+			customOptions += "-Xnoaot -Xint -Xshareclasses:name=intermediateclasscreatetest" + " -javaagent:" + agentJar.getName();
 			break;
 		case 3:
 			/* reuse shared cache created for 'case 1' with both retransformation incapable and capable agents */
-			customOptions += "-Xnoaot -Xshareclasses:name=intermediateclasscreatetest -Xtrace:print=tpnid{j9bcu.210}" + " -javaagent:" + agentJar.getName();
+			customOptions += "-Xnoaot -Xint -Xshareclasses:name=intermediateclasscreatetest -Xtrace:print=tpnid{j9bcu.210}" + " -javaagent:" + agentJar.getName();
 			break;
 		case 4:
 			/* cleanup - destroy the cache */

@@ -84,6 +84,9 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 			<makefilestub data="FFI_TARGET_DIR := z">
 				<include-if condition="spec.zos_390.*" />
 			</makefilestub>
+			<makefilestub data="FFI_TARGET_DIR := riscv">
+				<include-if condition="spec.linux_riscv64.*" />
+			</makefilestub>
 
 			<!-- identify platform-specific preconf subdirectory -->
 			<makefilestub data="FFI_PRECONF_DIR := ap32">
@@ -145,6 +148,10 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 				<include-if condition="spec.linux_390.* and spec.flags.J9VM_ENV_DATA64" />
 				<include-if condition="spec.linux_ztpf.*" />
 			</makefilestub>
+			
+			<makefilestub data="FFI_PRECONF_DIR := rv64">
+				<include-if condition="spec.linux_riscv64.*" />
+			</makefilestub>
 
 			<!-- ensure that 'all' is the default target -->
 			<makefilestub data="all :" />
@@ -203,6 +210,14 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 			</vpath>
 			<vpath pattern="sysv.S" path="aarch64" augmentObjects="true" type="relativepath">
 				<include-if condition="spec.linux_aarch64.*" />
+			</vpath>
+			
+			<!-- vpaths for riscv -->
+			<vpath pattern="ffi.c" path="riscv" augmentObjects="true" type="relativepath">
+				<include-if condition="spec.linux_riscv64.*" />
+			</vpath>
+			<vpath pattern="sysv.S" path="riscv" augmentObjects="true" type="relativepath">
+				<include-if condition="spec.linux_riscv64.*" />
 			</vpath>
 
 			<!-- vpaths for x86 -->

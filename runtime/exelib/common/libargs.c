@@ -334,6 +334,8 @@ vmOptionsTableAddOptionWithCopy(void **vmOptionsTable, char *optionString, void 
 	#else /* J9VM_ENV_LITTLE_ENDIAN */
 	  #define JVM_ARCH_DIR "ppc64"
 	#endif /* PPC64 */
+  #elif defined(RISCV64)
+      #define JVM_ARCH_DIR "riscv64"
   #else
 	#error "Must define an architecture"
   #endif

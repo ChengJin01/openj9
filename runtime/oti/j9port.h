@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2019 IBM Corp. and others
+ * Copyright (c) 1991, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -390,6 +390,8 @@ typedef enum J9ProcessorArchitecture {
 	PROCESSOR_X86_AMDK6,
 	PROCESSOR_X86_AMDATHLONDURON,
 	PROCESSOR_X86_AMDOPTERON,
+
+	PROCESOR_RISCV64_UNKNOWN,
 
 	PROCESSOR_DUMMY = 0x40000000 /* force wide enums */
 
@@ -933,6 +935,7 @@ typedef struct J9CacheInfoQuery {
 #define J9PORT_ARCH_PPC64LE OMRPORT_ARCH_PPC64LE
 #define J9PORT_ARCH_S390 OMRPORT_ARCH_S390
 #define J9PORT_ARCH_S390X OMRPORT_ARCH_S390X
+#define J9PORT_ARCH_RISCV OMRPORT_ARCH_RISCV
 
 #define J9PORT_RESOURCE_CORE_FLAGS OMRPORT_RESOURCE_CORE_FLAGS
 #define J9PORT_RESOURCE_FILE_DESCRIPTORS OMRPORT_RESOURCE_FILE_DESCRIPTORS

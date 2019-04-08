@@ -2080,7 +2080,7 @@ IDATA VMInitStages(J9JavaVM *vm, IDATA stage, void* reserved) {
 			 */
 			if (J9_ARE_ANY_BITS_SET(vm->vmRuntimeStateListener.idleTuningFlags, J9_IDLE_TUNING_GC_ON_IDLE | J9_IDLE_TUNING_COMPACT_ON_IDLE)) {
 				BOOLEAN idleGCTuningSupported = FALSE;
-#if (defined(LINUX) && (defined(J9HAMMER) || defined(J9X86) || defined(S39064) || defined(PPC64))) || defined(J9ZOS39064)
+#if (defined(LINUX) && (defined(J9HAMMER) || defined(J9X86) || defined(S39064) || defined(PPC64) || defined(RISCV64))) || defined(J9ZOS39064)
 				/* & only for gencon GC policy */
 				if (J9_GC_POLICY_GENCON == ((OMR_VM *)vm->omrVM)->gcPolicy) {
 					idleGCTuningSupported = TRUE;
@@ -2412,8 +2412,8 @@ IDATA VMInitStages(J9JavaVM *vm, IDATA stage, void* reserved) {
 			TRIGGER_J9HOOK_VM_ABOUT_TO_BOOTSTRAP(vm->hookInterface, vm->mainThread);
 			/* At this point, the decision about which interpreter to use has been made */
 			vm->bytecodeLoop = J9_ARE_ANY_BITS_SET(vm->extendedRuntimeFlags, J9_EXTENDED_RUNTIME_DEBUG_MODE)
-					? (void*)debugBytecodeLoop
-					: (void*)bytecodeLoop;
+					? debugBytecodeLoop
+					: bytecodeLoop;
 			break;
 
 		case JCL_INITIALIZED :
@@ -2771,6 +2771,14 @@ modifyDllLoadTable(J9JavaVM * vm, J9Pool* loadTable, J9VMInitArgs* j9vm_args)
 			}
 		}
 	}
+
+	/* Temporarily disable JIT/AOT until it is fully implemented */
+	#if defined(RISCV64)
+		xint = TRUE;
+		xjit = FALSE;
+		xaot = FALSE;
+		xnoaot = FALSE;
+	#endif
 
 	if (xint) {
 		JVMINIT_VERBOSE_INIT_VM_TRACE(vm, "-Xint set\n");

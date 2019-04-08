@@ -564,7 +564,7 @@
 	-DEXE=$(SQ)$(JAVA_COMMAND) $(JVM_OPTIONS) -Xdump -Xgcthreads1 $(SQ) \
 	-jar $(CMDLINETESTER_JAR) \
 	-config $(Q)$(TEST_RESROOT)$(D)decompilationtests.xml$(Q) \
-	-explainExcludes -xids all,linux_ppc -xlist $(Q)$(TEST_RESROOT)$(D)jvmtitests_excludes_$(JDK_VERSION).xml$(Q) -verbose -nonZeroExitWhenError; \
+	-explainExcludes -xids all,linux_ppc,$(PLATFORM) -xlist $(Q)$(TEST_RESROOT)$(D)decompilationtests_excludes_$(JDK_VERSION).xml$(Q) -verbose -nonZeroExitWhenError; \
 	${TEST_STATUS}</command>
 		<platformRequirements>^arch.arm</platformRequirements>
 		<levels>
@@ -596,9 +596,9 @@
 	-DEXE=$(SQ)$(JAVA_COMMAND) $(JVM_OPTIONS) -Xdump -Xgcthreads1 $(SQ) \
 	-jar $(CMDLINETESTER_JAR) \
 	-config $(Q)$(TEST_RESROOT)$(D)decompilationtests.xml$(Q) \
-	-explainExcludes -xids all,linux_ppc -xlist $(Q)$(TEST_RESROOT)$(D)jvmtitests_excludes_$(JDK_VERSION).xml$(Q) -verbose -nonZeroExitWhenError; \
+	-explainExcludes -xids all,linux_ppc,$(PLATFORM) -xlist $(Q)$(TEST_RESROOT)$(D)decompilationtests_excludes_$(JDK_VERSION).xml$(Q) -verbose -nonZeroExitWhenError; \
 	${TEST_STATUS}</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>extended</level>
 		</levels>
@@ -622,7 +622,7 @@
 	-XXdecomp:forceDecompile $(Q)-Xjit:count=0,limit={*.test*},rtresolve$(Q) -Xrunjdwp:transport=dt_socket,address=8888,server=y,onthrow=no.pkg.foo,launch=echo \
 	-cp $(Q)$(TEST_RESROOT)$(D)jvmtitest.jar$(Q) com.ibm.jvmti.tests.decompileAtMethodResolve.ResolveTest; \
 	${TEST_STATUS}</command>
-		<platformRequirements>^arch.arm</platformRequirements>
+		<platformRequirements>^arch.arm,^arch.riscv64</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>

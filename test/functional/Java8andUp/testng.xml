@@ -57,12 +57,29 @@
 	</test>
 	<test name="AttachAPISanity">
 		<classes>
-			<class name="org.openj9.test.attachAPI.AttachAPISanity"/>
+			<class name="org.openj9.test.attachAPI.AttachAPISanity">
+				<methods>
+					<exclude name="testAttachToOtherProcess" />
+				</methods>
+			</class>
 		</classes>
 	</test>
 	<test name="TestAttachAPI">
 		<classes>
-			<class name="org.openj9.test.attachAPI.TestAttachAPI"/>
+			<class name="org.openj9.test.attachAPI.TestAttachAPI">
+				<methods>
+					<exclude name="test_agntld03" />
+					<exclude name="test_agntld04" />
+					<exclude name="test_attach01_02" />
+					<exclude name="test_attach03" />
+					<exclude name="test_attach04" />
+					<exclude name="test_attach05" />
+					<exclude name="test_vmname04" />
+					<exclude name="test_vmname05" />
+					<exclude name="testDeleteTargetDirectory" />
+					<exclude name="testDeleteTargetDirectoryWithSpuriousFile" />
+				</methods>
+			</class>
 		</classes>
 	</test>
 	<test name="TestAttachAPIEnabling">
@@ -72,17 +89,32 @@
 	</test>
 	<test name="TestAttachErrorHandling">
 		<classes>
-			<class name="org.openj9.test.attachAPI.TestAttachErrorHandling"/>
+			<class name="org.openj9.test.attachAPI.TestAttachErrorHandling">
+				<methods>
+					<exclude name="testVmShutdownWhileAttached" />
+					<exclude name="test_startupShutdownRobustness" />
+				</methods>
+			</class>
 		</classes>
 	</test>
 	<test name="TestSunAttachClasses">
 		<classes>
-			<class name="org.openj9.test.attachAPI.TestSunAttachClasses"/>
+			<class name="org.openj9.test.attachAPI.TestSunAttachClasses">
+				<methods>
+					<exclude name="testAgentLoading" />
+					<exclude name="testAttachToOtherProcess" />
+				</methods>
+			</class>
 		</classes>
 	</test>
 	<test name="TestManagementAgent">
 		<classes>
-			<class name="org.openj9.test.attachAPI.TestManagementAgent"/>
+			<class name="org.openj9.test.attachAPI.TestManagementAgent">
+				<methods>
+					<exclude name="test_startLocalManagementAgent" />
+					<exclude name="test_startManagementAgent" />
+				</methods>
+			</class>
 		</classes>
 	</test>
 	<test name="TestJps">
@@ -290,6 +322,10 @@
 	<test name="VmArgumentTests">
 		<classes>
 			<class name="org.openj9.test.vmArguments.VmArgumentTests">
+				<methods>
+					<exclude name="testMappedOptions" />
+					<exclude name="testXprod" />
+				</methods>
 			</class>
 		</classes>
 	</test>

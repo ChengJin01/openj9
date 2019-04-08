@@ -34,6 +34,7 @@ A more complete set of build instructions are included here for multiple platfor
 - [macOS :apple:](#macos)
 - [ARM :iphone:](#arm)
 - [AArch64](#aarch64)
+- [Riscv64 :rocket:](#riscv64)
 
 User documentation for the latest release of Eclipse OpenJ9 is available at the [Eclipse Foundation](https://www.eclipse.org/openj9/docs).
 If you build a binary from the current OpenJ9 source, new features and changes might be in place for the next release of OpenJ9. Draft user
@@ -777,6 +778,355 @@ JCL      - d247952 based on jdk-11.0.6+6)
 ```
 
 :construction: AArch64 JIT compiler is not fully optimized at the time of writing this, compared with other platforms.
+
+:pencil: **OpenSSL support:** If you built an OpenJDK with OpenJ9 that includes OpenSSL v1.1.x support, the following acknowledgements apply in accordance with the license terms:
+
+  - *This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit. (http://www.openssl.org/).*
+  - *This product includes cryptographic software written by Eric Young (eay@cryptsoft.com).*
+
+:penguin: *Congratulations!* :tada:
+
+----------------------------------
+
+## Riscv64
+:cpu:
+The following instructions guide you through the process of building an **OpenJDK V11** binary that contains Eclipse OpenJ9 for Riscv64 (RISC-V 64-bit) Linux.
+
+Note:
+It is assumed that Ubuntu 16.04 is the default host system for the cross-compilation.
+
+### 1. Prepare your system for cross-compilation
+:cpu:
+A number of software packages/dependencies must be installed on the host system to create a suitable cross-compiling environment:
+
+- [The GNU cross-toolchain](https://github.com/riscv/riscv-gnu-toolchain), which contains the source code of the C/C++ cross-compiler intended for RISC-V.
+- [bootJDK](https://adoptopenjdk.net/archive.html?variant=openjdk11&jvmVariant=hotspot), which is only used in the cross-compilation on the host system.
+- [QEMU](https://www.qemu.org/download/#linux), which is an open source emulator that converts the RISC-V instructions to the opcode on the host system.
+platform.
+- [Fedora_RISCV](https://fedorapeople.org/groups/risc-v/disk-images/), which contains an Fedora OS image (stable version) and the corresponding BBL (Berkeley Boot Loader) binary file (used to boot via QEMU). 
+platform
+- [Freemarker V2.3.8](https://sourceforge.net/projects/freemarker/files/freemarker/2.3.8/freemarker-2.3.8.tar.gz/download)
+
+The following sections cover the whole installation & building steps for all required software packages.
+
+### 2. Install software packages for the cross-compilation
+:penguin:
+For the cross-compilation, the first thing is to install all required software packages on your system before building the JDK. When it comes to Fedora, you need to boot the OS image via QEMU to login the target system for installation.
+
+[1] First of all, download and install QEMU on your system as follows:
+```
+sudo apt-get install qemu
+```
+
+Note:
+If you are interested in building the QEMU source on your own, please refer to the building instructions
+at https://github.com/riscv/riscv-qemu/wiki for details.
+e.g.
+```
+git clone --recursive https://github.com/riscv/riscv-qemu.git
+cd riscv-qemu
+./configure \
+    --target-list=riscv64-softmmu,riscv64-linux-user
+make -j$(nproc)
+make install
+```
+
+[2] Download the Fedora OS image `stage4-disk.img.xz` and `bbl` (the boot loader) from
+`https://fedorapeople.org/groups/risc-v/disk-images/` (4GB in size by default)
+and expend it appropriately (e.g. 20GB) for more space as follows:
+```
+unxz --keep stage4-disk.img.xz
+truncate -s 20G stage4-disk.img
+e2fsck -fp stage4-disk.img
+resize2fs stage4-disk.img
+```
+Note:
+Please follow the steps below to install e2fsck If it doesn't exist on your host system:
+```
+wget http://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.43.1/e2fsprogs-1.43.1.tar.gz
+tar xzf e2fsprogs-1.43.1.tar.gz
+cd e2fsprogs-1.43.1
+./configure # <== If this step fails, please check the config.log file.
+                  It could be the missing "libc6-dev" package on your system.
+make
+make install
+cd e2fsck/
+./e2fsck
+```
+
+[3] Boot the Fedora OS image via QEMU (please refer to `https://wiki.qemu.org/Documentation/Platforms/RISCV` for details).
+e.g.
+```
+  qemu-system-riscv64 \
+   -nographic \
+   -machine virt \
+   -smp 4 \
+   -m 2G \ (the memory can be adjusted depending on the capability of your system)
+   -kernel `bbl` \
+   -object rng-random,filename=/dev/urandom,id=rng0 \
+   -device virtio-rng-device,rng=rng0 \
+   -append "console=ttyS0 ro root=/dev/vda" \
+   -device virtio-blk-device,drive=hd0 \
+   -drive file=`stage4-disk.img`,format=raw,id=hd0 \
+   -device virtio-net-device,netdev=usernet \
+   -netdev user,id=usernet,hostfwd=tcp::10000-:22 (the port number is 10000)
+```
+Login: `root`
+Password: `riscv`
+
+The following screen messages show up after logging in the system with the root account.
+e.g. 
+```
+Welcome to the Fedora/RISC-V stage4 disk image
+https://fedoraproject.org/wiki/Architectures/RISC-V
+
+Build date: 2018-04-06 08:24
+Kernel 4.19.0-rc8 on an riscv64 (ttyS0)
+The root password is ‘riscv’.
+To install new packages use ‘dnf install ...’
+If DNS isn’t working, try editing ‘/etc/yum.repos.d/local.repo’.
+
+For updates and latest information read:
+https://fedorapeople.org/groups/risc-v/disk-images/readme.txt
+
+stage4 login: root
+Password: riscv
+Last login: Fri Oct  4 21:21:28 from 10.0.2.2
+
+[root@stage4 ~]# uname -a
+Linux stage4.fedoraproject.org 4.19.0-rc8 #1
+SMP Wed Oct 17 15:11:25 UTC 2018 riscv64 riscv64 riscv64 GNU/Linux
+```
+
+Note:
+To establish another session to communicate with the target system,
+run the following command via any terminal software (e.g. putty) as follows:
+```
+  ssh -p 10000 root@localhost
+  root@localhost's password: riscv
+```
+
+[4] Install all X11/development related software packages required in building the JDK.
+```
+dnf install libX11-devel libXtst-devel libXt-devel libXrender-devel libXrandr-devel libXi-devel libXext-devel
+dnf install cups-devel fontconfig-devel alsa-lib-devel freetype-devel(freetype might be skipped if already installed)
+dnf install wget git autoconf automake (mostly used in the compilation on Fedora/QEMU)
+dnf install openssl-devel (optional if the OpenSSL support is required)
+```
+
+Note:
+If there is anything else missing during the cross-compilation, please check the link at `https://secondary.fedoraproject.org/pub/alt/risc-v/RPMS/riscv64`
+to see whether it is available for downloading. Some of them might go upstream to the main repository.
+
+[5] Power off the Fedora OS as follows after all installations above are finished.
+```
+poweroff
+```
+
+[6] Mount the Fedora OS image to your system for the later cross-compilation.
+```
+mkdir <your_fedora_mount_directory>
+sudo mount -o loop  stage4-disk.img  <your_fedora_mount_directory>
+
+<your_fedora_mount_directory># ls
+bin   dev  home  lib64       media  opt   root  sbin  sys  usr
+boot  etc  lib   lost+found  mnt    proc  run   srv   tmp  var
+```
+
+### 3. Build the cross-toolchain for RISC-V
+:penguin:
+The GNU cross-toolchain project contains everything required during compilation except the OS specific headers/libraries which are already installed previously on the Fedora OS image. 
+
+[1] Run the following command to get the source of the cross-toolchain
+```
+$ git clone --recursive https://github.com/riscv/riscv-gnu-toolchain
+```
+
+[2] When the process is complete, install all required software packages on your host system:
+```
+$ sudo apt-get install autoconf \
+automake \
+autotools-dev \
+curl \
+libmpc-dev \
+libmpfr-dev \
+libgmp-dev \
+gawk \
+build-essential \
+bison \
+flex \
+texinfo \
+gperf \
+libtool \
+patchutils \
+bc \
+zlib1g-dev \
+libexpat-dev
+```
+
+[3] Set up the installation path and build the cross-toolchain on your system:
+```
+cd riscv-gnu-toolchain
+./configure --prefix=/opt/riscv_toochain_linux (the path to install the cross-toolchain)
+make linux
+```
+
+Note:
+Please refer to the latest instructions at `https://github.com/riscv/riscv-gnu-toolchain` for details if
+you are working on other host systems or if any issue gets detected when building the cross-toolchain.
+
+[4] Run the RISC-V specific gcc command to ensure the cross-toolchain works good as expected:
+```
+ $ riscv64-unknown-linux-gnu-gcc --version
+   riscv64-unknown-linux-gnu-gcc (GCC) 9.2.0
+   Copyright (C) 2019 Free Software Foundation, Inc.
+   This is free software; see the source for copying conditions.  There is NO
+   warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
+
+### 4. Get the source for building the JDK
+:penguin:
+[1] First you need to clone the Extensions for OpenJDK for OpenJ9 project. This repository is a git mirror of OpenJDK without the HotSpot JVM, but with an **openj9** branch that contains a few necessary patches. Run the following command:
+```
+git clone https://github.com/ibmruntimes/openj9-openjdk-jdk11.git
+```
+
+[2] Cloning this repository can take a while due to the huge size of the OpenJDK project.
+When the process is complete, change directory into the cloned repository:
+```
+cd openj9-openjdk-jdk11
+```
+
+[3] Now fetch additional sources from the Eclipse OpenJ9 project and its clone of Eclipse OMR:
+```
+bash get_source.sh
+```
+
+### 5. Configure the cross-compiling environment
+:penguin:
+When you have all the source files, run the following configure command to set up the cross-compilation environment on your system:
+```
+bash configure --disable-warnings-as-errors \ 
+               --enable-ddr=no \
+               --with-build-jdk=/<path_to_boot_JDK> \
+               --openjdk-target=riscv64-unknown-linux-gnu \
+               --with-sysroot=/<path_to_your_fedora_mount_directory> \
+               --with-freemarker-jar=/<path_to>/freemarker.jar
+```
+
+:pencil: **OpenSSL support:** If you want to build an OpenJDK that uses OpenSSL, you must specify `--with-openssl={path_to_library}`
+
+  where:
+  - `path_to_library` uses an OpenSSL v1 library installed on the mounted Fedora OS image.
+e.g.
+```
+--with-openssl=/<path_to_your_fedora_mount_directory>/usr
+```
+
+You can check the version of OpenSSL on your target system as follows:
+```
+<your_fedora_mount_directory>/usr/bin# file openssl
+openssl: ELF 64-bit LSB executable, UCB RISC-V, version 1 (SYSV), 
+dynamically linked, interpreter /lib/ld-linux-riscv64-lp64d.so.1, 
+for GNU/Linux 4.15.0, BuildID[sha1]=715cfde5a3bdc6ff31b6cc2e449f06df1b3c465a, not stripped
+```
+
+### 6. Cross-build the JDK
+:penguin:
+[1] Now you're ready to cross-build OpenJDK with OpenJ9:
+```
+make all
+```
+
+A binary for the full developer kit (JDK without DDR support) is built and stored in the following directory:
+
+- **build/linux-riscv64-normal-server-release/images/jdk**
+
+[2] Copy the JDK to a specified directory on the mounted Fedora OS image
+e.g.
+```
+cp -r jdk /<path_to>/<your_fedora_mount_directory>/home/<your_user_name>/new_dir
+```
+
+### 7. Test the JDK on Fedora/QEMU
+:penguin:
+[1] Unmount the Fedora OS image as the cross-built jdk is generated.
+```
+sudo umount /<path_to_your_fedora_mount_directory>
+```
+
+[2] Launch the Fedora OS image via QEMU and change to your jdk directory on Fedora_Linux:
+```
+stage4 login: root
+Password: riscv
+Last login: Fri Oct  4 21:21:28 from 10.0.2.2
+[root@stage4 ~]# cd /home/<user_name>/new_dir/jdk
+```
+
+[3] For a simple test, try running the `java -version` command.
+Run:
+```
+./bin/java -version
+```
+
+Here is some sample output:
+```
+$ ./bin/java -version
+openjdk version "11.0.5-internal" 2019-11-15
+OpenJDK Runtime Environment (build 11.0.5-internal+0-adhoc.root.openj9-openjdk-jdk11)
+Eclipse OpenJ9 VM (build master-41621b6b6, JRE 11 Linux riscv64-64-Bit Compressed References 20191119_000000 (JIT disabled, AOT disabled)
+OpenJ9   - 41621b6b6
+OMR      - 92c14ce2
+JCL      - e5937725d3 based on jdk-11.0.5+10)
+
+```
+
+Note:
+[1] The JIT compiler for Riscv64 is not supported at the time of writing this. So it ends up with the same output by default with or without the `-Xint` option.
+[2] Instead of copying the JDK to the OS image, you can also choose to zip the jdk & upload it to Fedora via  the `scp`  command after booting the target system via QEMU as follows:
+```
+[root@stage4 home/<your_user_name>/new_dir]# scp  <user>@<the_IP_address_on_your_host_system>:/<path_to>/jdk.zip .
+[root@stage4 home/<your_user_name>/new_dir]# unzip -qq jdk.zip
+[root@stage4 home/<your_user_name>/new_dir]# jdk/bin/java -version
+```
+
+### 8. Build the JDK on Fedora/QEMU (Optionally if you enable DDR support in the jdk)
+:penguin:
+[1] Follow the steps at `### 4` to get all source required for building the JDK.
+e.g.
+```
+[root@stage4 <build_jdk_dir>] git clone https://github.com/ibmruntimes/openj9-openjdk-jdk11.git
+[root@stage4 <build_jdk_dir>] cd openj9-openjdk-jdk11
+[root@stage4 <build_jdk_dir>] bash get_source.sh
+```
+
+[2] Run the following configure script to set up the building environment on Fedora after downloading all the source.
+```
+export JAVA_HOME=/<path_to>/<the_cross_built_jdk>
+export PATH="$JAVA_HOME/bin:$PATH"
+
+bash configure --with-jobs=32 \
+               --with-freemarker-jar=/<path_to>/freemarker.jar
+```
+
+:pencil: **OpenSSL support:** If you want to build an OpenJDK that uses OpenSSL, 
+you must specify `--with-openssl=system` where`system` uses the OpenSSL library already installed on Fedora.
+
+Note:
+[1] The boot JDK set up in `JAVA_HOME` is the jdk which is cross-compiled previously & uploaded to Fedora.
+[2] Given that there is no JIT support for now, you might need to accelerate the compilation for parallel execution of building jobs by specifying `--with-jobs=<number_of_jobs`.
+
+### 9. Test the JDK on the hardware (Optionally if the Dev Board is available)
+:penguin:
+[1] First you need to purchase the RISC-V 64bit development board `Sifive Hifive Unleashed 540` online from  `https://www.sifive.com/boards/hifive-unleashed`.
+
+[2] Run the following command to copy the Fedora OS image (with the cross-built jdk) and the corresponding bbl at `https://fedorapeople.org/groups/risc-v/disk-images/hifive-unleashed/bbl.u540` to a micro SD card
+```
+copy ...
+```
+
+[3] Power on the board to boot Fedora
+
 
 :pencil: **OpenSSL support:** If you built an OpenJDK with OpenJ9 that includes OpenSSL v1.1.x support, the following acknowledgements apply in accordance with the license terms:
 
