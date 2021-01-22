@@ -8259,6 +8259,9 @@ done:
 
 		j9object_t mhReceiver = ((j9object_t *)_sp)[methodArgCount];
 		if (J9_UNEXPECTED(NULL == mhReceiver)) {
+			if (fromJIT) {
+				VM_VMHelpers::buildJITResolveFrame(_currentThread, _literals);
+			}
 			return THROW_NPE;
 		}
 
@@ -8284,6 +8287,9 @@ done:
 		/* Pop memberNameObject from the stack. */
 		j9object_t memberNameObject = *(j9object_t *)_sp++;
 		if (J9_UNEXPECTED(NULL == memberNameObject)) {
+			if (fromJIT) {
+				VM_VMHelpers::buildJITResolveFrame(_currentThread, _literals);
+			}
 			return THROW_NPE;
 		}
 
@@ -8317,6 +8323,9 @@ done:
 		/* Pop memberNameObject from the stack. */
 		j9object_t memberNameObject = *(j9object_t *)_sp++;
 		if (J9_UNEXPECTED(NULL == memberNameObject)) {
+			if (fromJIT) {
+				VM_VMHelpers::buildJITResolveFrame(_currentThread, _literals);
+			}
 			return THROW_NPE;
 		}
 
@@ -8326,6 +8335,9 @@ done:
 
 		j9object_t receiverObject = ((j9object_t *)_sp)[methodArgCount - 1];
 		if (J9_UNEXPECTED(NULL == receiverObject)) {
+			if (fromJIT) {
+				VM_VMHelpers::buildJITResolveFrame(_currentThread, _literals);
+			}
 			return THROW_NPE;
 		}
 		J9Class *receiverClass = J9OBJECT_CLAZZ(currentThread, receiverObject);
@@ -8356,6 +8368,9 @@ done:
 		/* Pop memberNameObject from the stack. */
 		j9object_t memberNameObject = *(j9object_t *)_sp++;
 		if (J9_UNEXPECTED(NULL == memberNameObject)) {
+			if (fromJIT) {
+				VM_VMHelpers::buildJITResolveFrame(_currentThread, _literals);
+			}
 			return THROW_NPE;
 		}
 
@@ -8365,6 +8380,9 @@ done:
 
 		j9object_t receiverObject = ((j9object_t *)_sp)[methodArgCount - 1];
 		if (J9_UNEXPECTED(NULL == receiverObject)) {
+			if (fromJIT) {
+				VM_VMHelpers::buildJITResolveFrame(_currentThread, _literals);
+			}
 			return THROW_NPE;
 		}
 		J9Class *receiverClass = J9OBJECT_CLAZZ(currentThread, receiverObject);

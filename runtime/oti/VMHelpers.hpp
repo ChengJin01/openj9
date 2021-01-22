@@ -43,6 +43,10 @@
 #include "ute.h"
 #include "ObjectAllocationAPI.hpp"
 
+#if defined(J9VM_OPT_OPENJDK_METHODHANDLE)
+#include "JITInterface.hpp"
+#endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
+
 typedef enum {
 	J9_BCLOOP_SEND_TARGET_INITIAL_STATIC = 0,
 	J9_BCLOOP_SEND_TARGET_INITIAL_SPECIAL,
@@ -1752,6 +1756,40 @@ exit:
 
 		return result;
 	}
+
+#if defined(J9VM_OPT_OPENJDK_METHODHANDLE)
+	static VMINLINE void*
+	buildJITResolveFrame(J9VMThread *currentThread, void *oldPC, UDATA flags = J9_SSF_JIT_RESOLVE, UDATA parmCount = 0, bool checkScavengeOnResolve = true, UDATA spAdjust = 0)
+	{
+		VM_JITInterface::disableRuntimeInstrumentation(currentThread);
+		UDATA *sp = currentThread->sp;
+		J9SFJITResolveFrame *resolveFrame = ((J9SFJITResolveFrame*)sp) - 1;
+		resolveFrame->savedJITException = currentThread->jitException;
+		currentThread->jitException = NULL;
+		resolveFrame->specialFrameFlags = flags;
+#if defined(J9SW_JIT_HELPERS_PASS_PARAMETERS_ON_STACK)
+		resolveFrame->parmCount = parmCount;
+#else /* J9SW_JIT_HELPERS_PASS_PARAMETERS_ON_STACK */
+		resolveFrame->parmCount = 0;
+#endif /* J9SW_JIT_HELPERS_PASS_PARAMETERS_ON_STACK */
+		resolveFrame->returnAddress = oldPC;
+		resolveFrame->taggedRegularReturnSP = (UDATA*)(((UDATA)(sp - spAdjust)) | J9SF_A0_INVISIBLE_TAG);
+		currentThread->sp = (UDATA*)resolveFrame;
+		currentThread->arg0EA = sp - 1;
+		currentThread->pc = (U_8*)J9SF_FRAME_TYPE_JIT_RESOLVE;
+		currentThread->literals = NULL;
+		currentThread->jitStackFrameFlags = 0;
+#if defined(J9VM_JIT_GC_ON_RESOLVE_SUPPORT) && defined(J9VM_GC_GENERATIONAL)
+		if (checkScavengeOnResolve) {
+			J9JITConfig *jitConfig = currentThread->javaVM->jitConfig;
+			if (J9_ARE_ANY_BITS_SET(jitConfig->runtimeFlags, J9JIT_SCAVENGE_ON_RESOLVE)) {
+				jitConfig->jitCheckScavengeOnResolve(currentThread);
+			}
+		}
+#endif /* J9VM_JIT_GC_ON_RESOLVE_SUPPORT && J9VM_GC_GENERATIONAL */
+		return oldPC;
+	}
+#endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 };
 
 #endif /* VMHELPERS_HPP_ */
