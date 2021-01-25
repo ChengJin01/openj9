@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-Copyright (c) 2006, 2020 IBM Corp. and others
+Copyright (c) 2006, 2021 IBM Corp. and others
 
 This program and the accompanying materials are made available under
 the terms of the Eclipse Public License 2.0 which accompanies this
@@ -143,6 +143,8 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 
 	<classref name="jdk/internal/loader/NativeLibraries" versions="15-"/>
 	<classref name="jdk/internal/loader/NativeLibraries$NativeLibraryImpl" versions="15-"/>
+	
+	<classref name="jdk/internal/foreign/abi/ProgrammableInvoker" flags="opt_panama" versions="16-"/>
 
 <!--
 	NOTE: the resolution code in jclcinit.c only looks at the J9ROMClassRef->runtimeFlags to determine
@@ -372,6 +374,10 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 	<fieldref class="java/lang/invoke/MethodHandle" name="form" signature="Ljava/lang/invoke/LambdaForm;" flags="opt_openjdkMethodhandle"/>
 
 	<fieldref class="jdk/internal/loader/NativeLibraries$NativeLibraryImpl" name="fromClass" signature="Ljava/lang/Class;" versions="15-"/>
+
+	<fieldref class="jdk/internal/foreign/abi/ProgrammableInvoker" name="cifNativeThunkDataRef" signature="J" flags="opt_panama" versions="16-"/>
+	<fieldref class="jdk/internal/foreign/abi/ProgrammableInvoker" name="cifNativeThunkSize" signature="J" flags="opt_panama" versions="16-"/>
+	<fieldref class="jdk/internal/foreign/abi/ProgrammableInvoker" name="methodType" signature="Ljava/lang/invoke/MethodType;" flags="opt_panama" versions="16-"/>
 
 <!--
 	NOTE: the resolution code in jclcinit.c only looks at the J9ROMClassRef->runtimeFlags to determine

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -30,13 +30,6 @@
 #endif /* J9VM_OPT_PANAMA */
 
 #define J9VM_LAYOUT_STRING_ON_STACK_LIMIT 128
-
-#ifdef J9VM_OPT_PANAMA
-typedef struct J9NativeCalloutData {
-	ffi_type **arguments;
-	ffi_cif *cif;
-} J9NativeCalloutData;
-#endif /* J9VM_OPT_PANAMA */
 
 class FFITypeHelpers
 {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017, 2020 IBM Corp. and others
+ * Copyright (c) 2017, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -33,21 +33,22 @@
 extern "C" {
 
 #ifdef J9VM_OPT_PANAMA
-/* java.lang.invoke.NativeMethodHandle: private native void initJ9NativeCalloutDataRef(java.lang.String[] argLayoutStrings); */
+/* jdk.internal.foreign.abi.ProgrammableInvoker: private native void initCifNativeThunkData(String[] argLayoutStrings); */
 VM_BytecodeAction
-OutOfLineINL_java_lang_invoke_NativeMethodHandle_initJ9NativeCalloutDataRef(J9VMThread *currentThread, J9Method *method)
+OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData(J9VMThread *currentThread, J9Method *method)
 {
 	VM_BytecodeAction rc = EXECUTE_BYTECODE;
 	J9JavaVM *vm = currentThread->javaVM;
 	ffi_type **args = NULL;
 	ffi_cif *cif = NULL;
-	J9NativeCalloutData *nativeCalloutData = NULL;
 
-	j9object_t methodHandle = *(j9object_t*)(currentThread->sp + 1);
+	printf("\ncalling OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData ....");
 
-	Assert_VM_Null(J9VMJAVALANGINVOKENATIVEMETHODHANDLE_J9NATIVECALLOUTDATAREF(currentThread, methodHandle));
+	j9object_t nativeInvoker = *(j9object_t*)(currentThread->sp + 1);
+	cif = (ffi_cif *)JDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_CIFNATIVETHUNKDATAREF(currentThread, nativeInvoker);
+	Assert_VM_Null(cif);
 
-	j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread, methodHandle);
+	j9object_t methodType = JDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_METHODTYPE(currentThread, nativeInvoker);
 	J9Class *returnTypeClass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, J9VMJAVALANGINVOKEMETHODTYPE_RTYPE(currentThread, methodType));
 	j9object_t argTypesObject = J9VMJAVALANGINVOKEMETHODTYPE_PTYPES(currentThread, methodType);
 
@@ -60,32 +61,28 @@ OutOfLineINL_java_lang_invoke_NativeMethodHandle_initJ9NativeCalloutDataRef(J9VM
 	
 	PORT_ACCESS_FROM_JAVAVM(vm);
 
-	/**
-	 * args[0] stores the ffi_type of the return argument of the method. The remaining args array stores the ffi_type of the input arguments.
+	/* args[0] stores the ffi_type of the return argument of the method.
+	 * The remaining args array stores the ffi_type of the input arguments.
 	 * typeCount is the number of input arguments, plus one for the return argument.
 	 */
 	U_32 typeCount = J9INDEXABLEOBJECT_SIZE(currentThread, argTypesObject) + 1;
 	args = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * typeCount, OMRMEM_CATEGORY_VM);
-
 	if (NULL == args) {
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		setNativeOutOfMemoryError(currentThread, 0, 0);
 		goto done;
 	}
 
-	/* Zero out the memory because if an error occurs before all the entries in this array are initialized then the error
-	* handling code at freeAllMemoryThenExit will attempt to free all the pointers, some of which will not be initialized.
-	*/
+	/* Zero out the memory because if an error occurs before all the entries in this array
+	 * are initialized then the error handling code at freeAllMemoryThenExit will attempt
+	 * to free all the pointers, some of which will not be initialized.
+	 */
 	memset(args, 0, sizeof(ffi_type *) * typeCount);
 
-	cif = (ffi_cif *)j9mem_allocate_memory(sizeof(ffi_cif), OMRMEM_CATEGORY_VM);
-	if (NULL == cif) {
-		rc = GOTO_THROW_CURRENT_EXCEPTION;
-		setNativeOutOfMemoryError(currentThread, 0, 0);
-		goto freeArgsThenExit;
-	}
-
-	/* In the common case we expect that layoutStringsExist will be NULL, which is why args[0] is written first then layoutStringsExist is checked after */
+	/* In the common case we expect that layoutStringsExist will be NULL,
+	 * which is why args[0] is written first then layoutStringsExist is
+	 * checked after that.
+	 */
 	args[0] = (ffi_type *)FFIHelpers.getFFIType(returnTypeClass);
 	if (layoutStringsExist) {
 		j9object_t retlayoutStringObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, argLayoutStringsObject, 0);
@@ -94,8 +91,7 @@ OutOfLineINL_java_lang_invoke_NativeMethodHandle_initJ9NativeCalloutDataRef(J9VM
 			if ((NULL == args[0]) || (NULL == args[0]->elements) || (0 == structSize)) {
 				rc = GOTO_THROW_CURRENT_EXCEPTION;
 				setNativeOutOfMemoryError(currentThread, 0, 0);
-				FFIHelpers.freeStructFFIType(args[0]);
-				goto freeCifAndArgsThenExit;
+				goto freeAllMemoryThenExit;
 			}
 		}
 	}
@@ -125,84 +121,31 @@ OutOfLineINL_java_lang_invoke_NativeMethodHandle_initJ9NativeCalloutDataRef(J9VM
 		}
 	}
 
-	/* typeCount-1 because ffi_prep_cif expects the number of input arguments of the method */
+	/* Set typeCount-1 in that ffi_prep_cif() expects the number of input arguments of the method */
 	if (FFI_OK != ffi_prep_cif(cif, FFI_DEFAULT_ABI, typeCount-1, args[0], &(args[1]))) {
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
-		goto freeAllMemoryThenExit;
 	}
 
-	nativeCalloutData = (J9NativeCalloutData *)j9mem_allocate_memory(sizeof(J9NativeCalloutData), OMRMEM_CATEGORY_VM);
-	if (NULL == nativeCalloutData) {
-		rc = GOTO_THROW_CURRENT_EXCEPTION;
-		setNativeOutOfMemoryError(currentThread, 0, 0);
-		goto freeAllMemoryThenExit;
-	}
-	nativeCalloutData->arguments = args;
-	nativeCalloutData->cif = cif;
-
-	J9VMJAVALANGINVOKENATIVEMETHODHANDLE_SET_J9NATIVECALLOUTDATAREF(currentThread, methodHandle, (void *)nativeCalloutData);
-
-done:
-	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 2);
-	return rc;
 freeAllMemoryThenExit:
 	for (U_32 i = 0; i < typeCount; i++) {
 		FFIHelpers.freeStructFFIType(args[i]);
 	}
-freeCifAndArgsThenExit:
-	j9mem_free_memory(cif);
-freeArgsThenExit:
 	j9mem_free_memory(args);
-	goto done;
-}
-
-/* java.lang.invoke.NativeMethodHandle: private native void freeJ9NativeCalloutDataRef(); */
-VM_BytecodeAction
-OutOfLineINL_java_lang_invoke_NativeMethodHandle_freeJ9NativeCalloutDataRef(J9VMThread *currentThread, J9Method *method)
-{
-	J9JavaVM *vm = currentThread->javaVM;
-	j9object_t methodHandle = *(j9object_t*)currentThread->sp;
-
-	j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread, methodHandle);
-	j9object_t argTypesObject = J9VMJAVALANGINVOKEMETHODTYPE_PTYPES(currentThread, methodType);
-	U_32 argumentCount = J9INDEXABLEOBJECT_SIZE(currentThread, argTypesObject) + 1;
-	J9NativeCalloutData *nativeCalloutData = J9VMJAVALANGINVOKENATIVEMETHODHANDLE_J9NATIVECALLOUTDATAREF(currentThread, methodHandle);
-
-	/* Manually synchronize methodHandle since declaring the method as synchronized in Java will have no effect (for all INLs). */
-	j9object_t methodHandleLock = (j9object_t)objectMonitorEnter(currentThread, methodHandle);
-	if (NULL == methodHandleLock) {
-		setNativeOutOfMemoryError(currentThread, J9NLS_VM_FAILED_TO_ALLOCATE_MONITOR);
-		goto done;
-	}
-
-	J9VMJAVALANGINVOKENATIVEMETHODHANDLE_SET_J9NATIVECALLOUTDATAREF(currentThread, methodHandle, NULL);
-
-	if (NULL != nativeCalloutData) {
-		PORT_ACCESS_FROM_JAVAVM(vm);
-
-		Assert_VM_notNull(nativeCalloutData);
-		Assert_VM_notNull(nativeCalloutData->arguments);
-		Assert_VM_notNull(nativeCalloutData->cif);
-
-		FFITypeHelpers FFIHelpers = FFITypeHelpers(currentThread);
-		for (U_8 i = 0; i < argumentCount; i++) {
-			FFIHelpers.freeStructFFIType(nativeCalloutData->arguments[i]);
-		}
-		j9mem_free_memory(nativeCalloutData->arguments);
-		nativeCalloutData->arguments = NULL;
-
-		j9mem_free_memory(nativeCalloutData->cif);
-		nativeCalloutData->cif = NULL;
-
-		j9mem_free_memory(nativeCalloutData);
-		nativeCalloutData = NULL;
-	}
-
-	objectMonitorExit(currentThread, methodHandleLock);
 
 done:
+	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 2);
+	return rc;
+}
+
+/* jdk.internal.foreign.abi.ProgrammableInvoker: private native void getCifNativeThunkRefSize(); */
+VM_BytecodeAction
+OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_getCifNativeThunkRefSize(J9VMThread *currentThread, J9Method *method)
+{
+	/*
+	JDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_SET_J9NATIVETHUNKDATAREF(currentThread, sizeof(ffi_cif));
 	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 1);
+	*/
 	return EXECUTE_BYTECODE;
 }
 #endif /* J9VM_OPT_PANAMA */
