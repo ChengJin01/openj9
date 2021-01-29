@@ -37,7 +37,7 @@ module openj9.dtfj {
   /*[IF PLATFORM-mz31 | PLATFORM-mz64]*/
   requires ibm.jzos;
   /*[ENDIF]*/
-  exports com.ibm.j9ddr.tools.ddrinteractive to openj9.dtfjview;
+//  exports com.ibm.j9ddr.tools.ddrinteractive to openj9.dtfjview;
   exports com.ibm.dtfj.image;
   exports com.ibm.dtfj.image.j9 to openj9.dtfjview;
   exports com.ibm.dtfj.java;

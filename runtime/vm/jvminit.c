@@ -80,6 +80,7 @@
 #include "bcnames.h"
 #include "jimagereader.h"
 #include "vendor_version.h"
+#include "omrlinkedlist.h"
 
 #ifdef J9VM_OPT_ZIP_SUPPORT
 #include "zip_api.h"
@@ -879,6 +880,40 @@ freeJavaVM(J9JavaVM * vm)
 		j9mem_free_memory(vm->realtimeSizeClasses);
 		vm->realtimeSizeClasses = NULL;
 	}
+
+#if JAVA_SPEC_VERSION >= 16
+	printf("\nfreeJavaVM1: vm->cifNativeCalloutDataCache = %p\n", vm->cifNativeCalloutDataCache);
+	printf("\nfreeJavaVM1: vm->cifArgumentTypesListHead = %p\n", vm->cifArgumentTypesListHead);
+
+	if (NULL != vm->cifNativeCalloutDataCacheMutex) {
+		omrthread_monitor_destroy(vm->cifNativeCalloutDataCacheMutex);
+		vm->cifNativeCalloutDataCacheMutex = NULL;
+	}
+	if (NULL != vm->cifNativeCalloutDataCache) {
+		pool_kill(vm->cifNativeCalloutDataCache);
+		vm->cifNativeCalloutDataCache = NULL;
+	}
+
+	if (NULL != vm->cifArgumentTypesMutex) {
+		omrthread_monitor_destroy(vm->cifArgumentTypesMutex);
+		vm->cifArgumentTypesMutex = NULL;
+	}
+	{
+		J9CifArgumentTypes *argumentTypesNode = NULL;
+		int argTypesNum = 0;
+		while (NULL != vm->cifArgumentTypesListHead) {
+			argTypesNum += 1;
+			argumentTypesNode = vm->cifArgumentTypesListHead;
+			J9_LINKED_LIST_REMOVE(vm->cifArgumentTypesListHead, argumentTypesNode);
+			j9mem_free_memory(argumentTypesNode->argumentTypes);
+			j9mem_free_memory(argumentTypesNode);
+			printf("\nReleasing %d argTypes...", argTypesNum);
+		}
+		vm->cifArgumentTypesListHead = NULL;
+	}
+	printf("\nfreeJavaVM2: vm->cifNativeCalloutDataCache = %p\n", vm->cifNativeCalloutDataCache);
+	printf("\nfreeJavaVM2: vm->cifArgumentTypesListHead = %p\n", vm->cifArgumentTypesListHead);
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 	j9mem_free_memory(vm);
 
@@ -6343,6 +6378,18 @@ protectedInitializeJavaVM(J9PortLibrary* portLibrary, void * userData)
 	/* check processor support for cache writeback */
 	vm->dCacheLineSize = 0;
 	vm->cpuCacheWritebackCapabilities = 0;
+
+#if JAVA_SPEC_VERSION >= 16
+	/* ffi_cif should be allocated on demand */
+	vm->cifNativeCalloutDataCache = NULL;
+	vm->cifArgumentTypesListHead = NULL;
+	if ((0 != omrthread_monitor_init_with_name(&vm->cifNativeCalloutDataCacheMutex, 0, "CIF cache mutex"))
+	|| (0 != omrthread_monitor_init_with_name(&vm->cifArgumentTypesMutex, 0, "CIF argument types mutex"))
+	) {
+		goto error;
+	}
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
 #if defined(J9X86) || defined(J9HAMMER)
 	{
 		J9ProcessorDesc desc;
