@@ -1,0 +1,162 @@
+/*******************************************************************************
+ * Copyright (c) 2021, 2021 IBM Corp. and others
+ *
+ * This program and the accompanying materials are made available under
+ * the terms of the Eclipse Public License 2.0 which accompanies this
+ * distribution and is available at https://www.eclipse.org/legal/epl-2.0/
+ * or the Apache License, Version 2.0 which accompanies this distribution and
+ * is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * This Source Code may also be made available under the following
+ * Secondary Licenses when the conditions for such availability set
+ * forth in the Eclipse Public License, v. 2.0 are satisfied: GNU
+ * General Public License, version 2 with the GNU Classpath
+ * Exception [1] and GNU General Public License, version 2 with the
+ * OpenJDK Assembly Exception [2].
+ *
+ * [1] https://www.gnu.org/software/classpath/license.html
+ * [2] http://openjdk.java.net/legal/assembly-exception.html
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
+ *******************************************************************************/
+
+#include "BytecodeAction.hpp"
+#include "UnsafeAPI.hpp"
+#include "j9vmnls.h"
+#include "omrlinkedlist.h"
+#include "OutOfLineINL.hpp"
+#include "FFITypeHelpers.hpp"
+#include "AtomicSupport.hpp"
+
+extern "C" {
+
+#if JAVA_SPEC_VERSION >= 16
+/* jdk.internal.foreign.abi.ProgrammableInvoker: private native void initCifNativeThunkData(Class<?>[] argLayoutClasses, Class<?> retLayoutClass, boolean isNewargTypesAddr); */
+VM_BytecodeAction
+OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData(J9VMThread *currentThread, J9Method *method)
+{
+	VM_BytecodeAction rc = EXECUTE_BYTECODE;
+	J9JavaVM *vm = currentThread->javaVM;
+	FFITypeHelpers FFIHelpers = FFITypeHelpers(currentThread);
+	ffi_cif *cif = NULL;
+	ffi_type *returnType = NULL;
+	ffi_type **argTypes = NULL;
+	J9CifArgumentTypes *cifArgTypesNode = NULL;
+	long argTypesLongValue = 0;
+	long cifLongValue = 0;
+	int tempIntValue = 0;
+
+	printf("\n**********calling OutOfLineINL_initCifNativeThunkData***BEGIN*******\n");
+
+	bool isNewargTypesAddr = (bool)(*(U_32*)currentThread->sp);
+	j9object_t retLayoutClassesObject = *(j9object_t*)(currentThread->sp + 1);
+	j9object_t argLayoutClassesObject = *(j9object_t*)(currentThread->sp + 2);
+	j9object_t nativeInvoker = *(j9object_t*)(currentThread->sp + 3);
+
+	printf("\nOutOfLineINL_initCifNativeThunkData: retLayoutClassesObject = %p\n", retLayoutClassesObject);
+	printf("\nOutOfLineINL_initCifNativeThunkData: argLayoutClassesObject = %p\n", argLayoutClassesObject);
+	printf("\nOutOfLineINL_initCifNativeThunkData: nativeInvoker = %p\n", nativeInvoker);
+
+	J9Class *nativeInvokerClass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, nativeInvoker);
+	printf("\nOutOfLineINL_initCifNativeThunkData: nativeInvokerClass = %p\n", nativeInvokerClass);
+
+	J9Class *returnTypeClass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, retLayoutClassesObject);
+	returnType = (ffi_type *)FFIHelpers.getFFIType(returnTypeClass);
+
+	U_32 argTypesCount = J9INDEXABLEOBJECT_SIZE(currentThread, argLayoutClassesObject);
+	printf("\ninitCifNativeThunkData: argTypesCount = %d\n", (int)argTypesCount);
+
+	PORT_ACCESS_FROM_JAVAVM(vm);
+
+	if (!isNewargTypesAddr) {
+		argTypes = (ffi_type **)(UDATA)J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_ARGTYPESADDR(currentThread, nativeInvoker);
+		printf("\nOutOfLineINL_initCifNativeThunkData: exists: old argTypes = %p\n", argTypes);
+	} else {
+		argTypes = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * argTypesCount, OMRMEM_CATEGORY_VM);
+		if (NULL == argTypes) {
+			rc = GOTO_THROW_CURRENT_EXCEPTION;
+			setNativeOutOfMemoryError(currentThread, 0, 0);
+			goto done;
+		}
+		memset(argTypes, 0, sizeof(ffi_type *) * argTypesCount);
+		isNewargTypesAddr = true;
+		printf("\ninitCifNativeThunkData: argTypes doesn't exist: create a new argTypes\n");
+
+		for (U_8 i = 0; i < argTypesCount; i++) {
+			argTypes[i] = (ffi_type *)FFIHelpers.getFFIType(J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, J9JAVAARRAYOFOBJECT_LOAD(currentThread, argLayoutClassesObject, i)));
+		}
+	}
+	printf("\nOutOfLineINL_initCifNativeThunkData: argTypes = %p\n", argTypes);
+
+	if (NULL == vm->cifNativeCalloutDataCache) {
+		vm->cifNativeCalloutDataCache = pool_new(sizeof(ffi_cif), 0, 0, 0, J9_GET_CALLSITE(), OMRMEM_CATEGORY_VM, POOL_FOR_PORT(PORTLIB));
+		if (NULL == vm->cifNativeCalloutDataCache) {
+			rc = GOTO_THROW_CURRENT_EXCEPTION;
+			setNativeOutOfMemoryError(currentThread, 0, 0);
+			goto freeAllMemoryThenExit;
+		}
+		printf("\ninitCifNativeThunkData: create a new cifNativeCalloutDataCache.....\n");
+	}
+
+	omrthread_monitor_enter(vm->cifNativeCalloutDataCacheMutex);
+	cif = (ffi_cif *)pool_newElement(vm->cifNativeCalloutDataCache);
+	omrthread_monitor_exit(vm->cifNativeCalloutDataCacheMutex);
+	if (NULL == cif) {
+		rc = GOTO_THROW_CURRENT_EXCEPTION;
+		setNativeOutOfMemoryError(currentThread, 0, 0);
+		goto freeAllMemoryThenExit;
+	}
+
+	if (FFI_OK != ffi_prep_cif(cif, FFI_DEFAULT_ABI, argTypesCount, returnType, &(argTypes[0]))) {
+		rc = GOTO_THROW_CURRENT_EXCEPTION;
+		setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
+		printf("\n**********calling OutOfLineINL_initCifNativeThunkData***NOK: GOTO_THROW_CURRENT_EXCEPTION\n");
+		goto freeAllMemoryThenExit;
+	}
+
+	if (isNewargTypesAddr) {
+		cifArgTypesNode = (J9CifArgumentTypes *)j9mem_allocate_memory(sizeof(J9CifArgumentTypes), OMRMEM_CATEGORY_VM);
+		if (NULL == cifArgTypesNode) {
+			rc = GOTO_THROW_CURRENT_EXCEPTION;
+			setNativeOutOfMemoryError(currentThread, 0, 0);
+			goto freeAllMemoryThenExit;
+		}
+
+		cifArgTypesNode->argumentTypes = argTypes;
+		omrthread_monitor_enter(vm->cifArgumentTypesMutex);
+		J9_LINKED_LIST_ADD_LAST(vm->cifArgumentTypesListHead, cifArgTypesNode);
+		omrthread_monitor_exit(vm->cifArgumentTypesMutex);
+
+		VM_AtomicSupport::writeBarrier();
+		argTypesLongValue = (intptr_t)argTypes;
+		printf("\ninitCifNativeThunkData: set argTypes back to java code after ffi_prep_cif: argTypesLongValue = 0x%lx\n", argTypesLongValue);
+		J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_SET_ARGTYPESADDR(currentThread, nativeInvoker, argTypesLongValue);
+	}
+
+	tempIntValue = J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_TEMPINTVALUE(currentThread, nativeInvoker);
+	printf("\ninitCifNativeThunkData: tempIntValue = %d\n", tempIntValue);
+	tempIntValue += 999;
+	VM_AtomicSupport::writeBarrier();
+	printf("\ninitCifNativeThunkData: set back tempIntValue = %d\n", tempIntValue);
+	J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_SET_TEMPINTVALUE(currentThread, nativeInvoker, tempIntValue);
+
+	cifLongValue = (intptr_t)cif;
+	printf("\ninitCifNativeThunkData: set argTypes back to java code after ffi_prep_cif: cifLongValue = 0x%lx\n", cifLongValue);
+	J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_SET_CIFNATIVETHUNKADDR(currentThread, nativeInvoker, cifLongValue);
+	printf("\n**********calling OutOfLineINL_initCifNativeThunkData***END OK*******\n");
+
+done:
+	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 4);
+	return rc;
+
+freeAllMemoryThenExit:
+	if (isNewargTypesAddr) {
+		j9mem_free_memory(argTypes);
+		argTypes = NULL;
+	}
+	goto done;
+}
+
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
+}
