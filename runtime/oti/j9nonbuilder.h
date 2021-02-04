@@ -35,6 +35,10 @@
 #include "jvmti.h"
 #include "j9javaaccessflags.h"
 
+#if JAVA_SPEC_VERSION >= 16
+#include "ffi.h"
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
 #define J9VM_MAX_HIDDEN_FIELDS_PER_CLASS 8
 
 #define J9VM_DLT_HISTORY_SIZE  16
@@ -4909,6 +4913,10 @@ typedef struct J9VMThread {
 #endif /* OMR_GC_COMPRESSED_POINTERS */
 #endif /* OMR_GC_CONCURRENT_SCAVENGER */
 	UDATA safePointCount;
+#if JAVA_SPEC_VERSION >= 16
+	UDATA *javaArgs;
+	UDATA javaArgCout;
+#endif /* JAVA_SPEC_VERSION >= 16 */
 } J9VMThread;
 
 #define J9VMTHREAD_ALIGNMENT  0x100
@@ -4989,6 +4997,14 @@ typedef struct J9VMRuntimeStateListener {
 	UDATA idleMinFreeHeap;
 	UDATA idleTuningFlags;
 } J9VMRuntimeStateListener;
+
+#if JAVA_SPEC_VERSION >= 16
+typedef struct J9CifArgumentTypes {
+	ffi_type **argumentTypes;
+	struct J9CifArgumentTypes *linkNext;
+	struct J9CifArgumentTypes *linkPrevious;
+} J9CifArgumentTypes;
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 /* Values for J9VMRuntimeStateListener.vmRuntimeState
  * These values are reflected in the Java class library code(RuntimeMXBean)
@@ -5395,6 +5411,13 @@ typedef struct J9JavaVM {
 	UDATA vmindexOffset;
 	UDATA vmtargetOffset;
 #endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
+#if JAVA_SPEC_VERSION >= 16
+	struct J9Pool *cifNativeCalloutDataCache;
+	omrthread_monitor_t cifNativeCalloutDataCacheMutex;
+	struct J9CifArgumentTypes *cifArgumentTypesListHead;
+	omrthread_monitor_t cifArgumentTypesMutex;
+	struct J9Class* memoryAddressClass;
+#endif /* JAVA_SPEC_VERSION >= 16 */
 } J9JavaVM;
 
 #define J9VM_PHASE_NOT_STARTUP  2
