@@ -24,6 +24,7 @@
 
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
 <suite name="Java16andUp suite" parallel="none" verbose="2">
+<<<<<<< Upstream, based on upstream/master
 	<test name="Jep389Tests_testClinkerFfi_DownCall">
 		<classes>
 			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests"/>
@@ -45,6 +46,17 @@
 		<test name="Jep389Tests_testClinkerFfi_VaList">
 		<classes>
 			<class name="org.openj9.test.jep389.valist.VaListTests"/>
+=======
+	<test name="Jep389Tests_testClinkerFfi">
+		<classes>
+			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests"/>
+			<class name="org.openj9.test.jep389.downcall.MultiCallTests"/>
+			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests1"/>
+			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests2"/>
+			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests3"/>
+			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests4"/>
+			<class name="org.openj9.test.jep389.downcall.InvalidDownCallTests"/>
+>>>>>>> b9c4892 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
 		</classes>
 	</test>
 </suite>

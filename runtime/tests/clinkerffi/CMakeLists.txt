@@ -23,6 +23,7 @@
 set(OMR_ENHANCED_WARNINGS OFF)
 j9vm_add_library(clinkerffitests SHARED
 	downcall.c
+<<<<<<< Upstream, based on upstream/master
 	upcall.c
 )
 target_link_libraries(clinkerffitests
@@ -300,6 +301,38 @@ omr_add_exports(clinkerffitests
 	add2DoubleStructs_returnStructByUpcallMH
 	add2DoubleStructs_returnStructPointerByUpcallMH
 	add3DoubleStructs_returnStructByUpcallMH
+=======
+)
+target_link_libraries(clinkerffitests
+	PRIVATE
+		j9vm_interface
+		jvm
+)
+
+omr_add_exports(clinkerffitests
+	add2Ints
+	add3Ints
+	addIntAndChar
+	add2IntsReturnVoid
+	add2BoolsWithOr
+	createNewCharFrom2Chars
+	add2Bytes
+	add2Shorts
+	add2Longs
+	add2Floats
+	add2Doubles
+	addIntsFromVaList
+	addLongsFromVaList
+	addDoublesFromVaList
+	addIntAndIntFromPointer
+	addBoolAndBoolFromPointerWithOr
+	createNewCharFromCharAndCharFromPointer
+	addByteAndByteFromPointer
+	addShortAndShortFromPointer
+	addLongAndLongFromPointer
+	addFloatAndFloatFromPointer
+	addDoubleAndDoubleFromPointer
+>>>>>>> b9c4892 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
 )
 
 install(

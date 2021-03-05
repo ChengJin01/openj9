@@ -46,8 +46,11 @@ J9OutOfLineINLMethod OutOfLineINL_java_lang_invoke_NativeMethodHandle_freeJ9Nati
 #if JAVA_SPEC_VERSION >= 16
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields;
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData;
+<<<<<<< Upstream, based on upstream/master
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallStub;
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveMetaDataFields;
+=======
+>>>>>>> b9c4892 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
 #endif /* JAVA_SPEC_VERSION >= 16 */
 }
 
