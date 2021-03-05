@@ -486,8 +486,10 @@ ifdef UMA_ENABLE_ALL_WARNINGS
         PPC_GCC_CXXFLAGS += -Wall -Wno-non-virtual-dtor
       endif
     <#else>
-      CFLAGS += -Wall
-      CXXFLAGS += -Wall -Wno-non-virtual-dtor
+      # CFLAGS += -Wall -Wno-stringop-truncation -Wno-stringop-overflow -ggdb3
+      # CXXFLAGS += -Wall -Wno-non-virtual-dtor -Wno-stringop-truncation -Wno-stringop-overflow -ggdb3
+      CFLAGS += -Wall  -ggdb3
+      CXXFLAGS += -Wall -Wno-non-virtual-dtor  -ggdb3
     </#if>
   endif
 endif

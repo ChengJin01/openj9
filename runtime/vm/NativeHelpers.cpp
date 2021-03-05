@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2020 IBM Corp. and others
+ * Copyright (c) 2001, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -145,6 +145,17 @@ convertCStringToByteArray(J9VMThread *currentThread, const char *cString)
 	j9object_t result = vm->memoryManagerFunctions->J9AllocateIndexableObject(currentThread, vm->byteArrayClass, size, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 	if (NULL != result) {
 		VM_ArrayCopyHelpers::memcpyToArray(currentThread, result, (UDATA)0, 0, size, (void*)cString);
+	}
+	return result;
+}
+
+UDATA *
+convertToNativeArgArray(J9VMThread *currentThread, j9object_t argArray, UDATA *javaArgs)
+{
+	UDATA argCount = (UDATA)J9INDEXABLEOBJECT_SIZE(currentThread, argArray);
+	UDATA *result = javaArgs;
+	if (NULL != result) {
+		VM_ArrayCopyHelpers::memcpyFromArray(currentThread, argArray, (UDATA)3, 0, argCount, (void*)result);
 	}
 	return result;
 }

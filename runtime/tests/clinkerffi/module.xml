@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-   Copyright (c) 2006, 2019 IBM Corp. and others
+   Copyright (c) 2021, 2021 IBM Corp. and others
 
    This program and the accompanying materials are made available under
    the terms of the Eclipse Public License 2.0 which accompanies this
@@ -23,46 +23,38 @@
 -->
 
 <module>
-        
-	<exports group="all">
-		<export name="JVM_OnUnload"/>
-		<export name="JVM_OnLoad"/>
-		<export name="J9VMDllMain"/>
+	<exports group="ClinkerFfiTests">
+		<export name="testAdd2Int"/>
+		<export name="testAdd3Int"/>
+		<export name="testAddIntAndChar"/>
+		<export name="testAdd2IntReturnVoid"/>
+		<export name="testAdd2BoolWithOr"/>
+		<export name="testGenNewChar"/>
+		<export name="testAdd2Byte"/>
+		<export name="testAdd2Short"/>
+		<export name="testAdd2Long"/>
+		<export name="testAdd2Float"/>
+		<export name="testAdd2Double"/>
 	</exports>
 
-	<artifact type="shared" name="j9trc" bundle="jvm" loadgroup="">
-		<include-if condition="spec.flags.module_rastrace" />
-		<options>
-			<option name="dllDescription" data="RAS trace"/>
-		</options>
+	<artifact type="shared" name="clinkerffitests" appendrelease="false">
 		<phase>core j2se</phase>
 		<exports>
-			<group name="all"/>
+			<group name="ClinkerFfiTests"/>
 		</exports>
 		<includes>
 			<include path="j9include"/>
 			<include path="j9oti"/>
-			<include path="j9gcinclude"/>
-			<include path="$(OMR_DIR)/gc/include" type="relativepath"/>
 		</includes>
 		<makefilestubs>
 			<makefilestub data="UMA_TREAT_WARNINGS_AS_ERRORS=1"/>
-			<makefilestub data="UMA_ENABLE_ALL_WARNINGS=1"/>
-			<makefilestub data="CFLAGS+=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"/>
-			<makefilestub data="trclog.o: CFLAGS+=-U_FORTIFY_SOURCE">
-				<include-if condition="spec.linux_aarch64.*"/>
-			</makefilestub>
+			<makefilestub data="UMA_DISABLE_DDRGEN=1"/>
 		</makefilestubs>
 		<libraries>
 			<library name="j9util"/>
 			<library name="j9utilcore"/>
-			<library name="j9avl" type="external"/>
-			<library name="j9hashtable" type="external"/>		
-			<library name="j9pool" type="external"/>				
-			<library name="j9thr"/>
-			<library name="j9hookable"/>
-			<library name="j9stackmap"/>
-			<library name="omrglue" type="external"/>
+			<library name="jvm"/>
 		</libraries>
 	</artifact>
+
 </module>

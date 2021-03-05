@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2018 IBM Corp. and others
+ * Copyright (c) 1991, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -25,9 +25,9 @@
 
 #include "ut_j9vm.h"
 #include "vm_internal.h"
-#ifdef J9VM_OPT_PANAMA
+#if JAVA_SPEC_VERSION >= 16
 #include "ffi.h"
-#endif /* J9VM_OPT_PANAMA */
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 #define J9VM_LAYOUT_STRING_ON_STACK_LIMIT 128
 
@@ -44,10 +44,10 @@ class FFITypeHelpers
  * Data members
  */
 private:
-#ifdef J9VM_OPT_PANAMA
+#if JAVA_SPEC_VERSION >= 16
 	J9VMThread *const _currentThread;
 	J9JavaVM *const _vm;
-#endif /* J9VM_OPT_PANAMA */
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 protected:
 
@@ -62,7 +62,7 @@ protected:
 
 public:
 
-#ifdef J9VM_OPT_PANAMA
+#if JAVA_SPEC_VERSION >= 16
 	/**
 	 * @brief Convert argument or return type from J9Class to ffi_type.
 	 * Only primitive types are currently supported. Objects will likely be passed as a pointer, so they are type long.
@@ -76,7 +76,7 @@ public:
 		if (type == _vm->voidReflectClass) {
 			typeFFI = &ffi_type_void;
 		} else if (type == _vm->booleanReflectClass) {
-			typeFFI = &ffi_type_uint8;
+			typeFFI = &ffi_type_uint32;
 		} else if (type == _vm->byteReflectClass) {
 			typeFFI = &ffi_type_sint8;
 		} else if (type == _vm->charReflectClass) {
@@ -87,11 +87,15 @@ public:
 			typeFFI = &ffi_type_sint32;
 		} else if (type == _vm->floatReflectClass) {
 			typeFFI = &ffi_type_float;
-		} else if (type == _vm->longReflectClass) {
+		} else if ((type == _vm->longReflectClass)
+		|| (type == _vm->memoryAddressClass)  // the long value address for the MemoryAddress type
+		) {
 			typeFFI = &ffi_type_sint64;
 		} else if (type == _vm->doubleReflectClass) {
 			typeFFI = &ffi_type_double;
-		} else if (J9CLASS_IS_ARRAY(type) && ((J9ArrayClass*)type)->leafComponentType == J9VMJAVALANGOBJECT_OR_NULL(_vm)) {
+		} else if (J9CLASS_IS_ARRAY(type)
+		&& ((J9ArrayClass*)type)->leafComponentType == J9VMJAVALANGOBJECT_OR_NULL(_vm)
+		) {
 			typeFFI = &ffi_type_pointer;
 		} else {
 			Assert_VM_unreachable();
@@ -289,7 +293,7 @@ doneGetArrayFFIType:
 			, _vm(_currentThread->javaVM)
 	{ };
 
-#endif /* J9VM_OPT_PANAMA */
+#endif /* JAVA_SPEC_VERSION >= 16 */
 };
 
 #endif /* FFITYPEHELPERS_HPP_ */
