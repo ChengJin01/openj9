@@ -143,6 +143,8 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 
 	<classref name="jdk/internal/loader/NativeLibraries" versions="15-"/>
 	<classref name="jdk/internal/loader/NativeLibraries$NativeLibraryImpl" versions="15-"/>
+	
+	<classref name="jdk/internal/foreign/abi/ProgrammableInvoker" flags="opt_openjdkFfi" versions="16-"/>
 
 	<classref name="jdk/internal/foreign/abi/ProgrammableInvoker" flags="opt_openjdkFfi" versions="16-"/>
 	<classref name="jdk/internal/foreign/abi/ProgrammableUpcallHandler" flags="opt_openjdkFfi" versions="16-"/>
@@ -375,11 +377,14 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 	<fieldref class="jdk/internal/foreign/abi/ProgrammableInvoker" name="cifNativeThunkAddr" signature="J" flags="opt_openjdkFfi" versions="16-"/>
 	<fieldref class="jdk/internal/foreign/abi/ProgrammableInvoker" name="argTypesAddr" signature="J" flags="opt_openjdkFfi" versions="16-"/>
 
+<<<<<<< Upstream, based on upstream/master
 	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="handler" signature="Ljdk/internal/foreign/abi/ProgrammableUpcallHandler;" flags="opt_openjdkFfi" versions="16-"/>
 	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="calleeMH" signature="Ljava/lang/invoke/MethodHandle;" flags="opt_openjdkFfi" versions="16-"/>
 	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="invokeName" signature="Ljava/lang/String;" flags="opt_openjdkFfi" versions="16-"/>
 	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="invokeCache" signature="[Ljava/lang/Object;" flags="opt_openjdkFfi" versions="16-"/>
 
+=======
+>>>>>>> b9c4892 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
 <!--
 	NOTE: the resolution code in jclcinit.c only looks at the J9ROMClassRef->runtimeFlags to determine
 	whether or not to attempt the class load.  The flags sepcified on the methods are ignored.
