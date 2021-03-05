@@ -99,7 +99,10 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 			<src path="${TestUtilities}" />
 			<exclude name="**/modules/**" />
 <<<<<<< Upstream, based on upstream/master
+<<<<<<< Upstream, based on upstream/master
 =======
+=======
+>>>>>>> b9c4892 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
 			<compilerarg line='--add-modules jdk.incubator.foreign' />
 			<compilerarg line='--add-exports java.base/jdk.internal.misc=ALL-UNNAMED' />
 >>>>>>> 27f8798 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
