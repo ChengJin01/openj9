@@ -289,7 +289,7 @@ doneGetArrayFFIType:
 
 		return typeFFI;
 	}
-
+	
 	/**
 	 * @brief Obtain a primitive FFI type from a layout string object
 	 * @param typeFFI[in] The primitive FFI type to be obtain
