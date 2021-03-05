@@ -28,6 +28,9 @@ list(APPEND OMR_PLATFORM_CXX_COMPILE_OPTIONS -fno-threadsafe-statics)
 # so we put these in the CMAKE_CXX_FLAGS instead
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-stringop-truncation -Wno-stringop-overflow -ggdb")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-stringop-truncation -Wno-stringop-overflow -ggdb")
+
 # Raise an error if a shared library has any unresolved symbols.
 # This flag isn't supported on OSX, but it has this behaviour by default
 if(NOT OMR_OS_OSX)

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2020 IBM Corp. and others
+ * Copyright (c) 1991, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -250,6 +250,11 @@ allocateVMThread(J9JavaVM * vm, omrthread_t osThread, UDATA privateFlags, void *
 	newThread->jitTOC = vm->jitTOC;
 #endif
 #endif
+
+#if JAVA_SPEC_VERSION >= 16
+	newThread->javaArgs = NULL;
+	newThread->javaArgCout = 0;
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 	/* If an exclusive access request is in progress, mark this thread */
 
