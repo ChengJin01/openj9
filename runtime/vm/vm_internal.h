@@ -431,6 +431,18 @@ convertByteArrayToCString(J9VMThread *currentThread, j9object_t byteArray);
 j9object_t
 convertCStringToByteArray(J9VMThread *currentThread, const char *byteArray);
 
+/**
+ * Allocate native memory and copy the argument array to it.
+ *
+ * @param currentThread[in] the current J9VMThread
+ * @param argArray[in] the specified argument array (must not be NULL)
+ * @param javaArgs[in] the specified native memory to store the arguments (must not be NULL)
+ *
+ * @returns the newly-allocated memory, or NULL on failure (no exception is set pending)
+ */
+UDATA *
+convertToNativeArgArray(J9VMThread *currentThread, j9object_t argArray, UDATA *javaArgs);
+
 /* ------------------- romclasses.c ----------------- */
 
 /**
