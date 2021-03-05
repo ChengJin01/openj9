@@ -317,8 +317,11 @@ static J9OutOfLineINLMapping outOfLineINLmappings[] = {
 #if JAVA_SPEC_VERSION >= 16
 	{ "Java_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields__", OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields },
 	{ "Java_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData___3Ljava_lang_String_2Ljava_lang_String_2Z", OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData },
+<<<<<<< Upstream, based on upstream/master
 	{ "Java_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallStub__Ljava_lang_Object_2_3Ljava_lang_String_2", OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallStub },
 	{ "Java_jdk_internal_foreign_abi_UpcallMHMetaData_resolveMetaDataFields__", OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveMetaDataFields },
+=======
+>>>>>>> b9c4892 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
 #endif /* JAVA_SPEC_VERSION >= 16 */
 };
 
