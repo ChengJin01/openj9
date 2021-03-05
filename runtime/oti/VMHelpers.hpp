@@ -186,6 +186,9 @@ typedef enum {
 	J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTOVIRTUAL,
 	J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTOINTERFACE,
 #endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
+#if JAVA_SPEC_VERSION >= 16
+	J9_BCLOOP_SEND_TARGET_INL_PROGRAMMABLEINVOKER_INVOKENATIVE,
+#endif /* JAVA_SPEC_VERSION >= 16 */
 } VM_SendTarget;
 
 typedef enum {
@@ -1544,10 +1547,13 @@ exit:
 			*returnStorage = (UDATA)*(U_32*)returnStorage;
 			break;
 		case J9NtcVoid:
-			/* Fall through is intentional */
+			*returnStorage = (UDATA)0;
+			break;
 		case J9NtcLong:
 			/* Fall through is intentional */
 		case J9NtcDouble:
+			/* Fall through is intentional */
+		case J9NtcPointer:
 			/* Fall through is intentional */
 		case J9NtcClass:
 			break;

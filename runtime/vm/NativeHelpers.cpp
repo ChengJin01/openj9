@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2001, 2020 IBM Corp. and others
+ * Copyright (c) 2001, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -147,6 +147,19 @@ convertCStringToByteArray(J9VMThread *currentThread, const char *cString)
 		VM_ArrayCopyHelpers::memcpyToArray(currentThread, result, (UDATA)0, 0, size, (void*)cString);
 	}
 	return result;
+}
+
+U_64 *
+convertToNativeArgArray(J9VMThread *currentThread, j9object_t argArray, U_64 *ffiArgs)
+{
+	UDATA argCount = (UDATA)J9INDEXABLEOBJECT_SIZE(currentThread, argArray);
+	/* 3 means each element of the array to be copied is 8 bytes (64bits) in size
+	 * as specified in memcpyToOrFromArrayContiguous() at ArrayCopyHelpers.hpp.
+	 * Note: all parameters are converted to long in ProgrammableInvoker, so the size of
+	 * element in the argument array must be 64bits.
+	 */
+	VM_ArrayCopyHelpers::memcpyFromArray(currentThread, argArray, 3, 0, argCount, (void*)ffiArgs);
+	return ffiArgs;
 }
 
 J9SFMethodTypeFrame *
