@@ -24,14 +24,34 @@
 #include "BytecodeAction.hpp"
 #include "UnsafeAPI.hpp"
 #include "j9vmnls.h"
-#include "omrlinkedlist.h"
 #include "OutOfLineINL.hpp"
-#include "FFITypeHelpers.hpp"
+#include "LayoutFFITypeHelpers.hpp"
 #include "AtomicSupport.hpp"
 
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
+
+typedef struct stru_Int_Int stru_Int_Int;
+typedef struct stru_Int_NestedStruct stru_Int_NestedStruct;
+
+struct stru_Int_Int {
+    int elem1;
+    int elem2;
+};
+
+struct stru_Int_NestedStruct {
+    int elem1;
+    stru_Int_Int elem2;
+};
+
+static int addIntAndIntsFromNestedStruct_reverseOrder(int arg1, stru_Int_NestedStruct arg2)
+{
+	int intSum = arg1 + arg2.elem1 + arg2.elem2.elem1 + arg2.elem2.elem2;
+	return intSum;
+}
+
+
 /* jdk.internal.foreign.abi.ProgrammableInvoker: private static synchronized native void resolveRequiredFields(); */
 VM_BytecodeAction
 OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields(J9VMThread *currentThread, J9Method *method)
@@ -40,6 +60,8 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields(
 	J9JavaVM *vm = currentThread->javaVM;
 	J9ConstantPool *jclConstantPool = (J9ConstantPool *)vm->jclConstantPool;
 	const int cpEntryNum = 2;
+	PORT_ACCESS_FROM_JAVAVM(vm);
+
 	U_16 cpIndex[cpEntryNum] = {
 				J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_CIFNATIVETHUNKADDR,
 				J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_ARGTYPESADDR
@@ -60,6 +82,64 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields(
 	}
 
 done:
+
+{
+	  UDATA returnValue = 0;
+	  UDATA *returnStorageTest = &returnValue;
+	  ffi_cif cif_temp;
+	  UDATA structElemNum = 2;
+	  UDATA nestedStructElemNum = 2;
+	  UDATA argNum = 2;
+	  ffi_type **cls_struct_fields1 = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * (structElemNum + 1), OMRMEM_CATEGORY_VM);
+	  ffi_type **cls_struct_fields2 = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * (nestedStructElemNum + 1), OMRMEM_CATEGORY_VM);
+	  ffi_type **dbl_arg_types = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * (argNum + 1), OMRMEM_CATEGORY_VM);
+	  void **args_db = (void **)j9mem_allocate_memory(sizeof(void *) * (argNum + 1), OMRMEM_CATEGORY_VM);
+	  ffi_type cls_struct_type1, cls_struct_type2;
+	  ffi_type *retType = &ffi_type_sint32;
+	  //int structSize = sizeof(stru_3Short) + sizeof(short);
+	  int arg1;
+	  int *arg2 = (int *)j9mem_allocate_memory(sizeof(stru_Int_NestedStruct), OMRMEM_CATEGORY_VM);
+
+	  cls_struct_fields2[0] = &ffi_type_sint32;
+	  cls_struct_fields2[1] = &ffi_type_sint32;
+	  cls_struct_fields2[2] = NULL;
+
+	  cls_struct_type2.size = 0;
+	  cls_struct_type2.alignment = 0;
+	  cls_struct_type2.type = FFI_TYPE_STRUCT;
+	  cls_struct_type2.elements = cls_struct_fields2;
+
+	  cls_struct_fields1[0] = &ffi_type_sint32;
+	  cls_struct_fields1[1] = &cls_struct_type2;
+	  cls_struct_fields1[2] = NULL;
+
+	  cls_struct_type1.size = 0;
+	  cls_struct_type1.alignment = 0;
+	  cls_struct_type1.type = FFI_TYPE_STRUCT;
+	  cls_struct_type1.elements = cls_struct_fields1;
+
+	  dbl_arg_types[0] = &ffi_type_sint32;
+	  dbl_arg_types[1] = &cls_struct_type1;
+	  dbl_arg_types[2] = NULL;
+
+	 ffi_prep_cif(&cif_temp, FFI_DEFAULT_ABI, 2, retType, dbl_arg_types);
+	 arg1 = 111;
+	   arg2[0] = 112;
+	   arg2[1] = 113;
+	   arg2[2] = 114;
+	 args_db[0] = &arg1;
+	 args_db[1] = arg2;
+	 args_db[2] = NULL;
+
+	 printf("\nOutOfLineINL: calling ffi_call: ... ");
+	ffi_call(&cif_temp, FFI_FN(addIntAndIntsFromNestedStruct_reverseOrder), returnStorageTest, args_db);
+	printf("\nffi_call1: returnStorageTest = %d, returnValue = %d\n", (int)(*returnStorageTest), (int)returnValue);
+	j9mem_free_memory(cls_struct_fields1);
+	j9mem_free_memory(cls_struct_fields2);
+	j9mem_free_memory(dbl_arg_types);
+	j9mem_free_memory(args_db);
+}
+
 	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 0);
 	return rc;
 }
@@ -78,33 +158,62 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData
 {
 	VM_BytecodeAction rc = EXECUTE_BYTECODE;
 	J9JavaVM *vm = currentThread->javaVM;
-	FFITypeHelpers FFIHelpers = FFITypeHelpers(currentThread);
+	LayoutFFITypeHelpers ffiTypeHelpers(currentThread);
 	ffi_cif *cif = NULL;
 	ffi_type *returnType = NULL;
 	ffi_type **argTypes = NULL;
-	J9CifArgumentTypes *cifArgTypesNode = NULL;
-
-	PORT_ACCESS_FROM_JAVAVM(vm);
 
 	bool newArgTypes = (bool)(*(U_32*)currentThread->sp);
 	j9object_t retLayoutStrObject = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 1);
 	j9object_t argLayoutStrsObject = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 2);
 	j9object_t nativeInvoker = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 3);
 	U_32 argTypesCount = J9INDEXABLEOBJECT_SIZE(currentThread, argLayoutStrsObject);
-	returnType = (ffi_type *)FFIHelpers.getPrimitiveFFIType(retLayoutStrObject);
+	UDATA returnLayoutSize = 0;
+
+	PORT_ACCESS_FROM_JAVAVM(vm);
+
+	/* Set up the ffi_type of the return layout in the case of primitive or struct */
+	returnLayoutSize = ffiTypeHelpers.getLayoutFFIType(&returnType, retLayoutStrObject);
+	if (returnLayoutSize >= UDATA_MAX) {
+		rc = GOTO_THROW_CURRENT_EXCEPTION;
+		setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
+		goto done;
+	/* Only intended for strut as the primitive's ffi_type is non-null */
+	} else if ((NULL == returnType)
+	|| ((FFI_TYPE_STRUCT == returnType->type) && (NULL == returnType->elements))
+	) {
+		rc = GOTO_THROW_CURRENT_EXCEPTION;
+		setNativeOutOfMemoryError(currentThread, 0, 0);
+		goto done;
+	}
 
 	if (!newArgTypes) {
 		argTypes = (ffi_type **)(UDATA)J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_ARGTYPESADDR(currentThread, nativeInvoker);
 	} else {
-		argTypes = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * argTypesCount, OMRMEM_CATEGORY_VM);
+		argTypes = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * (argTypesCount + 1), OMRMEM_CATEGORY_VM);
 		if (NULL == argTypes) {
 			rc = GOTO_THROW_CURRENT_EXCEPTION;
 			setNativeOutOfMemoryError(currentThread, 0, 0);
-			goto done;
+			goto freeAllMemoryThenExit;
 		}
+		argTypes[argTypesCount] = NULL;
 
-		for (U_8 i = 0; i < argTypesCount; i++) {
-			argTypes[i] = (ffi_type *)FFIHelpers.getPrimitiveFFIType(J9JAVAARRAYOFOBJECT_LOAD(currentThread, argLayoutStrsObject, i));
+		for (U_32 argIndex = 0; argIndex < argTypesCount; argIndex++) {
+			j9object_t argLayoutStrObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, argLayoutStrsObject, argIndex);
+			/* Set up the ffi_type of the argument layout in the case of primitive or struct */
+			UDATA argLayoutSize = ffiTypeHelpers.getLayoutFFIType(&argTypes[argIndex], argLayoutStrObject);
+			if (argLayoutSize >= UDATA_MAX) {
+				rc = GOTO_THROW_CURRENT_EXCEPTION;
+				setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
+				goto freeAllMemoryThenExit;
+			/* Only intended for strut as the primitive's ffi_type is non-null */
+			} else if ((NULL == argTypes[argIndex])
+			|| ((FFI_TYPE_STRUCT == argTypes[argIndex]->type) && (NULL == argTypes[argIndex]->elements))
+			) {
+				rc = GOTO_THROW_CURRENT_EXCEPTION;
+				setNativeOutOfMemoryError(currentThread, 0, 0);
+				goto freeAllMemoryThenExit;
+			}
 		}
 	}
 
@@ -133,25 +242,6 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData
 	}
 
 	if (newArgTypes) {
-		if (NULL == vm->cifArgumentTypesCache) {
-			vm->cifArgumentTypesCache = pool_new(sizeof(J9CifArgumentTypes), 0, 0, 0, J9_GET_CALLSITE(), OMRMEM_CATEGORY_VM, POOL_FOR_PORT(PORTLIB));
-			if (NULL == vm->cifArgumentTypesCache) {
-				rc = GOTO_THROW_CURRENT_EXCEPTION;
-				setNativeOutOfMemoryError(currentThread, 0, 0);
-				goto freeAllMemoryThenExit;
-			}
-		}
-
-		omrthread_monitor_enter(vm->cifArgumentTypesCacheMutex);
-		cifArgTypesNode = (J9CifArgumentTypes *)pool_newElement(vm->cifArgumentTypesCache);
-		omrthread_monitor_exit(vm->cifArgumentTypesCacheMutex);
-		if (NULL == cifArgTypesNode) {
-			rc = GOTO_THROW_CURRENT_EXCEPTION;
-			setNativeOutOfMemoryError(currentThread, 0, 0);
-			goto freeAllMemoryThenExit;
-		}
-		cifArgTypesNode->argumentTypes = (void **)argTypes;
-
 		VM_AtomicSupport::writeBarrier();
 		J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEINVOKER_SET_ARGTYPESADDR(currentThread, nativeInvoker, (intptr_t)argTypes);
 	}
@@ -164,10 +254,14 @@ done:
 	return rc;
 
 freeAllMemoryThenExit:
-	if (newArgTypes) {
+	if (newArgTypes && (NULL != argTypes)) {
+		for (U_32 argIndex = 0; argTypes[argIndex] != NULL; argIndex++) {
+			ffiTypeHelpers.freeStructFFIType(argTypes[argIndex]);
+		}
 		j9mem_free_memory(argTypes);
 		argTypes = NULL;
 	}
+	ffiTypeHelpers.freeStructFFIType(returnType);
 	goto done;
 }
 
