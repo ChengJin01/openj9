@@ -95,20 +95,13 @@ public class MultiCallTests {
 		mh = clinker.downcallHandle(functionSymbol3, mt3, fd3);
 		mh.invokeExact(454, 398);
 		
-		MethodType mt4 = MethodType.methodType(Integer.class, int.class, int.class);
-		mh = clinker.downcallHandle(functionSymbol1, mt4, fd1);
-		Integer result2 = (Integer)mh.invokeExact(212, 223);
-		Assert.assertEquals(result2.intValue(), 435);
+		mh = clinker.downcallHandle(functionSymbol1, mt1, fd1);
+		result = (int)mh.invokeExact(234, 567);
+		Assert.assertEquals(result, 801);
 		
-		MethodType mt5 = MethodType.methodType(int.class, Integer.class, int.class);
-		mh = clinker.downcallHandle(functionSymbol1, mt5, fd1);
-		result = (int)mh.invokeExact((Integer)312, 323);
-		Assert.assertEquals(result, 635);
-		
-		MethodType mt6 = MethodType.methodType(int.class, int.class, Integer.class, Integer.class);
-		mh = clinker.downcallHandle(functionSymbol2, mt6, fd2);
-		result = (int)mh.invokeExact(312, (Integer)323, (Integer)335);
-		Assert.assertEquals(result, 970);
+		mh = clinker.downcallHandle(functionSymbol2, mt2, fd2);
+		result = (int)mh.invokeExact(312, 323, 334);
+		Assert.assertEquals(result, 969);
 		
 		mh = clinker.downcallHandle(functionSymbol3, mt3, fd3);
 		mh.invokeExact(539, 672);
@@ -154,5 +147,7 @@ public class MultiCallTests {
 		mh = clinker.downcallHandle(functionSymbol3, mt3, fd);
 		boolean boolResult = (boolean)mh.invokeExact(true, false);
 		Assert.assertEquals(boolResult, true);
+		boolResult = (boolean)mh.invokeExact(false, false);
+		Assert.assertEquals(boolResult, false);
 	}
 }

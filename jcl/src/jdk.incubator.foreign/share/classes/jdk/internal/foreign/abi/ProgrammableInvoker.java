@@ -25,6 +25,8 @@ package jdk.internal.foreign.abi;
 import java.util.Optional;
 import java.util.List;
 import java.util.HashMap;
+import java.util.OptionalLong;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import static java.lang.invoke.MethodHandles.*;
@@ -35,6 +37,8 @@ import java.lang.invoke.WrongMethodTypeException;
 
 import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.ValueLayout;
+import jdk.incubator.foreign.GroupLayout;
+import jdk.incubator.foreign.SequenceLayout;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.MemoryAddress;
@@ -232,14 +236,21 @@ public class ProgrammableInvoker {
 	
 	/* Map the layouts of return type & argument types to the underlying prep_cif */
 	private void generateAdapter() {
-		Optional<MemoryLayout> returnLayout = funcDescriptor.returnLayout();
-		/* Set the void layout string intended for the underlying native code as the corresponding layout doesn't exist in the Spec */
-		String retLayoutStr = (returnLayout.isPresent()) ? returnLayout.toString() : "b0[abi/kind=VOID]"; //$NON-NLS-1$
+		/* Set the void layout string intended for the underlying native code
+		 * as the corresponding layout doesn't exist in the Spec.
+		 * Note: 'V' stands for the void type and 0 means zero byte.
+		 */
+		String retLayoutStr = "0V"; //$NON-NLS-1$
+		if (realReturnLayout != null) {
+			retLayoutStr = realReturnLayout.byteSize() + preprocessLayoutString(realReturnLayout);
+		}
 		
 		int argLayoutCount = argLayoutArray.length;
 		String[] argLayoutStrs = new String[argLayoutCount];
 		for (int argIndex = 0; argIndex < argLayoutCount; argIndex++) {
-			argLayoutStrs[argIndex] = argLayoutArray[argIndex].toString();
+			MemoryLayout argLayout = argLayoutArray[argIndex];
+			/* Prefix the size of layout to the layout string to be parsed in native */
+			argLayoutStrs[argIndex] = argLayout.byteSize() + preprocessLayoutString(argLayout);
 		}
 		
 		synchronized(privateClassLock) {
@@ -290,6 +301,106 @@ public class ProgrammableInvoker {
 				cachedCifNativeThunkAddr.put(funcDescHashPlusFuncAddr, Long.valueOf(cifNativeThunkAddr));
 			}
 		}
+	}
+	
+	/* Preprocess the layout string to remove all description for easier handling in native.
+	 * e.g. a nested struct layout string such as
+	 * [
+	 *   [
+	 *    b32(elem1)[abi/kind=INT,layout/name=elem1]
+	 *    b32(elem2)[abi/kind=INT,layout/name=elem2]
+	 *   ](Struct1_II)[layout/name=Struct1_II]
+	 *   [
+	 *    b32(elem1)[abi/kind=INT,layout/name=elem1]
+	 *    b32(elem2)[abi/kind=INT,layout/name=elem2]
+	 *    ](Struct2_II)[layout/name=Struct2_II]
+	 *   ](nested_struct)[layout/name=nested_struct]
+	 * 
+	 * ends up with
+	 * 
+	 *   [
+	 *     [
+	 *      I  (C_INT)
+	 *      I  (C_INT)
+	 *     ]
+	 *     [
+	 *      I  (C_INT)
+	 *      I  (C_INT)
+	 *     ]
+	 *   ]
+	 */
+	private static String preprocessLayoutString(MemoryLayout targetLayout) {
+		String resultLayoutString = prefixCountOfStructElements(targetLayout);
+		
+		/* Remove the layout name in parentheses if exits. e.g. "(c_int)" */
+		resultLayoutString = resultLayoutString.replaceAll("\\(.*?\\)", "") //$NON-NLS-1$ //$NON-NLS-2$
+					/* Remove the primitive layout name in square brackets if exits. e.g. ",layout/name=C_INT" */
+					.replaceAll("\\,layout/name=.*?\\]", "\\]") //$NON-NLS-1$ //$NON-NLS-2$
+					/* Remove the struct layout name in square brackets if exits. e.g. "[layout/name=struct_II]" */
+					.replaceAll("\\[layout/name=.*?\\]", "") //$NON-NLS-1$ //$NON-NLS-2$
+					/* Remove all the primitives' size in the layout string.
+					 * e.g. remove "b32" for little-endianness and "B" for big-endianness */
+					.replaceAll("b\\d+", "").replaceAll("B\\d+", "") //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+					/* Remove all the padding bits in the layout string. e.g. remove "x16" */
+					.replaceAll("x\\d+", "") //$NON-NLS-1$ //$NON-NLS-2$
+					/* Convert all primitives to a single letter for easier handling in native */
+					.replaceAll("\\[abi/kind=CHAR\\]", "C") //$NON-NLS-1$ //$NON-NLS-2$
+					.replaceAll("\\[abi/kind=SHORT\\]", "S") //$NON-NLS-1$ //$NON-NLS-2$
+					.replaceAll("\\[abi/kind=INT\\]", "I") //$NON-NLS-1$ //$NON-NLS-2$
+					.replaceAll("\\[abi/kind=LONG\\]", "L") //$NON-NLS-1$ //$NON-NLS-2$
+					.replaceAll("\\[abi/kind=LONG_LONG\\]", "L") //$NON-NLS-1$ //$NON-NLS-2$
+					.replaceAll("\\[abi/kind=FLOAT\\]", "F") //$NON-NLS-1$ //$NON-NLS-2$
+					.replaceAll("\\[abi/kind=DOUBLE\\]", "D") //$NON-NLS-1$ //$NON-NLS-2$
+					.replaceAll("\\[abi/kind=POINTER\\]", "P"); //$NON-NLS-1$ //$NON-NLS-2$
+		return resultLayoutString;
+	}
+	
+	/* Recursively prefix the count of struct elements (namely the count of ffi_types in a struct) 
+	 * to the front of struct layout string.
+	 */
+	private static String prefixCountOfStructElements(MemoryLayout targetLayout) {
+		String resultLayoutString = targetLayout.toString();
+		
+		MemoryLayout resultLayout = targetLayout;
+		boolean isSequenceLayout = false;
+		long seqElementCount = 0;
+		if (SequenceLayout.class.isInstance(targetLayout)) {
+			resultLayout = ((SequenceLayout)targetLayout).elementLayout();
+			seqElementCount = ((SequenceLayout)targetLayout).elementCount().getAsLong();
+			isSequenceLayout = true;
+		}
+		
+		if (GroupLayout.class.isInstance(resultLayout)) {
+			List<MemoryLayout> layoutElements = ((GroupLayout)resultLayout).memberLayouts();
+			int structElementCount = layoutElements.size();
+			String elementLayoutStrs = ""; //$NON-NLS-1$
+			int paddingElementCount = 0;
+			for (int elementIndex = 0; elementIndex < structElementCount; elementIndex++) {
+				MemoryLayout structElement = layoutElements.get(elementIndex);
+				String structElementStr = structElement.toString().toLowerCase();
+				/* Skip the padding element (e.g. x16) if exists */
+				if (structElementStr.startsWith("x")) { //$NON-NLS-1$
+					paddingElementCount += 1;
+				} else {
+					elementLayoutStrs += prefixCountOfStructElements(structElement);
+				}
+			}
+			/* Exclude all the padding elements in the struct layout string
+			 * and prefix "#" to identify the start of this layout string.
+			 */
+			resultLayoutString = "#" + (layoutElements.size() - paddingElementCount)
+									+ "[" + elementLayoutStrs + "]"; //$NON-NLS-1$ //$NON-NLS-2$
+
+			if (isSequenceLayout) {
+				/* Prefix the count of sequence element to the front of the SequenceLayout string */
+				resultLayoutString = seqElementCount + ":" + resultLayoutString;
+			}
+		} else if (isSequenceLayout) {
+			/* Remove "[" and "]" of the SequenceLayout string in the case of primitive elements */
+			resultLayoutString = resultLayoutString.substring(1, resultLayoutString.length() - 1);
+		}
+		
+		return resultLayoutString;
 	}
 	
 	/* The method is ultimately invoked by Clinker on the specific platforms to generate the requested
@@ -387,7 +498,7 @@ public class ProgrammableInvoker {
 			return MemoryAddress.ofLong(retValue);
 		} else if (realReturnType == MemorySegment.class) {
 			MemoryAddress memSegmtAddr = MemoryAddress.ofLong(retValue);
-			return memSegmtAddr.asSegmentRestricted(realReturnLayout.bitSize());
+			return memSegmtAddr.asSegmentRestricted(realReturnLayout.byteSize());
 		}
 		return retValue;
 	}
@@ -449,37 +560,34 @@ public class ProgrammableInvoker {
 		Class<?>  realType = unboxingPrimitiveClassType(targetType);
 		boolean isPrimitiveLayout = false;
 		
-		/* The struct (specified by GroupLayout) corresponds to MemorySegment at Java level */
+		if (targetLayout != null) {
+			if (!targetLayout.hasSize()) {
+				throw new IllegalArgumentException("The layout's size is expected: layout = " + targetLayout); //$NON-NLS-1$
+			} else if (targetLayout.bitSize() <= 0) {
+				throw new IllegalArgumentException("The layout's size must be greater than zero: layout = " + targetLayout); //$NON-NLS-1$
+			}
+		}
+		
+		/* The struct (specified by GroupLayout) for MemorySegment corresponds to GroupLayout in terms of layout */
 		if (targetType == MemorySegment.class) {
 			if (!GroupLayout.class.isInstance(targetLayout)) {
 				throw new IllegalArgumentException("GroupLayout is expected: layout = " + targetLayout); //$NON-NLS-1$
 			}
-		/* ValueLayout is only intended for the primitive types */
-		} else {
-			isPrimitiveLayout = (ValueLayout.class.isInstance(targetLayout) && (targetType != void.class));
-			if (!isPrimitiveLayout) {
+		/* Check the void layout (null for void) and the void type */
+		} else if (((targetType == void.class) && (targetLayout != null))
+		|| ((targetType != void.class) && (targetLayout == null))
+		) {
+			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = "  //$NON-NLS-1$
+												+ ((targetLayout == null) ? "VOID" : targetLayout) //$NON-NLS-1$
+												+ ", type = " + targetType);  //$NON-NLS-1$
+		/* Check the primitive type and MemoryAddress against the ValueLayout */
+		} else if (targetType != void.class) {
+			if (!ValueLayout.class.isInstance(targetLayout)) {
 				throw new IllegalArgumentException("ValueLayout is expected: layout = " + targetLayout); //$NON-NLS-1$
 			}
-		}
-		
-		if (targetLayout != null) {
-			if (!targetLayout.hasSize()) {
-				throw new IllegalArgumentException("The layout's size is expected: layout = " + targetLayout); //$NON-NLS-1$
-			} 	else if (0 == targetLayout.bitSize()) {
-				throw new IllegalArgumentException("The layout's size must be greater than zero: layout = " + targetLayout); //$NON-NLS-1$
-			}
-			
-			if(!targetLayout.toString().contains("[abi/kind=")) { //$NON-NLS-1$
-				throw new IllegalArgumentException("The layout's ABI Class is undefined: layout = " + targetLayout); //$NON-NLS-1$
-			}
-			
-			if (isPrimitiveLayout) {
-				validatePrimitiveLayoutSize(targetLayout, realType);
-				validatePrimitiveLayoutKind(targetLayout, realType);
-			}
-		} else if (targetType != void.class) { // the type must be void when the layout is null
-			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = VOID"  //$NON-NLS-1$
-					+ ", type = " + targetType);  //$NON-NLS-1$
+			/* Check the size and kind of the ValueLayout for the primitive types and MemoryAddress */
+			validateValueLayoutSize(targetLayout, realType);
+			validateValueLayoutKind(targetLayout, realType);
 		}
 	}
 	
@@ -509,7 +617,7 @@ public class ProgrammableInvoker {
 	}
 	
 	/* Check the size of the specified primitive layout to determine whether it matches the specified type */
-	private static void validatePrimitiveLayoutSize(MemoryLayout TypeLayout, Class<?> targetType) {
+	private static void validateValueLayoutSize(MemoryLayout TypeLayout, Class<?> targetType) {
 		String layoutSize = TypeLayout.bitSize() + "_bits"; //$NON-NLS-1$
 		boolean mismatchedSize = false;
 		
@@ -562,8 +670,12 @@ public class ProgrammableInvoker {
 	}
 	
 	/* Check the kind (type) of the specified primitive layout to determine whether it matches the specified type */
-	private static void validatePrimitiveLayoutKind(MemoryLayout targetLayout, Class<?> targetType) {
+	private static void validateValueLayoutKind(MemoryLayout targetLayout, Class<?> targetType) {
 		boolean mismatchType = false;
+		
+		if(!targetLayout.toString().contains("[abi/kind=")) { //$NON-NLS-1$
+			throw new IllegalArgumentException("The layout's ABI Class is undefined: layout = " + targetLayout); //$NON-NLS-1$
+		}
 		
 		/* Extract the kind from the specified layout with the ATTR_NAME "abi/kind".
 		 * e.g. b32[abi/kind=INT]

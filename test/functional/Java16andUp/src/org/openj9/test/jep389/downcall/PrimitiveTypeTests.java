@@ -88,16 +88,6 @@ public class PrimitiveTypeTests {
 	}
 	
 	@Test
-	public void test_addTwoBoolObjectsWithOr() throws Throwable {
-		MethodType mt = MethodType.methodType(Boolean.class, Boolean.class, Boolean.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
-		Symbol functionSymbol = nativeLib.lookup("add2BoolsWithOr").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Boolean result = (Boolean)mh.invokeExact((Boolean)false, (Boolean)true);
-		Assert.assertEquals(result.booleanValue(), true);
-	}
-	
-	@Test
 	public void test_generateNewChar() throws Throwable {
 		MethodType mt = MethodType.methodType(char.class, char.class, char.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
@@ -130,16 +120,6 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		char result = (char)mh.invokeExact('B', 'D');
 		Assert.assertEquals(result, 'C');
-	}
-	
-	@Test
-	public void test_generateNewCharObject() throws Throwable {
-		MethodType mt = MethodType.methodType(Character.class, Character.class, Character.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
-		Symbol functionSymbol = nativeLib.lookup("createNewCharFrom2Chars").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Character result = (Character)mh.invokeExact((Character)'F', (Character)'C');
-		Assert.assertEquals(result.charValue(), 'D');
 	}
 	
 	@Test
@@ -188,16 +168,6 @@ public class PrimitiveTypeTests {
 	}
 	
 	@Test
-	public void test_addTwoByteObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Byte.class, Byte.class, Byte.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, C_CHAR);
-		Symbol functionSymbol = nativeLib.lookup("add2Bytes").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Byte result = (Byte)mh.invokeExact(Byte.valueOf((byte)8), Byte.valueOf((byte)5));
-		Assert.assertEquals(result.byteValue(), (byte)13);
-	}
-	
-	@Test
 	public void test_addTwoShorts() throws Throwable {
 		MethodType mt = MethodType.methodType(short.class, short.class, short.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
@@ -239,16 +209,6 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		short result = (short)mh.invokeExact((short)24, (short)32);
 		Assert.assertEquals(result, (short)56);
-	}
-	
-	@Test
-	public void test_addTwoShortObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Short.class, Short.class, Short.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
-		Symbol functionSymbol = nativeLib.lookup("add2Shorts").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Short result = (Short)mh.invokeExact(Short.valueOf((short)56), Short.valueOf((short)42));
-		Assert.assertEquals(result.shortValue(), (short)98);
 	}
 	
 	@Test
@@ -294,16 +254,6 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		int result = (int)mh.invokeExact(112, 123);
 		Assert.assertEquals(result, 235);
-	}
-	
-	@Test
-	public void test_addTwoIntObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Integer.class,Integer.class, Integer.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
-		Symbol functionSymbol = nativeLib.lookup("add2Ints").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Integer result = (Integer)mh.invokeExact((Integer)234, (Integer)245);
-		Assert.assertEquals(result.intValue(), 479);
 	}
 	
 	@Test
@@ -363,16 +313,6 @@ public class PrimitiveTypeTests {
 	}
 	
 	@Test
-	public void test_addIntObjectAndCharObject() throws Throwable {
-		MethodType mt = MethodType.methodType(Integer.class, Integer.class, Character.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_SHORT);
-		Symbol functionSymbol = nativeLib.lookup("addIntAndChar").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Integer result = (Integer)mh.invokeExact((Integer)276, (Character)'E');
-		Assert.assertEquals(result.intValue(), 345);
-	}
-	
-	@Test
 	public void test_addTwoLongs() throws Throwable {
 		MethodType mt = MethodType.methodType(long.class, long.class, long.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, longLayout, longLayout);
@@ -405,16 +345,6 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		long result = (long)mh.invokeExact(57424L, 698235L);
 		Assert.assertEquals(result, 755659L);
-	}
-	
-	@Test
-	public void test_addTwoLongObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Long.class, Long.class, Long.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, longLayout, longLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2Longs").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Long result = (Long)mh.invokeExact((Long)257423L, (Long)235726L);
-		Assert.assertEquals(result.longValue(), 493149L);
 	}
 	
 	@Test
@@ -469,16 +399,6 @@ public class PrimitiveTypeTests {
 	}
 	
 	@Test
-	public void test_addTwoFloatObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Float.class, Float.class, Float.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_FLOAT, C_FLOAT, C_FLOAT);
-		Symbol functionSymbol = nativeLib.lookup("add2Floats").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Float result = (Float)mh.invokeExact((Float)15.03f, (Float)16.09f);
-		Assert.assertEquals(result.floatValue(), 31.12f, 0.01f);
-	}
-	
-	@Test
 	public void test_addTwoDoubles() throws Throwable {
 		MethodType mt = MethodType.methodType(double.class, double.class, double.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_DOUBLE, C_DOUBLE);
@@ -511,16 +431,6 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		double result = (double)mh.invokeExact(159.748d, 262.795d);
 		Assert.assertEquals(result, 422.543d, 0.001d);
-	}
-	
-	@Test
-	public void test_addTwoDoubleObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Double.class, Double.class, Double.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_DOUBLE, C_DOUBLE);
-		Symbol functionSymbol = nativeLib.lookup("add2Doubles").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Double result = (Double)mh.invokeExact((Double)259.748d, (Double)362.797d);
-		Assert.assertEquals(result.doubleValue(), 622.545d, 0.001d);
 	}
 	
 	@Test
