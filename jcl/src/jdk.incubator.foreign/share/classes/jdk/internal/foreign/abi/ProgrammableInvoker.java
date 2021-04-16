@@ -57,6 +57,7 @@ public class ProgrammableInvoker {
 	private long argTypesAddr;
 	private List<MemoryLayout> argLayouts;
 	private MemoryLayout[] argLayoutArray;
+	private MemoryLayout realReturnLayout;
 	
 	final static Lookup lookup = MethodHandles.lookup();
 	
@@ -73,6 +74,7 @@ public class ProgrammableInvoker {
 	private static MethodHandle floatToLongFilter = null;
 	private static MethodHandle doubleToLongFilter = null;
 	private static MethodHandle memAddrToLongFilter = null;
+	private static MethodHandle memSegmtToLongFilter = null;
 	
 	private static MethodHandle booleanObjToLongFilter = null;
 	private static MethodHandle charObjToLongFilter = null;
@@ -103,6 +105,7 @@ public class ProgrammableInvoker {
 			floatToLongFilter = lookup.findStatic(ProgrammableInvoker.class, "floatToLong", methodType(long.class, float.class)); //$NON-NLS-1$
 			doubleToLongFilter = lookup.findStatic(Double.class, "doubleToLongBits", methodType(long.class, double.class)); //$NON-NLS-1$
 			memAddrToLongFilter = lookup.findStatic(ProgrammableInvoker.class, "memAddrToLong", methodType(long.class, MemoryAddress.class)); //$NON-NLS-1$
+			memSegmtToLongFilter = lookup.findStatic(ProgrammableInvoker.class, "memSegmtToLong", methodType(long.class, MemorySegment.class)); //$NON-NLS-1$
 
 			booleanObjToLongFilter = lookup.findStatic(ProgrammableInvoker.class, "booleanObjToLong", methodType(long.class, Boolean.class)); //$NON-NLS-1$
 			charObjToLongFilter = lookup.findStatic(ProgrammableInvoker.class, "charObjToLong", methodType(long.class, Character.class)); //$NON-NLS-1$
@@ -160,9 +163,14 @@ public class ProgrammableInvoker {
 		return Float.floatToIntBits(argValue);
 	}
 	
-	/* Intended for memAddrToLongFilter that converts the memory address value to long */
+	/* Intended for memAddrToLongFilter that converts the memory address to long */
 	private static final long memAddrToLong(MemoryAddress argValue) {
 		return argValue.toRawLongValue();
+	}
+	
+	/* Intended for memAddrToLongFilter that converts the memory segment to long */
+	private static final long memSegmtToLong(MemorySegment argValue) {
+		return argValue.address().toRawLongValue();
 	}
 	
 	/* Intended for booleanObjToLongFilter that converts the Boolean object to long */
@@ -316,7 +324,7 @@ public class ProgrammableInvoker {
 		return resultHandle;
 	}
 	
-	/* Obtain the filter that converts the primitive value to long against its type */
+	/* Obtain the filter that converts the passed-in argument to long against its type */
 	private static MethodHandle getArgumentFilter(Class<?> argTypeClass) {
 		Class<?> realArgTypeClass = unboxingPrimitiveClassType(argTypeClass);
 		MethodHandle filterMH = null;
@@ -340,6 +348,8 @@ public class ProgrammableInvoker {
 			filterMH = (argTypeClass == realArgTypeClass) ? doubleToLongFilter : doubleObjToLongFilter;
 		} else if (realArgTypeClass == MemoryAddress.class) {
 			filterMH = memAddrToLongFilter;
+		} else if (realArgTypeClass == MemorySegment.class) {
+			filterMH = memSegmtToLongFilter;
 		}
 		
 		return filterMH;
@@ -375,6 +385,9 @@ public class ProgrammableInvoker {
 			return Double.longBitsToDouble(retValue);
 		} else if (realReturnType == MemoryAddress.class) {
 			return MemoryAddress.ofLong(retValue);
+		} else if (realReturnType == MemorySegment.class) {
+			MemoryAddress memSegmtAddr = MemoryAddress.ofLong(retValue);
+			return memSegmtAddr.asSegmentRestricted(realReturnLayout.bitSize());
 		}
 		return retValue;
 	}
@@ -385,11 +398,12 @@ public class ProgrammableInvoker {
 	private void checkIfValidLayoutAndType(MethodType targetMethodType, FunctionDescriptor funcDesc) {
 		Class<?> retType = targetMethodType.returnType();
 		if (!validateArgRetTypeClass(retType) && (retType != void.class)) {
-			throw new IllegalArgumentException("The return type is neither primitive/void nor MemoryAddress");  //$NON-NLS-1$
+			throw new IllegalArgumentException("The return type must be primitive/void, MemoryAddress or MemoryAddress" //$NON-NLS-1$
+												+ ": retType = " + retType);  //$NON-NLS-1$
 		}
 		
 		Optional<MemoryLayout> returnLayout = funcDesc.returnLayout();
-		MemoryLayout realReturnLayout = returnLayout.isPresent() ? returnLayout.get() : null; // set to null for void
+		realReturnLayout = returnLayout.isPresent() ? returnLayout.get() : null; // set to null for void
 		validateLayoutAgainstType(realReturnLayout, targetMethodType.returnType());
 
 		Class<?>[] argTypes = targetMethodType.parameterArray();
@@ -405,15 +419,13 @@ public class ProgrammableInvoker {
 		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayoutCount]);
 		for (int argIndex = 0; argIndex < argLayoutCount; argIndex++) {
 			if (!validateArgRetTypeClass(argTypes[argIndex])) {
-				throw new IllegalArgumentException("The passed-in argument types at index " + argIndex + " is neither primitive nor MemoryAddress"); //$NON-NLS-1$ //$NON-NLS-2$
+				throw new IllegalArgumentException("The passed-in argument type at index " + argIndex + " is neither primitive nor MemoryAddress/MemoryAddress"); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 			validateLayoutAgainstType(argLayoutArray[argIndex], argTypes[argIndex]);
 		}
 	}
 	
-	/* Verify whether the specified types are primitive or MemoryAddress
-	 * Note: will update after the struct layout (phase 2 & 3) is fully implemented.
-	 */
+	/* Verify whether the specified type is primitive, MemoryAddress (for pointer) or MemorySegment (for struct) */
 	private static boolean validateArgRetTypeClass(Class<?> targetType) {
 		if (!targetType.isPrimitive()
 		&& (targetType != Boolean.class)
@@ -425,6 +437,7 @@ public class ProgrammableInvoker {
 		&& (targetType != Float.class)
 		&& (targetType != Double.class)
 		&& (targetType != MemoryAddress.class)
+		&& (targetType != MemorySegment.class)
 		) {
 			return false;
 		}
@@ -434,22 +447,40 @@ public class ProgrammableInvoker {
 	/* Check the validity of the layout against the corresponding type */
 	private static void validateLayoutAgainstType(MemoryLayout targetLayout, Class<?> targetType) {
 		Class<?>  realType = unboxingPrimitiveClassType(targetType);
+		boolean isPrimitiveLayout = false;
 		
-		if (targetLayout != null) {
-			if (!ValueLayout.class.isInstance(targetLayout)) {
+		/* The struct (specified by GroupLayout) corresponds to MemorySegment at Java level */
+		if (targetType == MemorySegment.class) {
+			if (!GroupLayout.class.isInstance(targetLayout)) {
+				throw new IllegalArgumentException("GroupLayout is expected: layout = " + targetLayout); //$NON-NLS-1$
+			}
+		/* ValueLayout is only intended for the primitive types */
+		} else {
+			isPrimitiveLayout = (ValueLayout.class.isInstance(targetLayout) && (targetType != void.class));
+			if (!isPrimitiveLayout) {
 				throw new IllegalArgumentException("ValueLayout is expected: layout = " + targetLayout); //$NON-NLS-1$
 			}
+		}
+		
+		if (targetLayout != null) {
 			if (!targetLayout.hasSize()) {
 				throw new IllegalArgumentException("The layout's size is expected: layout = " + targetLayout); //$NON-NLS-1$
+			} 	else if (0 == targetLayout.bitSize()) {
+				throw new IllegalArgumentException("The layout's size must be greater than zero: layout = " + targetLayout); //$NON-NLS-1$
 			}
-			
-			validateLayoutSize(targetLayout, realType);
 			
 			if(!targetLayout.toString().contains("[abi/kind=")) { //$NON-NLS-1$
 				throw new IllegalArgumentException("The layout's ABI Class is undefined: layout = " + targetLayout); //$NON-NLS-1$
 			}
+			
+			if (isPrimitiveLayout) {
+				validatePrimitiveLayoutSize(targetLayout, realType);
+				validatePrimitiveLayoutKind(targetLayout, realType);
+			}
+		} else if (targetType != void.class) { // the type must be void when the layout is null
+			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = VOID"  //$NON-NLS-1$
+					+ ", type = " + targetType);  //$NON-NLS-1$
 		}
-		validateLayoutKind(targetLayout, realType);
 	}
 	
 	/* Unbox the primitive class type to the primitive type if it occurs in the method types */
@@ -477,8 +508,8 @@ public class ProgrammableInvoker {
 		return clazz;
 	}
 	
-	/* Check the layout size to determine whether the layout matches the corresponding type */
-	private static void validateLayoutSize(MemoryLayout TypeLayout, Class<?> targetType) {
+	/* Check the size of the specified primitive layout to determine whether it matches the specified type */
+	private static void validatePrimitiveLayoutSize(MemoryLayout TypeLayout, Class<?> targetType) {
 		String layoutSize = TypeLayout.bitSize() + "_bits"; //$NON-NLS-1$
 		boolean mismatchedSize = false;
 		
@@ -530,65 +561,59 @@ public class ProgrammableInvoker {
 		}
 	}
 	
-	/* Check the layout kind to determine whether the layout matches the corresponding type */
-	private static void validateLayoutKind(MemoryLayout targetLayout, Class<?> targetType) {
+	/* Check the kind (type) of the specified primitive layout to determine whether it matches the specified type */
+	private static void validatePrimitiveLayoutKind(MemoryLayout targetLayout, Class<?> targetType) {
 		boolean mismatchType = false;
 		
 		/* Extract the kind from the specified layout with the ATTR_NAME "abi/kind".
 		 * e.g. b32[abi/kind=INT]
 		 */
-		if (targetLayout != null) {
-			TypeKind kind = (TypeKind)targetLayout.attribute(TypeKind.ATTR_NAME).orElse(null);
-			
-			switch (kind) {
-			case CHAR:
-				/* the CHAR layout (8bits) in Java only matches with byte in C */
-				break;
-			case SHORT:
-				/* the SHORT layout (16bits) in Java only matches char and short in C */
-				break;
-			case INT:
-				/* the INT layout (32bits) in Java only matches boolean and int in C */
-				if ((targetType != boolean.class) && (targetType != int.class)) {
-					mismatchType = true;
-				}
-				break;
-			case LONG:
-			case LONG_LONG:
-				/* the LONG/LONG_LONG layout (64bits) in Java only matches long in C */
-				if (targetType != long.class) {
-					mismatchType = true;
-				}
-				break;
-			case FLOAT:
-				/* the FLOAT layout (32bits) in Java only matches float in C */
-				if (targetType != float.class) {
-					mismatchType = true;
-				}
-				break;
-			case DOUBLE:
-				/* the DOUBLE layout (64bits) in Java only matches double in C */
-				if (targetType != double.class) {
-					mismatchType = true;
-				}
-				break;
-			case POINTER:
-				/* the POINTER layout (64bits) in Java only matches MemoryAddress */
-				if (targetType != MemoryAddress.class) {
-					mismatchType = true;
-				}
-				break;
-			default:
+		TypeKind kind = (TypeKind)targetLayout.attribute(TypeKind.ATTR_NAME).orElse(null);
+		switch (kind) {
+		case CHAR:
+			/* the CHAR layout (8bits) in Java only matches with byte in C */
+			break;
+		case SHORT:
+			/* the SHORT layout (16bits) in Java only matches char and short in C */
+			break;
+		case INT:
+			/* the INT layout (32bits) in Java only matches boolean and int in C */
+			if ((targetType != boolean.class) && (targetType != int.class)) {
 				mismatchType = true;
-				break;
 			}
-		} else if (targetType != void.class) { // the type must be void when the layout is null
+			break;
+		case LONG:
+		case LONG_LONG:
+			/* the LONG/LONG_LONG layout (64bits) in Java only matches long in C */
+			if (targetType != long.class) {
+				mismatchType = true;
+			}
+			break;
+		case FLOAT:
+			/* the FLOAT layout (32bits) in Java only matches float in C */
+			if (targetType != float.class) {
+				mismatchType = true;
+			}
+			break;
+		case DOUBLE:
+			/* the DOUBLE layout (64bits) in Java only matches double in C */
+			if (targetType != double.class) {
+				mismatchType = true;
+			}
+			break;
+		case POINTER:
+			/* the POINTER layout (64bits) in Java only matches MemoryAddress */
+			if (targetType != MemoryAddress.class) {
+				mismatchType = true;
+			}
+			break;
+		default:
 			mismatchType = true;
+			break;
 		}
 		
 		if (mismatchType) {
-			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = "  //$NON-NLS-1$
-												+ ((targetLayout == null) ? "VOID" : targetLayout) //$NON-NLS-1$
+			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = " + targetLayout //$NON-NLS-1$
 												+ ", type = " + targetType);  //$NON-NLS-1$
 		}
 	}
