@@ -60,6 +60,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		boolean result = (boolean)mh.invokeExact(true, false);
 		Assert.assertEquals(result, true);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_INT.withName("int"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (boolean)mh.invokeExact(false, false);
+		Assert.assertEquals(result, false);
 	}
 	
 	@Test
@@ -68,10 +73,17 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_POINTER);
 		Symbol functionSymbol = nativeLib.lookup("addBoolAndBoolFromPointerWithOr").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment intSegmt = MemorySegment.allocateNative(C_INT);
 		MemoryAccess.setInt(intSegmt, 1);
 		boolean result = (boolean)mh.invokeExact(false, intSegmt.address());
+		intSegmt.close();
+		Assert.assertEquals(result, true);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_POINTER.withName("pointer"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		intSegmt = MemorySegment.allocateNative(C_INT);
+		MemoryAccess.setInt(intSegmt, 0);
+		result = (boolean)mh.invokeExact(true, intSegmt.address());
 		intSegmt.close();
 		Assert.assertEquals(result, true);
 	}
@@ -85,16 +97,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		boolean result = (boolean)mh.invokeExact(true, false);
 		Assert.assertEquals(result, true);
-	}
-	
-	@Test
-	public void test_addTwoBoolObjectsWithOr() throws Throwable {
-		MethodType mt = MethodType.methodType(Boolean.class, Boolean.class, Boolean.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
-		Symbol functionSymbol = nativeLib.lookup("add2BoolsWithOr").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Boolean result = (Boolean)mh.invokeExact((Boolean)false, (Boolean)true);
-		Assert.assertEquals(result.booleanValue(), true);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_INT.withName("int"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (boolean)mh.invokeExact(false, true);
+		Assert.assertEquals(result, true);
 	}
 	
 	@Test
@@ -105,6 +112,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		char result = (char)mh.invokeExact('B', 'D');
 		Assert.assertEquals(result, 'C');
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_SHORT.withName("short"), C_SHORT.withName("short"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (char)mh.invokeExact('B', 'D');
+		Assert.assertEquals(result, 'C');
 	}
 	
 	@Test
@@ -113,10 +125,17 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_POINTER, C_SHORT);
 		Symbol functionSymbol = nativeLib.lookup("createNewCharFromCharAndCharFromPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment shortSegmt = MemorySegment.allocateNative(C_SHORT);
 		MemoryAccess.setChar(shortSegmt, 'B');
 		char result = (char)mh.invokeExact(shortSegmt.address(), 'D');
+		shortSegmt.close();
+		Assert.assertEquals(result, 'C');
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_SHORT.withName("short"), C_POINTER.withName("pointer"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		shortSegmt = MemorySegment.allocateNative(C_SHORT);
+		MemoryAccess.setChar(shortSegmt, 'B');
+		result = (char)mh.invokeExact(shortSegmt.address(), 'D');
 		shortSegmt.close();
 		Assert.assertEquals(result, 'C');
 	}
@@ -130,16 +149,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		char result = (char)mh.invokeExact('B', 'D');
 		Assert.assertEquals(result, 'C');
-	}
-	
-	@Test
-	public void test_generateNewCharObject() throws Throwable {
-		MethodType mt = MethodType.methodType(Character.class, Character.class, Character.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
-		Symbol functionSymbol = nativeLib.lookup("createNewCharFrom2Chars").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Character result = (Character)mh.invokeExact((Character)'F', (Character)'C');
-		Assert.assertEquals(result.charValue(), 'D');
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_SHORT.withName("short"), C_SHORT.withName("short"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (char)mh.invokeExact('B', 'D');
+		Assert.assertEquals(result, 'C');
 	}
 	
 	@Test
@@ -150,6 +164,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		byte result = (byte)mh.invokeExact((byte)6, (byte)3);
 		Assert.assertEquals(result, (byte)9);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_CHAR.withName("char"), C_CHAR.withName("char"), C_CHAR.withName("char"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (byte)mh.invokeExact((byte)8, (byte)9);
+		Assert.assertEquals(result, (byte)17);
 	}
 	
 	@Test
@@ -160,6 +179,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		byte result = (byte)mh.invokeExact((byte)-6, (byte)-3);
 		Assert.assertEquals(result, (byte)-9);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_CHAR.withName("char"), C_CHAR.withName("char"), C_CHAR.withName("char"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (byte)mh.invokeExact((byte)-7, (byte)-8);
+		Assert.assertEquals(result, (byte)-15);
 	}
 	
 	@Test
@@ -168,12 +192,19 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, C_POINTER);
 		Symbol functionSymbol = nativeLib.lookup("addByteAndByteFromPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment charSegmt = MemorySegment.allocateNative(C_CHAR);
 		MemoryAccess.setByte(charSegmt, (byte)3);
 		byte result = (byte)mh.invokeExact((byte)6, charSegmt.address());
 		charSegmt.close();
 		Assert.assertEquals(result, (byte)9);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_CHAR.withName("char"), C_CHAR.withName("char"), C_POINTER.withName("pointer"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		charSegmt = MemorySegment.allocateNative(C_CHAR);
+		MemoryAccess.setByte(charSegmt, (byte)7);
+		result = (byte)mh.invokeExact((byte)8, charSegmt.address());
+		charSegmt.close();
+		Assert.assertEquals(result, (byte)15);
 	}
 	
 	@Test
@@ -185,16 +216,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		byte result = (byte)mh.invokeExact((byte)6, (byte)3);
 		Assert.assertEquals(result, (byte)9);
-	}
-	
-	@Test
-	public void test_addTwoByteObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Byte.class, Byte.class, Byte.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, C_CHAR);
-		Symbol functionSymbol = nativeLib.lookup("add2Bytes").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Byte result = (Byte)mh.invokeExact(Byte.valueOf((byte)8), Byte.valueOf((byte)5));
-		Assert.assertEquals(result.byteValue(), (byte)13);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_CHAR.withName("char"), C_CHAR.withName("char"), C_CHAR.withName("char"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (byte)mh.invokeExact((byte)6, (byte)7);
+		Assert.assertEquals(result, (byte)13);
 	}
 	
 	@Test
@@ -205,6 +231,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		short result = (short)mh.invokeExact((short)24, (short)32);
 		Assert.assertEquals(result, (short)56);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_SHORT.withName("short"), C_SHORT.withName("short"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (short)mh.invokeExact((short)11, (short)22);
+		Assert.assertEquals(result, (short)33);
 	}
 	
 	@Test
@@ -215,6 +246,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		short result = (short)mh.invokeExact((short)-24, (short)-32);
 		Assert.assertEquals(result, (short)-56);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_SHORT.withName("short"), C_SHORT.withName("short"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (short)mh.invokeExact((short)-11, (short)-22);
+		Assert.assertEquals(result, (short)-33);
 	}
 	
 	@Test
@@ -223,11 +259,17 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_POINTER, C_SHORT);
 		Symbol functionSymbol = nativeLib.lookup("addShortAndShortFromPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment shortSegmt = MemorySegment.allocateNative(C_SHORT);
 		MemoryAccess.setShort(shortSegmt, (short)24);
 		short result = (short)mh.invokeExact(shortSegmt.address(), (short)32);
 		Assert.assertEquals(result, (short)56);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_SHORT.withName("short"), C_POINTER.withName("pointer"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		shortSegmt = MemorySegment.allocateNative(C_SHORT);
+		MemoryAccess.setShort(shortSegmt, (short)22);
+		result = (short)mh.invokeExact(shortSegmt.address(), (short)33);
+		Assert.assertEquals(result, (short)55);
 	}
 	
 	@Test
@@ -239,16 +281,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		short result = (short)mh.invokeExact((short)24, (short)32);
 		Assert.assertEquals(result, (short)56);
-	}
-	
-	@Test
-	public void test_addTwoShortObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Short.class, Short.class, Short.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
-		Symbol functionSymbol = nativeLib.lookup("add2Shorts").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Short result = (Short)mh.invokeExact(Short.valueOf((short)56), Short.valueOf((short)42));
-		Assert.assertEquals(result.shortValue(), (short)98);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_SHORT.withName("short"), C_SHORT.withName("short"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (short)mh.invokeExact((short)12, (short)34);
+		Assert.assertEquals(result, (short)46);
 	}
 	
 	@Test
@@ -259,6 +296,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		int result = (int)mh.invokeExact(112, 123);
 		Assert.assertEquals(result, 235);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("short"), C_INT.withName("short"), C_INT.withName("short"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (int)mh.invokeExact(111, 222);
+		Assert.assertEquals(result, 333);
 	}
 	
 	@Test
@@ -269,6 +311,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		int result = (int)mh.invokeExact(-112, -123);
 		Assert.assertEquals(result, -235);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_INT.withName("int"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (int)mh.invokeExact(-222, -444);
+		Assert.assertEquals(result, -666);
 	}
 	
 	@Test
@@ -277,12 +324,19 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_POINTER);
 		Symbol functionSymbol = nativeLib.lookup("addIntAndIntFromPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment intSegmt = MemorySegment.allocateNative(C_INT);
 		MemoryAccess.setInt(intSegmt, 215);
 		int result = (int)mh.invokeExact(321, intSegmt.address());
 		intSegmt.close();
 		Assert.assertEquals(result, 536);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_POINTER.withName("pointer"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		intSegmt = MemorySegment.allocateNative(C_INT);
+		MemoryAccess.setInt(intSegmt, 333);
+		result = (int)mh.invokeExact(444, intSegmt.address());
+		intSegmt.close();
+		Assert.assertEquals(result, 777);
 	}
 	
 	@Test
@@ -294,16 +348,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		int result = (int)mh.invokeExact(112, 123);
 		Assert.assertEquals(result, 235);
-	}
-	
-	@Test
-	public void test_addTwoIntObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Integer.class,Integer.class, Integer.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
-		Symbol functionSymbol = nativeLib.lookup("add2Ints").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Integer result = (Integer)mh.invokeExact((Integer)234, (Integer)245);
-		Assert.assertEquals(result.intValue(), 479);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_INT.withName("int"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (int)mh.invokeExact(234, 567);
+		Assert.assertEquals(result, 801);
 	}
 	
 	@Test
@@ -349,6 +398,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		int result = (int)mh.invokeExact(58, 'A');
 		Assert.assertEquals(result, 123);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (int)mh.invokeExact(60, 'B');
+		Assert.assertEquals(result, 126);
 	}
 	
 	@Test
@@ -360,16 +414,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		int result = (int)mh.invokeExact(58, 'A');
 		Assert.assertEquals(result, 123);
-	}
-	
-	@Test
-	public void test_addIntObjectAndCharObject() throws Throwable {
-		MethodType mt = MethodType.methodType(Integer.class, Integer.class, Character.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_SHORT);
-		Symbol functionSymbol = nativeLib.lookup("addIntAndChar").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Integer result = (Integer)mh.invokeExact((Integer)276, (Character)'E');
-		Assert.assertEquals(result.intValue(), 345);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_INT.withName("int"), C_SHORT.withName("short"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (int)mh.invokeExact(60, 'B');
+		Assert.assertEquals(result, 126);
 	}
 	
 	@Test
@@ -380,6 +429,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		long result = (long)mh.invokeExact(57424L, 698235L);
 		Assert.assertEquals(result, 755659L);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(longLayout.withName("long"), longLayout.withName("long"), longLayout.withName("long"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (long)mh.invokeExact(333222L, 111555L);
+		Assert.assertEquals(result, 444777L);
 	}
 	
 	@Test
@@ -388,12 +442,19 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, C_POINTER, longLayout);
 		Symbol functionSymbol = nativeLib.lookup("addLongAndLongFromPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment longSegmt = MemorySegment.allocateNative(longLayout);
 		MemoryAccess.setLong(longSegmt, 57424L);
 		long result = (long)mh.invokeExact(longSegmt.address(), 698235L);
 		longSegmt.close();
 		Assert.assertEquals(result, 755659L);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(longLayout.withName("long"), C_POINTER.withName("int"), longLayout.withName("long"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		longSegmt = MemorySegment.allocateNative(longLayout.withName("long"));
+		MemoryAccess.setLong(longSegmt, 11111L);
+		result = (long)mh.invokeExact(longSegmt.address(), 22222L);
+		longSegmt.close();
+		Assert.assertEquals(result, 33333L);
 	}
 	
 	@Test
@@ -405,16 +466,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		long result = (long)mh.invokeExact(57424L, 698235L);
 		Assert.assertEquals(result, 755659L);
-	}
-	
-	@Test
-	public void test_addTwoLongObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Long.class, Long.class, Long.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, longLayout, longLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2Longs").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Long result = (Long)mh.invokeExact((Long)257423L, (Long)235726L);
-		Assert.assertEquals(result.longValue(), 493149L);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(longLayout.withName("long"), longLayout.withName("long"), longLayout.withName("long"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (long)mh.invokeExact(111222L, 333444L);
+		Assert.assertEquals(result, 444666L);
 	}
 	
 	@Test
@@ -441,6 +497,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		float result = (float)mh.invokeExact(5.74f, 6.79f);
 		Assert.assertEquals(result, 12.53f, 0.01f);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_FLOAT.withName("float"), C_FLOAT.withName("float"), C_FLOAT.withName("float"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (float)mh.invokeExact(15.74f, 16.79f);
+		Assert.assertEquals(result, 32.53f, 0.01f);
 	}
 	
 	@Test
@@ -449,12 +510,19 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(C_FLOAT, C_FLOAT, C_POINTER);
 		Symbol functionSymbol = nativeLib.lookup("addFloatAndFloatFromPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment floatSegmt = MemorySegment.allocateNative(C_FLOAT);
 		MemoryAccess.setFloat(floatSegmt, 6.79f);
 		float result = (float)mh.invokeExact(5.74f, floatSegmt.address());
 		floatSegmt.close();
 		Assert.assertEquals(result, 12.53f, 0.01f);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_FLOAT.withName("float"), C_FLOAT.withName("float"), C_POINTER.withName("pointer"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		floatSegmt = MemorySegment.allocateNative(C_FLOAT.withName("float"));
+		MemoryAccess.setFloat(floatSegmt, 16.79f);
+		result = (float)mh.invokeExact(15.74f, floatSegmt.address());
+		floatSegmt.close();
+		Assert.assertEquals(result, 32.53f, 0.01f);
 	}
 	
 	@Test
@@ -466,16 +534,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		float result = (float)mh.invokeExact(5.74f, 6.79f);
 		Assert.assertEquals(result, 12.53f, 0.01f);
-	}
-	
-	@Test
-	public void test_addTwoFloatObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Float.class, Float.class, Float.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_FLOAT, C_FLOAT, C_FLOAT);
-		Symbol functionSymbol = nativeLib.lookup("add2Floats").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Float result = (Float)mh.invokeExact((Float)15.03f, (Float)16.09f);
-		Assert.assertEquals(result.floatValue(), 31.12f, 0.01f);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_FLOAT.withName("float"), C_FLOAT.withName("float"), C_FLOAT.withName("float"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (float)mh.invokeExact(15.74f, 16.79f);
+		Assert.assertEquals(result, 32.53f, 0.01f);
 	}
 	
 	@Test
@@ -486,6 +549,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		double result = (double)mh.invokeExact(159.748d, 262.795d);
 		Assert.assertEquals(result, 422.543d, 0.001d);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_DOUBLE.withName("double"), C_DOUBLE.withName("double"), C_DOUBLE.withName("double"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		result = (double)mh.invokeExact(1159.748d, 1262.795d);
+		Assert.assertEquals(result, 2422.543d, 0.001d);
 	}
 	
 	@Test
@@ -494,12 +562,19 @@ public class PrimitiveTypeTests {
 		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_POINTER, C_DOUBLE);
 		Symbol functionSymbol = nativeLib.lookup("addDoubleAndDoubleFromPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
 		MemorySegment doubleSegmt = MemorySegment.allocateNative(C_DOUBLE);
 		MemoryAccess.setDouble(doubleSegmt, 159.748d);
 		double result = (double)mh.invokeExact(doubleSegmt.address(), 262.795d);
 		doubleSegmt.close();
 		Assert.assertEquals(result, 422.543d, 0.001d);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_DOUBLE.withName("double"), C_POINTER.withName("pointer"), C_DOUBLE.withName("double"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		doubleSegmt = MemorySegment.allocateNative(C_DOUBLE.withName("double"));
+		MemoryAccess.setDouble(doubleSegmt, 1159.748d);
+		result = (double)mh.invokeExact(doubleSegmt.address(), 1262.795d);
+		doubleSegmt.close();
+		Assert.assertEquals(result, 2422.543d, 0.001d);
 	}
 	
 	@Test
@@ -511,16 +586,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		double result = (double)mh.invokeExact(159.748d, 262.795d);
 		Assert.assertEquals(result, 422.543d, 0.001d);
-	}
-	
-	@Test
-	public void test_addTwoDoubleObjects() throws Throwable {
-		MethodType mt = MethodType.methodType(Double.class, Double.class, Double.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_DOUBLE, C_DOUBLE);
-		Symbol functionSymbol = nativeLib.lookup("add2Doubles").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		Double result = (Double)mh.invokeExact((Double)259.748d, (Double)362.797d);
-		Assert.assertEquals(result.doubleValue(), 622.545d, 0.001d);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_DOUBLE.withName("double"), C_DOUBLE.withName("double"), C_DOUBLE.withName("double"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		result = (double)mh.invokeExact(1159.748d, 1262.795d);
+		Assert.assertEquals(result, 2422.543d, 0.001d);
 	}
 	
 	@Test
@@ -548,6 +618,11 @@ public class PrimitiveTypeTests {
 		MemorySegment funcMemSegment = CLinker.toCString("JEP389 DOWNCALL TEST SUITES");
 		long strLength = (long)mh.invokeExact(funcMemSegment.address());
 		Assert.assertEquals(strLength, 27);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(longLayout.withName("long"), C_POINTER.withName("pointer"));
+		mh = clinker.downcallHandle(strlenSymbol, mt, fd2);
+		strLength = (long)mh.invokeExact(funcMemSegment.address());
+		Assert.assertEquals(strLength, 27);
 	}
 	
 	@Test
@@ -559,6 +634,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		MemorySegment funcMemSegment = CLinker.toCString("JEP389 DOWNCALL TEST SUITES");
 		long strLength = (long)mh.invokeExact(funcMemSegment.address());
+		Assert.assertEquals(strLength, 27);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(longLayout.withName("long"), C_POINTER.withName("pointer"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		strLength = (long)mh.invokeExact(funcMemSegment.address());
 		Assert.assertEquals(strLength, 27);
 	}
 	
@@ -624,6 +704,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		MemorySegment formatMemSegment = CLinker.toCString("\n%d + %d = %d\n");
 		mh.invoke(formatMemSegment.address(), 15, 27, 42);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_POINTER.withName("pointer"),
+														C_INT.withName("int"), C_INT.withName("int"), C_INT.withName("int"));
+		mh = clinker.downcallHandle(functionSymbol, mt, fd2);
+		mh.invoke(formatMemSegment.address(), 115, 127, 242);
 	}
 	
 	@Test
@@ -635,6 +720,11 @@ public class PrimitiveTypeTests {
 		MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
 		MemorySegment formatMemSegment = CLinker.toCString("\n%d + %d = %d\n");
 		mh.invoke(formatMemSegment.address(), 15, 27, 42);
+		
+		FunctionDescriptor fd2 = FunctionDescriptor.of(C_INT.withName("int"), C_POINTER.withName("pointer"),
+														C_INT.withName("int"), C_INT.withName("int"), C_INT.withName("int"));
+		mh = clinker.downcallHandle(memAddr, mt, fd2);
+		mh.invoke(formatMemSegment.address(), 115, 127, 242);
 	}
 	
 	@Test
