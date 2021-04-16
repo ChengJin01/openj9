@@ -69,6 +69,7 @@ if(OMR_ARCH_X86)
 	target_sources(ffi PRIVATE x86/ffi.c)
 	if(OMR_ENV_DATA64)
 		target_sources(ffi PRIVATE x86/ffi64.c)
+		target_sources(ffi PRIVATE x86/ffiw64.c)
 	endif()
 
 	if(OMR_OS_WINDOWS)

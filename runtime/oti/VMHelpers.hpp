@@ -1554,6 +1554,8 @@ exit:
 		case J9NtcDouble:
 			/* Fall through is intentional */
 		case J9NtcClass:
+			/* Fall through is intentional */
+		case J9NtcPointer:
 			break;
 		}
 	}
