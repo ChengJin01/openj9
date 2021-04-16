@@ -133,12 +133,14 @@ set(main_sources
 	jvminitcommon.c
 	jvmrisup.c
 	KeyHashTable.c
+	LayoutFFITypeHelpers.cpp
 	leconditionexceptionsup.c
 	linearswalk.c
 	lockwordconfig.c
 	logsupport.c
 	lookuphelper.c
 	lookupmethod.c
+	LayoutFFITypeHelpers.cpp
 	ModularityHashTables.c
 	monhelpers.c
 	montable.c
