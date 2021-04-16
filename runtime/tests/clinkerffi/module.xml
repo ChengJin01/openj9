@@ -46,6 +46,11 @@
 		<export name="addLongAndLongFromPointer"/>
 		<export name="addFloatAndFloatFromPointer"/>
 		<export name="addDoubleAndDoubleFromPointer"/>
+		<export name="addBoolAndBoolsFromStructWithXor"/>
+		<export name="addBoolFromPointerAndBoolsFromStructWithXor"/>
+		<export name="addBoolAndBoolsFromStructPointerWithXor"/>
+		<export name="add2BoolStructsWithXor"/>
+		<export name="addBoolAndBoolsFromNestedStructWithXor"/>
 	</exports>
 
 	<artifact type="shared" name="clinkerffitests" appendrelease="false">

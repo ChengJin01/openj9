@@ -538,6 +538,19 @@ j9gs_deinitializeThread(struct J9VMThread *vmThread);
 UDATA initializeExclusiveAccess(J9JavaVM *vm);
 void shutDownExclusiveAccess(J9JavaVM *vm);
 
+#if JAVA_SPEC_VERSION >= 16
+/* LayoutFFITypeHelpers.cpp */
+
+/**
+ * Release the memory of struct specific ffi_types if exists in the argument types
+ *
+ * @param currentThread[in] the current J9VMThread
+ * @param argFFITypes[in] the ffi_type array of arguments
+ */
+void
+freeAllStructFFITypes(J9VMThread *currentThread, void **argFFITypes);
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
 #ifdef __cplusplus
 }
 #endif

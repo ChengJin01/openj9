@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include "downcall.h"
 
 /**
  * Add two integers.
@@ -316,3 +317,71 @@ double addDoublesFromVaList(int doubleCount, va_list doubleVaList) {
 	}
 	return doubleSum;
 }
+
+/**
+ * Add a boolean and two booeans of struct with the XOR (^) operator.
+ *
+ * @param boolArg1 a boolean
+ * @param boolArg2 a struct with two booleans
+ * @return the result of the OR operation
+ */
+int addBoolAndBoolsFromStructWithXor(int arg1, stru_Bool_Bool arg2)
+{
+	int intSum = arg1 ^ arg2.elem1 ^ arg2.elem2;
+	return intSum;
+}
+
+/**
+ * Add a boolean (dereferenced from a pointer) and two booleans of struct with the XOR (^) operator.
+ *
+ * @param boolArg1 a pointer to boolean
+ * @param boolArg2 a struct with two booleans
+ * @return the result of the OR operation
+ */
+int addBoolFromPointerAndBoolsFromStructWithXor(int *arg1, stru_Bool_Bool arg2)
+{
+	int intSum = *arg1 ^ arg2.elem1 ^ arg2.elem2;
+	return intSum;
+}
+
+/**
+ * Add a boolean and two booleans of struct (dereferenced from a pointer) with the XOR (^) operator.
+ *
+ * @param boolArg1 a boolean
+ * @param boolArg2 a pointer to struct with two booleans
+ * @return the result of the OR operation
+ */
+int addBoolAndBoolsFromStructPointerWithXor(int arg1, stru_Bool_Bool *arg2)
+{
+	int intSum = arg1 ^ arg2->elem1 ^ arg2->elem2;
+	return intSum;
+}
+
+/**
+ * Add booleans of two structs with the XOR (^) operator.
+ *
+ * @param boolArg1 the 1st struct with two booleans
+ * @param boolArg2 the 2nd struct with two booleans
+ * @return the result of the OR operation
+ */
+stru_Bool_Bool add2BoolStructsWithXor(stru_Bool_Bool arg1, stru_Bool_Bool arg2)
+{
+	stru_Bool_Bool intSum;
+	intSum.elem1 = arg1.elem1 ^ arg2.elem1;
+	intSum.elem2 = arg1.elem2 ^ arg2.elem2;
+	return intSum;
+}
+
+/**
+ * Add a boolean and all booleans of struct with a nested struct with the XOR (^) operator.
+ *
+ * @param boolArg1 a boolean
+ * @param boolArg2 a struct with a nested struct
+ * @return the result of the OR operation
+ */
+int addBoolAndBoolsFromNestedStructWithXor(int arg1, stru_Bool_NestedStruct arg2)
+{
+	int intSum = arg1 ^ arg2.elem1.elem1 ^ arg2.elem1.elem2 ^ arg2.elem2;
+	return intSum;
+}
+

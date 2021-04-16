@@ -41,6 +41,9 @@
 #include <ctype.h>
 #include <limits.h>
 #include "util_api.h"
+#if JAVA_SPEC_VERSION >= 16
+#include "vm_internal.h"
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 #if !defined(stdout) 
 #ifdef stdout
@@ -627,6 +630,33 @@ freeJavaVM(J9JavaVM * vm)
 	j9sig_set_async_signal_handler(sigxfszHandler, NULL, 0);
 #endif /* !defined(WIN32) */
 
+#if JAVA_SPEC_VERSION >= 16
+	if (NULL != vm->cifNativeCalloutDataCacheMutex) {
+		omrthread_monitor_destroy(vm->cifNativeCalloutDataCacheMutex);
+		vm->cifNativeCalloutDataCacheMutex = NULL;
+	}
+	if (NULL != vm->cifNativeCalloutDataCache) {
+		pool_kill(vm->cifNativeCalloutDataCache);
+		vm->cifNativeCalloutDataCache = NULL;
+	}
+
+	if (NULL != vm->cifArgumentTypesCacheMutex) {
+		omrthread_monitor_destroy(vm->cifArgumentTypesCacheMutex);
+		vm->cifArgumentTypesCacheMutex = NULL;
+	}
+
+	if (NULL != vm->cifArgumentTypesCache) {
+		pool_state poolState;
+		J9CifArgumentTypes *cifArgTypesNode = pool_startDo(vm->cifArgumentTypesCache, &poolState);
+		while (NULL != cifArgTypesNode) {
+			freeAllStructFFITypes(currentThread, cifArgTypesNode->argumentTypes);
+			cifArgTypesNode = pool_nextDo(&poolState);
+		}
+		pool_kill(vm->cifArgumentTypesCache);
+		vm->cifArgumentTypesCache = NULL;
+	}
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
 	/* Remove the predefinedHandlerWrapper. */
 	j9sig_set_single_async_signal_handler(predefinedHandlerWrapper, vm, 0, NULL);
 
@@ -884,33 +914,6 @@ freeJavaVM(J9JavaVM * vm)
 		j9mem_free_memory(vm->realtimeSizeClasses);
 		vm->realtimeSizeClasses = NULL;
 	}
-
-#if JAVA_SPEC_VERSION >= 16
-	if (NULL != vm->cifNativeCalloutDataCacheMutex) {
-		omrthread_monitor_destroy(vm->cifNativeCalloutDataCacheMutex);
-		vm->cifNativeCalloutDataCacheMutex = NULL;
-	}
-	if (NULL != vm->cifNativeCalloutDataCache) {
-		pool_kill(vm->cifNativeCalloutDataCache);
-		vm->cifNativeCalloutDataCache = NULL;
-	}
-
-	if (NULL != vm->cifArgumentTypesCacheMutex) {
-		omrthread_monitor_destroy(vm->cifArgumentTypesCacheMutex);
-		vm->cifArgumentTypesCacheMutex = NULL;
-	}
-
-	if (NULL != vm->cifArgumentTypesCache) {
-		pool_state poolState;
-		J9CifArgumentTypes *cifArgTypesNode = pool_startDo(vm->cifArgumentTypesCache, &poolState);
-		while (NULL != cifArgTypesNode) {
-			j9mem_free_memory(cifArgTypesNode->argumentTypes);
-			cifArgTypesNode = pool_nextDo(&poolState);
-		}
-		pool_kill(vm->cifArgumentTypesCache);
-		vm->cifArgumentTypesCache = NULL;
-	}
-#endif /* JAVA_SPEC_VERSION >= 16 */
 
 	j9mem_free_memory(vm);
 

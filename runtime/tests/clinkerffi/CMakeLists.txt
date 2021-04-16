@@ -53,6 +53,11 @@ omr_add_exports(clinkerffitests
 	addLongAndLongFromPointer
 	addFloatAndFloatFromPointer
 	addDoubleAndDoubleFromPointer
+	addBoolAndBoolsFromStructWithXor
+	addBoolFromPointerAndBoolsFromStructWithXor
+	addBoolAndBoolsFromStructPointerWithXor
+	add2BoolStructsWithXor
+	addBoolAndBoolsFromNestedStructWithXor
 )
 
 install(
