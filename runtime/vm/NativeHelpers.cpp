@@ -149,15 +149,17 @@ convertCStringToByteArray(J9VMThread *currentThread, const char *cString)
 	return result;
 }
 
-UDATA *
-convertToNativeArgArray(J9VMThread *currentThread, j9object_t argArray, UDATA *javaArgs)
+U_64 *
+convertToNativeArgArray(J9VMThread *currentThread, j9object_t argArray, U_64 *ffiArgs)
 {
 	UDATA argCount = (UDATA)J9INDEXABLEOBJECT_SIZE(currentThread, argArray);
-	UDATA *result = javaArgs;
-	if (NULL != result) {
-		VM_ArrayCopyHelpers::memcpyFromArray(currentThread, argArray, (UDATA)3, 0, argCount, (void*)result);
-	}
-	return result;
+	/* 3 means each element of the array to be copied is 8 bytes (64bits) in size
+	 * as specified in memcpyToOrFromArrayContiguous() at ArrayCopyHelpers.hpp.
+	 * Note: all parameters are converted to long in ProgrammableInvoker, so the size of
+	 * element in the argument array must be 64bits.
+	 */
+	VM_ArrayCopyHelpers::memcpyFromArray(currentThread, argArray, 3, 0, argCount, (void*)ffiArgs);
+	return ffiArgs;
 }
 
 J9SFMethodTypeFrame *

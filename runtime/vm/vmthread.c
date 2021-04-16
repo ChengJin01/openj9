@@ -252,8 +252,8 @@ allocateVMThread(J9JavaVM * vm, omrthread_t osThread, UDATA privateFlags, void *
 #endif
 
 #if JAVA_SPEC_VERSION >= 16
-	newThread->javaArgs = NULL;
-	newThread->javaArgCout = 0;
+	newThread->ffiArgs = NULL;
+	newThread->ffiArgCount = 0;
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
 	/* If an exclusive access request is in progress, mark this thread */
