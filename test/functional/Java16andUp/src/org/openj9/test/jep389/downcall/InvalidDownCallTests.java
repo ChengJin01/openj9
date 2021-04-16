@@ -35,6 +35,7 @@ import jdk.incubator.foreign.ValueLayout;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.MemoryLayouts;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.LibraryLookup;
 import static jdk.incubator.foreign.LibraryLookup.Symbol;
 
@@ -51,6 +52,150 @@ public class InvalidDownCallTests {
 	LibraryLookup defaultLib = LibraryLookup.ofDefault();
 	CLinker clinker = CLinker.getInstance();
 	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidBooleanTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Boolean.class, boolean.class, boolean.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
+		Symbol functionSymbol = nativeLib.lookup("add2BoolsWithOr").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Boolean return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidBooleanTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(boolean.class, Boolean.class, boolean.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
+		Symbol functionSymbol = nativeLib.lookup("add2BoolsWithOr").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Boolean argument");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidCharacterTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Character.class, char.class, char.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
+		Symbol functionSymbol = nativeLib.lookup("createNewCharFrom2Chars").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Character return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidCharacterTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(char.class, char.class, Character.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
+		Symbol functionSymbol = nativeLib.lookup("createNewCharFrom2Chars").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Character argument");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidByteTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Byte.class, byte.class, byte.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, C_CHAR);
+		Symbol functionSymbol = nativeLib.lookup("add2Bytes").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Byte return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidByteTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(byte.class, Byte.class, byte.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, C_CHAR);
+		Symbol functionSymbol = nativeLib.lookup("add2Bytes").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Byte argument");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidShortTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Short.class, short.class, short.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
+		Symbol functionSymbol = nativeLib.lookup("add2Shorts").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Short return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidShortTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(short.class, short.class, Short.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, C_SHORT);
+		Symbol functionSymbol = nativeLib.lookup("add2Shorts").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Short argument");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidIntegerTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Integer.class,int.class, int.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
+		Symbol functionSymbol = nativeLib.lookup("add2Ints").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Integer return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidIntegerTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(int.class,Integer.class, int.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
+		Symbol functionSymbol = nativeLib.lookup("add2Ints").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Integer argument");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidLongTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Long.class, long.class, long.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, longLayout, longLayout);
+		Symbol functionSymbol = nativeLib.lookup("add2Longs").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Long return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidLongTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(long.class, long.class, Long.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, longLayout, longLayout);
+		Symbol functionSymbol = nativeLib.lookup("add2Longs").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Long argument");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidFloatTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Float.class, float.class, float.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_FLOAT, C_FLOAT, C_FLOAT);
+		Symbol functionSymbol = nativeLib.lookup("add2Floats").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Float return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidFloatTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(float.class, Float.class, float.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_FLOAT, C_FLOAT, C_FLOAT);
+		Symbol functionSymbol = nativeLib.lookup("add2Floats").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Float argument");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The return type must be .*")
+	public void test_invalidDoubleTypeOnReturn() throws Throwable {
+		MethodType mt = MethodType.methodType(Double.class, double.class, double.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_DOUBLE, C_DOUBLE);
+		Symbol functionSymbol = nativeLib.lookup("add2Doubles").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Double return type");
+	}
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "The passed-in argument type at index .*")
+	public void test_invalidDoubleTypeArgument() throws Throwable {
+		MethodType mt = MethodType.methodType(double.class, double.class, Double.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_DOUBLE, C_DOUBLE);
+		Symbol functionSymbol = nativeLib.lookup("add2Doubles").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the Double argument");
+	}
+	
 	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Mismatch between the layout .*")
 	public void test_mismatchedVoidReturnLayoutWithIntType() throws Throwable {
 		MethodType mt = MethodType.methodType(int.class, int.class, int.class);
@@ -60,6 +205,15 @@ public class InvalidDownCallTests {
 		fail("Failed to throw out IllegalArgumentException in the case of the void return layout");
 	}
 	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Mismatch between the layout .*")
+	public void test_mismatchedVoidReturnTypeWithIntReturnLayout() throws Throwable {
+		MethodType mt = MethodType.methodType(void.class, int.class, int.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
+		Symbol functionSymbol = nativeLib.lookup("add2Ints").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the void return type");
+	}
+	
 	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Mismatched size .*")
 	public void test_mismatchedShortReturnLayoutWithIntType() throws Throwable {
 		MethodType mt = MethodType.methodType(int.class, int.class, int.class);
@@ -67,15 +221,6 @@ public class InvalidDownCallTests {
 		Symbol functionSymbol = nativeLib.lookup("add2Ints").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		fail("Failed to throw out IllegalArgumentException in the case of the non-void return layout");
-	}
-	
-	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Mismatched size .*")
-	public void test_mismatchedVoidReturnTypeWithIntReturnLayout() throws Throwable {
-		MethodType mt = MethodType.methodType(void.class, int.class, int.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_INT);
-		Symbol functionSymbol = nativeLib.lookup("add2Ints").get();
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		fail("Failed to throw out IllegalArgumentException in the case of the void return type");
 	}
 	
 	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Mismatched size .*")
@@ -231,7 +376,7 @@ public class InvalidDownCallTests {
 		fail("Failed to throw out IllegalArgumentException in the case of the mismatched layout size");
 	}
 	
-	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = ".* neither primitive nor MemoryAddress")
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = ".* neither primitive nor .*")
 	public void test_unsupportedStringType() throws Throwable {
 		MethodType mt = MethodType.methodType(int.class, int.class, String.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, MemoryLayouts.BITS_64_LE);
@@ -239,5 +384,13 @@ public class InvalidDownCallTests {
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 		fail("Failed to throw out IllegalArgumentException in the case of the unsupported String type");
 	}
-
+	
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "GroupLayout is expected: .*")
+	public void test_unsupportedStructLayout() throws Throwable {
+		MethodType mt = MethodType.methodType(boolean.class, boolean.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, MemoryLayouts.BITS_64_LE);
+		Symbol functionSymbol = nativeLib.lookup("addBoolAndBoolsFromStructWithXor").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the unsupported layout for struct");
+	}
 }

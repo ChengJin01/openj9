@@ -139,6 +139,7 @@ set(main_sources
 	logsupport.c
 	lookuphelper.c
 	lookupmethod.c
+	LayoutFFITypeHelpers.cpp
 	ModularityHashTables.c
 	monhelpers.c
 	montable.c
