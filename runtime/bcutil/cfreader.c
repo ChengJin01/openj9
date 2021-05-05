@@ -1449,7 +1449,7 @@ checkPool(J9CfrClassFile* classfile, U_8* segment, U_8* poolStart, I_32 *maxBoot
 			if (cpBase[info->slot1].tag != CFR_CONSTANT_Utf8) {
 				errorCode = J9NLS_CFR_ERR_BAD_STRING_INDEX__ID;
 				goto _errorFound;
-			}					
+			}
 			index += 3;
 			break;
 
@@ -1463,8 +1463,7 @@ checkPool(J9CfrClassFile* classfile, U_8* segment, U_8* poolStart, I_32 *maxBoot
 			if (cpBase[info->slot1].tag != CFR_CONSTANT_Class) {
 				errorCode = J9NLS_CFR_ERR_BAD_CLASS_INDEX__ID;
 				goto _errorFound;
-			}					
-					
+			}
 			if (!(info->slot2) || (info->slot2 > count)) {
 				errorCode = J9NLS_CFR_ERR_BAD_INDEX__ID;
 				goto _errorFound;
@@ -1472,7 +1471,17 @@ checkPool(J9CfrClassFile* classfile, U_8* segment, U_8* poolStart, I_32 *maxBoot
 			if (cpBase[info->slot2].tag != CFR_CONSTANT_NameAndType) {
 				errorCode = J9NLS_CFR_ERR_BAD_NAME_AND_TYPE_INDEX__ID;
 				goto _errorFound;
-			}					
+			}
+			/* An interface's method must not be <init> */
+			/*
+			if ((vmVersionShifted >= BCT_Java9MajorVersionShifted)
+			&& (CFR_CONSTANT_InterfaceMethodref == info->tag)
+			&& utf8Equal(&cpBase[cpBase[info->slot2].slot1], "<init>", 6)
+			) {
+				errorCode = J9NLS_CFR_ERR_INIT_ILLEGAL_IN_INTERFACE__ID;
+				goto _errorFound;
+			}
+			*/
 			index += 5;
 			break;
 
@@ -1484,7 +1493,7 @@ checkPool(J9CfrClassFile* classfile, U_8* segment, U_8* poolStart, I_32 *maxBoot
 			if (cpBase[info->slot1].tag != CFR_CONSTANT_Utf8) {
 				errorCode = J9NLS_CFR_ERR_BAD_NAME_INDEX__ID;
 				goto _errorFound;
-			}					
+			}
 					
 			if ((!(info->slot2)) || (info->slot2 > count)) {
 				errorCode = J9NLS_CFR_ERR_BAD_INDEX__ID;
@@ -1493,7 +1502,7 @@ checkPool(J9CfrClassFile* classfile, U_8* segment, U_8* poolStart, I_32 *maxBoot
 			if (cpBase[info->slot2].tag != CFR_CONSTANT_Utf8) {
 				errorCode = J9NLS_CFR_ERR_BAD_DESCRIPTOR_INDEX__ID;
 				goto _errorFound;
-			}					
+			}
 			index += 5;
 			break;
 
@@ -2546,6 +2555,8 @@ checkClass(J9PortLibrary *portLib, J9CfrClassFile* classfile, U_8* segment, U_32
 	U_32 value, errorCode, offset;
 	U_32 i;
 	I_32 maxBootstrapMethodIndex = -1;
+	U_8* className = classfile->constantPool[classfile->constantPool[classfile->thisClass].slot1].bytes;
+	printf("\n******** checkClass = %s\n", className);
 
 	if(checkPool(classfile, segment, (U_8*)10, &maxBootstrapMethodIndex, flags)) {
 		return -1;
