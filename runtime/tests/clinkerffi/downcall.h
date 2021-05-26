@@ -35,6 +35,7 @@ typedef long LONG;
 #endif /* defined(WIN64) */
 
 typedef struct stru_Bool_Bool stru_Bool_Bool;
+typedef struct stru_Bool_Bool_Bool stru_Bool_Bool_Bool;
 typedef struct stru_NestedStruct_Bool stru_NestedStruct_Bool;
 typedef struct stru_Bool_NestedStruct stru_Bool_NestedStruct;
 typedef struct stru_NestedBoolArray_Bool stru_NestedBoolArray_Bool;
@@ -43,14 +44,17 @@ typedef struct stru_NestedStruArray_Bool stru_NestedStruArray_Bool;
 typedef struct stru_Bool_NestedStruArray stru_Bool_NestedStruArray;
 
 typedef struct stru_Byte_Byte stru_Byte_Byte;
+typedef struct stru_Byte_Byte_Byte stru_Byte_Byte_Byte;
 typedef struct stru_NestedStruct_Byte stru_NestedStruct_Byte;
 typedef struct stru_Byte_NestedStruct stru_Byte_NestedStruct;
 typedef struct stru_NestedByteArray_Byte stru_NestedByteArray_Byte;
 typedef struct stru_Byte_NestedByteArray stru_Byte_NestedByteArray;
 typedef struct stru_NestedStruArray_Byte stru_NestedStruArray_Byte;
 typedef struct stru_Byte_NestedStruArray stru_Byte_NestedStruArray;
+typedef struct stru_Byte_Byte_Byte stru_Byte_Byte_Byte;
 
 typedef struct stru_Char_Char stru_Char_Char;
+typedef struct stru_Char_Char_Char stru_Char_Char_Char;
 typedef struct stru_NestedStruct_Char stru_NestedStruct_Char;
 typedef struct stru_Char_NestedStruct stru_Char_NestedStruct;
 typedef struct stru_NestedCharArray_Char stru_NestedCharArray_Char;
@@ -59,6 +63,7 @@ typedef struct stru_NestedStruArray_Char stru_NestedStruArray_Char;
 typedef struct stru_Char_NestedStruArray stru_Char_NestedStruArray;
 
 typedef struct stru_Short_Short stru_Short_Short;
+typedef struct stru_Short_Short_Short stru_Short_Short_Short;
 typedef struct stru_NestedStruct_Short stru_NestedStruct_Short;
 typedef struct stru_Short_NestedStruct stru_Short_NestedStruct;
 typedef struct stru_NestedShortArray_Short stru_NestedShortArray_Short;
@@ -67,6 +72,7 @@ typedef struct stru_NestedStruArray_Short stru_NestedStruArray_Short;
 typedef struct stru_Short_NestedStruArray stru_Short_NestedStruArray;
 
 typedef struct stru_Int_Int stru_Int_Int;
+typedef struct stru_Int_Int_Int stru_Int_Int_Int;
 typedef struct stru_Int_Short stru_Int_Short;
 typedef struct stru_Short_Int stru_Short_Int;
 typedef struct stru_NestedStruct_Int stru_NestedStruct_Int;
@@ -77,6 +83,7 @@ typedef struct stru_NestedStruArray_Int stru_NestedStruArray_Int;
 typedef struct stru_Int_NestedStruArray stru_Int_NestedStruArray;
 
 typedef struct stru_Long_Long stru_Long_Long;
+typedef struct stru_Long_Long_Long stru_Long_Long_Long;
 typedef struct stru_Int_Long stru_Int_Long;
 typedef struct stru_Long_Int stru_Long_Int;
 typedef struct stru_NestedStruct_Long stru_NestedStruct_Long;
@@ -87,6 +94,7 @@ typedef struct stru_NestedStruArray_Long stru_NestedStruArray_Long;
 typedef struct stru_Long_NestedStruArray stru_Long_NestedStruArray;
 
 typedef struct stru_Float_Float stru_Float_Float;
+typedef struct stru_Float_Float_Float stru_Float_Float_Float;
 typedef struct stru_NestedStruct_Float stru_NestedStruct_Float;
 typedef struct stru_Float_NestedStruct stru_Float_NestedStruct;
 typedef struct stru_NestedFloatArray_Float stru_NestedFloatArray_Float;
@@ -95,6 +103,7 @@ typedef struct stru_NestedStruArray_Float stru_NestedStruArray_Float;
 typedef struct stru_Float_NestedStruArray stru_Float_NestedStruArray;
 
 typedef struct stru_Double_Double stru_Double_Double;
+typedef struct stru_Double_Double_Double stru_Double_Double_Double;
 typedef struct stru_Double_Float stru_Double_Float;
 typedef struct stru_Float_Double stru_Float_Double;
 typedef struct stru_NestedStruct_Double stru_NestedStruct_Double;
@@ -107,6 +116,12 @@ typedef struct stru_Double_NestedStruArray stru_Double_NestedStruArray;
 struct stru_Bool_Bool {
 	int elem1;
 	int elem2;
+};
+
+struct stru_Bool_Bool_Bool {
+	int elem1;
+	int elem2;
+	int elem3;
 };
 
 struct stru_NestedStruct_Bool {
@@ -144,6 +159,12 @@ struct stru_Byte_Byte {
 	char elem2;
 };
 
+struct stru_Byte_Byte_Byte {
+	char elem1;
+	char elem2;
+	char elem3;
+};
+
 struct stru_NestedStruct_Byte {
 	stru_Byte_Byte elem1;
 	char elem2;
@@ -177,6 +198,12 @@ struct stru_Byte_NestedStruArray {
 struct stru_Char_Char {
 	short elem1;
 	short elem2;
+};
+
+struct stru_Char_Char_Char {
+	short elem1;
+	short elem2;
+	short elem3;
 };
 
 struct stru_NestedStruct_Char {
@@ -214,6 +241,12 @@ struct stru_Short_Short {
 	short elem2;
 };
 
+struct stru_Short_Short_Short {
+	short elem1;
+	short elem2;
+	short elem3;
+};
+
 struct stru_NestedStruct_Short {
 	stru_Short_Short elem1;
 	short elem2;
@@ -247,6 +280,12 @@ struct stru_Short_NestedStruArray {
 struct stru_Int_Int {
 	int elem1;
 	int elem2;
+};
+
+struct stru_Int_Int_Int {
+	int elem1;
+	int elem2;
+	int elem3;
 };
 
 struct stru_Int_Short {
@@ -294,6 +333,12 @@ struct stru_Long_Long {
 	LONG elem2;
 };
 
+struct stru_Long_Long_Long {
+	long elem1;
+	long elem2;
+	long elem3;
+};
+
 struct stru_Int_Long {
 	int elem1;
 	LONG elem2;
@@ -339,6 +384,12 @@ struct stru_Float_Float {
 	float elem2;
 };
 
+struct stru_Float_Float_Float {
+	float elem1;
+	float elem2;
+	float elem3;
+};
+
 struct stru_NestedStruct_Float {
 	stru_Float_Float elem1;
 	float elem2;
@@ -372,6 +423,12 @@ struct stru_Float_NestedStruArray {
 struct stru_Double_Double {
 	double elem1;
 	double elem2;
+};
+
+struct stru_Double_Double_Double {
+	double elem1;
+	double elem2;
+	double elem3;
 };
 
 struct stru_Double_Float {

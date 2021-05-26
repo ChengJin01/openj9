@@ -522,7 +522,7 @@ addBoolAndBoolsFromStructWithNestedStructArray_reverseOrder(int arg1, stru_Bool_
  * @return a struct with two booleans
  */
 stru_Bool_Bool
-add2BoolStructsWithXor(stru_Bool_Bool arg1, stru_Bool_Bool arg2)
+add2BoolStructsWithXor_returnStruct(stru_Bool_Bool arg1, stru_Bool_Bool arg2)
 {
 	stru_Bool_Bool intSum;
 	intSum.elem1 = arg1.elem1 ^ arg2.elem1;
@@ -543,6 +543,23 @@ add2BoolStructsWithXor_returnStructPointer(stru_Bool_Bool *arg1, stru_Bool_Bool 
 	arg1->elem1 = arg1->elem1 ^ arg2.elem1;
 	arg1->elem2 = arg1->elem2 ^ arg2.elem2;
 	return arg1;
+}
+
+/**
+ * Get a new struct by adding each boolean element of two structs with 3 boolean elements.
+ *
+ * @param arg1 the 1st struct with three booleans
+ * @param arg2 the 2nd struct with three booleans
+ * @return a struct with three booleans
+ */
+stru_Bool_Bool_Bool
+add3BoolStructsWithXor_returnStruct(stru_Bool_Bool_Bool arg1, stru_Bool_Bool_Bool arg2)
+{
+	stru_Bool_Bool_Bool boolSum;
+	boolSum.elem1 = arg1.elem1 ^ arg2.elem1;
+	boolSum.elem2 = arg1.elem2 ^ arg2.elem2;
+	boolSum.elem3 = arg1.elem3 ^ arg2.elem3;
+	return boolSum;
 }
 
 /**
@@ -693,14 +710,14 @@ addByteAndBytesFromStructWithNestedStructArray_reverseOrder(char arg1, stru_Byte
 }
 
 /**
- * Get a new struct by adding each byte element of two structs.
+ * Get a new struct by adding each byte element of two structs with 2 byte elements.
  *
  * @param arg1 the 1st struct with two bytes
  * @param arg2 the 2nd struct with two bytes
  * @return a struct with two bytes
  */
 stru_Byte_Byte
-add2ByteStructs(stru_Byte_Byte arg1, stru_Byte_Byte arg2)
+add2ByteStructs_returnStruct(stru_Byte_Byte arg1, stru_Byte_Byte arg2)
 {
 	stru_Byte_Byte charSum;
 	charSum.elem1 = arg1.elem1 + arg2.elem1;
@@ -709,7 +726,7 @@ add2ByteStructs(stru_Byte_Byte arg1, stru_Byte_Byte arg2)
 }
 
 /**
- * Get a pointer to struct by adding each byte element of two structs.
+ * Get a pointer to struct by adding each byte element of two structs with 2 byte elements.
  *
  * @param arg1 a pointer to the 1st struct with two bytes
  * @param arg2 the 2nd struct with two bytes
@@ -721,6 +738,22 @@ add2ByteStructs_returnStructPointer(stru_Byte_Byte *arg1, stru_Byte_Byte arg2)
 	arg1->elem1 = arg1->elem1 + arg2.elem1;
 	arg1->elem2 = arg1->elem2 + arg2.elem2;
 	return arg1;
+}
+
+/**
+ * Get a new struct by adding each byte element of two structs with 3 byte elements.
+ *
+ * @param arg1 the 1st struct with three bytes
+ * @param arg2 the 2nd struct with three bytes
+ * @return a struct with two bytes
+ */
+stru_Byte_Byte_Byte add3ByteStructs_returnStruct(stru_Byte_Byte_Byte arg1, stru_Byte_Byte_Byte arg2)
+{
+	stru_Byte_Byte_Byte charSum;
+	charSum.elem1 = arg1.elem1 + arg2.elem1;
+	charSum.elem2 = arg1.elem2 + arg2.elem2;
+	charSum.elem3 = arg1.elem3 + arg2.elem3;
+	return charSum;
 }
 
 /**
@@ -875,19 +908,19 @@ addCharAndCharsFromStructWithNestedStructArray_reverseOrder(short arg1, stru_Cha
 }
 
 /**
- * Create a new struct by adding each element of two structs.
+ * Create a new struct by adding each char element of two structs.
  *
  * @param arg1 the 1st struct with two chars
  * @param arg2 the 2nd struct with two chars
  * @return a struct of with two chars
  */
 stru_Char_Char
-add2CharStructs(stru_Char_Char arg1, stru_Char_Char arg2)
+add2CharStructs_returnStruct(stru_Char_Char arg1, stru_Char_Char arg2)
 {
-	stru_Char_Char shortSum;
-	shortSum.elem1 = arg1.elem1 + arg2.elem1 - 'A';
-	shortSum.elem2 = arg1.elem2 + arg2.elem2 - 'A';
-	return shortSum;
+	stru_Char_Char charSum;
+	charSum.elem1 = arg1.elem1 + arg2.elem1 - 'A';
+	charSum.elem2 = arg1.elem2 + arg2.elem2 - 'A';
+	return charSum;
 }
 
 /**
@@ -903,6 +936,23 @@ add2CharStructs_returnStructPointer(stru_Char_Char *arg1, stru_Char_Char arg2)
 	arg1->elem1 = arg1->elem1 + arg2.elem1 - 'A';
 	arg1->elem2 = arg1->elem2 + arg2.elem2 - 'A';
 	return arg1;
+}
+
+/**
+ * Create a new struct by adding each char element of two structs with three chars.
+ *
+ * @param arg1 the 1st struct with three chars
+ * @param arg2 the 2nd struct with three chars
+ * @return a struct of with three chars
+ */
+stru_Char_Char_Char
+add3CharStructs_returnStruct(stru_Char_Char_Char arg1, stru_Char_Char_Char arg2)
+{
+	stru_Char_Char_Char charSum;
+	charSum.elem1 = arg1.elem1 + arg2.elem1 - 'A';
+	charSum.elem2 = arg1.elem2 + arg2.elem2 - 'A';
+	charSum.elem3 = arg1.elem3 + arg2.elem3 - 'A';
+	return charSum;
 }
 
 /**
@@ -1053,14 +1103,14 @@ addShortAndShortsFromStructWithNestedStructArray_reverseOrder(short arg1, stru_S
 }
 
 /**
- * Get a new struct by adding each short element of two structs.
+ * Get a new struct by adding each short element of two structs with two short elements.
  *
  * @param arg1 the 1st struct with two shorts
  * @param arg2 the 2nd struct with two shorts
  * @return a struct with two shorts
  */
 stru_Short_Short
-add2ShortStructs(stru_Short_Short arg1, stru_Short_Short arg2)
+add2ShortStructs_returnStruct(stru_Short_Short arg1, stru_Short_Short arg2)
 {
 	stru_Short_Short shortSum;
 	shortSum.elem1 = arg1.elem1 + arg2.elem1;
@@ -1069,7 +1119,7 @@ add2ShortStructs(stru_Short_Short arg1, stru_Short_Short arg2)
 }
 
 /**
- * Get a pointer to struct by adding each short element of two structs.
+ * Get a pointer to struct by adding each short element of two structs with two short elements.
  *
  * @param arg1 a pointer to the 1st struct with two shorts
  * @param arg2 the 2nd struct with two shorts
@@ -1081,6 +1131,23 @@ add2ShortStructs_returnStructPointer(stru_Short_Short *arg1, stru_Short_Short ar
 	arg1->elem1 = arg1->elem1 + arg2.elem1;
 	arg1->elem2 = arg1->elem2 + arg2.elem2;
 	return arg1;
+}
+
+/**
+ * Get a new struct by adding each short element of two structs with three short elements.
+ *
+ * @param arg1 the 1st struct with three shorts
+ * @param arg2 the 2nd struct with three shorts
+ * @return a struct with three shorts
+ */
+stru_Short_Short_Short
+add3ShortStructs_returnStruct(stru_Short_Short_Short arg1, stru_Short_Short_Short arg2)
+{
+	stru_Short_Short_Short shortSum;
+	shortSum.elem1 = arg1.elem1 + arg2.elem1;
+	shortSum.elem2 = arg1.elem2 + arg2.elem2;
+	shortSum.elem3 = arg1.elem3 + arg2.elem3;
+	return shortSum;
 }
 
 /**
@@ -1260,14 +1327,14 @@ addIntAndIntsFromStructWithNestedStructArray_reverseOrder(int arg1, stru_Int_Nes
 }
 
 /**
- * Get a new struct by adding each integer element of two structs
+ * Get a new struct by adding each integer element of two structs (each has two integers).
  *
  * @param arg1 the 1st struct with two integers
  * @param arg2 the 2nd struct with two integers
  * @return a struct with two integers
  */
 stru_Int_Int
-add2IntStructs(stru_Int_Int arg1, stru_Int_Int arg2)
+add2IntStructs__returnStruct(stru_Int_Int arg1, stru_Int_Int arg2)
 {
 	stru_Int_Int intSum;
 	intSum.elem1 = arg1.elem1 + arg2.elem1;
@@ -1276,18 +1343,35 @@ add2IntStructs(stru_Int_Int arg1, stru_Int_Int arg2)
 }
 
 /**
- * Get a pointer to struct by adding each integer element of two structs
+ * Get a pointer to struct by adding each integer element of two structs (each has two integers).
  *
  * @param arg1 a pointer to the 1st struct with two integers
  * @param arg2 the 2nd struct with two integers
  * @return a pointer to the sum of integers
  */
 stru_Int_Int*
-add2IntStructs_returnStructPointer(stru_Int_Int *arg1, stru_Int_Int arg2)
+add2IntStructs__returnStructPointer(stru_Int_Int *arg1, stru_Int_Int arg2)
 {
 	arg1->elem1 = arg1->elem1 + arg2.elem1;
 	arg1->elem2 = arg1->elem2 + arg2.elem2;
 	return arg1;
+}
+
+/**
+ * Get a new struct by adding each integer element of two structs (each has three integers).
+ *
+ * @param arg1 the 1st struct with three integers
+ * @param arg2 the 2nd struct with three integers
+ * @return a struct with three integers
+ */
+stru_Int_Int_Int
+add3IntStructs_returnStruct(stru_Int_Int_Int arg1, stru_Int_Int_Int arg2)
+{
+	stru_Int_Int_Int intSum;
+	intSum.elem1 = arg1.elem1 + arg2.elem1;
+	intSum.elem2 = arg1.elem2 + arg2.elem2;
+	intSum.elem3 = arg1.elem3 + arg2.elem3;
+	return intSum;
 }
 
 /**
@@ -1465,14 +1549,14 @@ addLongAndLongsFromStructWithNestedStructArray_reverseOrder(LONG arg1, stru_Long
 }
 
 /**
- * Get a new struct by adding each long element of two structs.
+ * Get a new struct by adding each long element of two structs (each has two long elements).
  *
  * @param arg1 the 1st struct with two longs
  * @param arg2 the 2nd struct with two longs
  * @return a struct with two longs
  */
 stru_Long_Long
-add2LongStructs(stru_Long_Long arg1, stru_Long_Long arg2)
+add2LongStructs_returnStruct(stru_Long_Long arg1, stru_Long_Long arg2)
 {
 	stru_Long_Long longSum;
 	longSum.elem1 = arg1.elem1 + arg2.elem1;
@@ -1481,7 +1565,7 @@ add2LongStructs(stru_Long_Long arg1, stru_Long_Long arg2)
 }
 
 /**
- * Get a pointer to struct by adding each long element of two structs
+ * Get a pointer to struct by adding each long element of two structs (each has two long elements).
  *
  * @param arg1 a pointer to the 1st struct with two longs
  * @param arg2 the 2nd struct with two longs
@@ -1493,6 +1577,23 @@ add2LongStructs_returnStructPointer(stru_Long_Long *arg1, stru_Long_Long arg2)
 	arg1->elem1 = arg1->elem1 + arg2.elem1;
 	arg1->elem2 = arg1->elem2 + arg2.elem2;
 	return arg1;
+}
+
+/**
+ * Get a new struct by adding each long element of two structs (each has three long elements).
+ *
+ * @param arg1 the 1st struct with three longs
+ * @param arg2 the 2nd struct with three longs
+ * @return a struct with three longs
+ */
+stru_Long_Long_Long
+add3LongStructs_returnStruct(stru_Long_Long_Long arg1, stru_Long_Long_Long arg2)
+{
+	stru_Long_Long_Long longSum;
+	longSum.elem1 = arg1.elem1 + arg2.elem1;
+	longSum.elem2 = arg1.elem2 + arg2.elem2;
+	longSum.elem3 = arg1.elem3 + arg2.elem3;
+	return longSum;
 }
 
 /**
@@ -1642,18 +1743,35 @@ addFloatAndFloatsFromStructWithNestedStructArray_reverseOrder(float arg1, stru_F
 }
 
 /**
- * Create a new struct by adding each float element of two structs
+ * Create a new struct by adding each float element of two structs with two floats.
  *
  * @param arg1 the 1st struct with two floats
  * @param arg2 the 2nd struct with two floats
  * @return a struct with two floats
  */
 stru_Float_Float
-add2FloatStructs(stru_Float_Float arg1, stru_Float_Float arg2)
+add2FloatStructs_returnStruct(stru_Float_Float arg1, stru_Float_Float arg2)
 {
 	stru_Float_Float floatSum;
 	floatSum.elem1 = arg1.elem1 + arg2.elem1;
 	floatSum.elem2 = arg1.elem2 + arg2.elem2;
+	return floatSum;
+}
+
+/**
+ * Create a new struct by adding each float element of two structs with three float elements.
+ *
+ * @param arg1 the 1st struct with three floats
+ * @param arg2 the 2nd struct with three floats
+ * @return a struct with three floats
+ */
+stru_Float_Float_Float
+add3FloatStructs_returnStruct(stru_Float_Float_Float arg1, stru_Float_Float_Float arg2)
+{
+	stru_Float_Float_Float floatSum;
+	floatSum.elem1 = arg1.elem1 + arg2.elem1;
+	floatSum.elem2 = arg1.elem2 + arg2.elem2;
+	floatSum.elem3 = arg1.elem3 + arg2.elem3;
 	return floatSum;
 }
 
@@ -1847,14 +1965,14 @@ addDoubleAndDoublesFromStructWithNestedStructArray_reverseOrder(double arg1, str
 }
 
 /**
- * Create a new struct by adding each double element of two structs
+ * Create a new struct by adding each double element of two structs with two double elements.
  *
  * @param arg1 the 1st struct with two doubles
  * @param arg2 the 2nd struct with two doubles
  * @return a struct with two doubles
  */
 stru_Double_Double
-add2DoubleStructs(stru_Double_Double arg1, stru_Double_Double arg2)
+add2DoubleStructs_returnStruct(stru_Double_Double arg1, stru_Double_Double arg2)
 {
 	stru_Double_Double doubleSum;
 	doubleSum.elem1 = arg1.elem1 + arg2.elem1;
@@ -1863,7 +1981,7 @@ add2DoubleStructs(stru_Double_Double arg1, stru_Double_Double arg2)
 }
 
 /**
- * Get a pointer to struct by adding each double element of two structs
+ * Get a pointer to struct by adding each double element of two structs with two double elements.
  *
  * @param arg1 a pointer to the 1st struct with two doubles
  * @param arg2 the 2nd struct with two doubles
@@ -1875,4 +1993,22 @@ add2DoubleStructs_returnStructPointer(stru_Double_Double *arg1, stru_Double_Doub
 	arg1->elem1 = arg1->elem1 + arg2.elem1;
 	arg1->elem2 = arg1->elem2 + arg2.elem2;
 	return arg1;
+}
+
+
+/**
+ * Create a new struct by adding each double element of two structs with three double elements.
+ *
+ * @param arg1 the 1st struct with three doubles
+ * @param arg2 the 2nd struct with three doubles
+ * @return a struct with three doubles
+ */
+stru_Double_Double_Double
+add3DoubleStructs_returnStruct(stru_Double_Double_Double arg1, stru_Double_Double_Double arg2)
+{
+	stru_Double_Double_Double doubleSum;
+	doubleSum.elem1 = arg1.elem1 + arg2.elem1;
+	doubleSum.elem2 = arg1.elem2 + arg2.elem2;
+	doubleSum.elem3 = arg1.elem3 + arg2.elem3;
+	return doubleSum;
 }

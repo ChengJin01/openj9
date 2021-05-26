@@ -51,6 +51,10 @@ import jdk.incubator.foreign.MemoryHandles;
 
 /**
  * Test cases for JEP 389: Foreign Linker API (Incubator) DownCall for argument/return struct.
+ * 
+ * Note: the padding elements in the struct are only required by RI or VarHandle (accessing the
+ * data address) while they are totally ignored in OpenJ9 given the padding/alignment are
+ * calculated by ffi_call automatically in native based on the struct elements in OpenJ9.
  */
 @Test(groups = { "level.sanity" })
 public class StructTests {
@@ -326,29 +330,29 @@ public class StructTests {
 	}
 	
 	@Test
-	public void test_add2BoolStructsWithXor() throws Throwable {
+	public void test_add2BoolStructsWithXor_returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"), C_INT.withName("elem2"));
 		VarHandle boolHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
 		VarHandle boolHandle2 = structLayout.varHandle(int.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2BoolStructsWithXor").get();
+		Symbol functionSymbol = nativeLib.lookup("add2BoolStructsWithXor_returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
 		boolHandle1.set(structSegmt1, 1);
-		boolHandle1.set(structSegmt1, 0);
+		boolHandle2.set(structSegmt1, 0);
 		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
-		boolHandle2.set(structSegmt2, 1);
+		boolHandle1.set(structSegmt2, 1);
 		boolHandle2.set(structSegmt2, 1);
 
-		MemorySegment result = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
-		Assert.assertEquals(boolHandle1.get(result), 0);
-		Assert.assertEquals(boolHandle2.get(result), 1);
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(boolHandle1.get(resultSegmt), 0);
+		Assert.assertEquals(boolHandle2.get(resultSegmt), 1);
 		structSegmt1.close();
 		structSegmt2.close();
-		result.close();
+		resultSegmt.close();
 	}
 	
 	@Test
@@ -364,15 +368,45 @@ public class StructTests {
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
 		boolHandle1.set(structSegmt1, 1);
-		boolHandle1.set(structSegmt1, 0);
+		boolHandle2.set(structSegmt1, 0);
 		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
-		boolHandle2.set(structSegmt2, 1);
+		boolHandle1.set(structSegmt2, 1);
 		boolHandle2.set(structSegmt2, 1);
 
 		MemoryAddress resultAddr = (MemoryAddress)mh.invokeExact(structSegmt1.address(), structSegmt2);
 		MemorySegment resultSegmt = resultAddr.asSegmentRestricted(structLayout.byteSize());
 		Assert.assertEquals(boolHandle1.get(resultSegmt), 0);
 		Assert.assertEquals(boolHandle2.get(resultSegmt), 1);
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+	}
+	
+	@Test
+	public void test_add3BoolStructsWithXor_returnStruct() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"), C_INT.withName("elem2"), C_INT.withName("elem3"));
+		VarHandle boolHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
+		VarHandle boolHandle2 = structLayout.varHandle(int.class, PathElement.groupElement("elem2"));
+		VarHandle boolHandle3 = structLayout.varHandle(int.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3BoolStructsWithXor_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		boolHandle1.set(structSegmt1, 1);
+		boolHandle2.set(structSegmt1, 0);
+		boolHandle3.set(structSegmt1, 1);
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		boolHandle1.set(structSegmt2, 1);
+		boolHandle2.set(structSegmt2, 1);
+		boolHandle3.set(structSegmt2, 0);
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(boolHandle1.get(resultSegmt), 0);
+		Assert.assertEquals(boolHandle2.get(resultSegmt), 1);
+		Assert.assertEquals(boolHandle3.get(resultSegmt), 1);
 		structSegmt1.close();
 		structSegmt2.close();
 		resultSegmt.close();
@@ -490,7 +524,8 @@ public class StructTests {
 	@Test
 	public void test_addByteAndBytesFromNestedStruct_reverseOrder() throws Throwable {
 		GroupLayout nestedStructLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"), C_CHAR.withName("elem2"));
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"),nestedStructLayout.withName("struct_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"),
+				nestedStructLayout.withName("struct_elem2"), MemoryLayout.ofPaddingBits(C_CHAR.bitSize()));
 		MethodType mt = MethodType.methodType(byte.class, byte.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addByteAndBytesFromNestedStruct_reverseOrder").get();
@@ -528,7 +563,8 @@ public class StructTests {
 	@Test
 	public void test_addByteAndBytesFromStructWithNestedByteArray() throws Throwable {
 		SequenceLayout byteArray = MemoryLayout.ofSequence(2, C_CHAR);
-		GroupLayout structLayout = MemoryLayout.ofStruct(byteArray.withName("array_elem1"), C_CHAR.withName("elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(byteArray.withName("array_elem1"),
+				C_CHAR.withName("elem2"), MemoryLayout.ofPaddingBits(C_CHAR.bitSize()));
 		MethodType mt = MethodType.methodType(byte.class, byte.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addByteAndBytesFromStructWithNestedByteArray").get();
@@ -547,7 +583,8 @@ public class StructTests {
 	@Test
 	public void test_addByteAndBytesFromStructWithNestedByteArray_reverseOrder() throws Throwable {
 		SequenceLayout byteArray = MemoryLayout.ofSequence(2, C_CHAR);
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"), byteArray.withName("array_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"),
+				byteArray.withName("array_elem2"), MemoryLayout.ofPaddingBits(C_CHAR.bitSize()));
 		MethodType mt = MethodType.methodType(byte.class, byte.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addByteAndBytesFromStructWithNestedByteArray_reverseOrder").get();
@@ -586,7 +623,8 @@ public class StructTests {
 	public void test_addByteAndBytesFromStructWithNestedStructArray() throws Throwable {
 		GroupLayout byteStruct = MemoryLayout.ofStruct(C_CHAR.withName("elem1"), C_CHAR.withName("elem2"));
 		SequenceLayout structArray = MemoryLayout.ofSequence(2, byteStruct);
-		GroupLayout structLayout = MemoryLayout.ofStruct(structArray.withName("struct_array_elem1"), C_CHAR.withName("elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(structArray.withName("struct_array_elem1"),
+				C_CHAR.withName("elem2"), MemoryLayout.ofPaddingBits(C_CHAR.bitSize() * 3));
 		MethodType mt = MethodType.methodType(byte.class, byte.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addByteAndBytesFromStructWithNestedStructArray").get();
@@ -608,7 +646,8 @@ public class StructTests {
 	public void test_addByteAndBytesFromStructWithNestedStructArray_reverseOrder() throws Throwable {
 		GroupLayout byteStruct = MemoryLayout.ofStruct(C_CHAR.withName("elem1"), C_CHAR.withName("elem2"));
 		SequenceLayout structArray = MemoryLayout.ofSequence(2, byteStruct);
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"), structArray.withName("struct_array_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"),
+				structArray.withName("struct_array_elem2"), MemoryLayout.ofPaddingBits(C_CHAR.bitSize() * 3));
 		MethodType mt = MethodType.methodType(byte.class, byte.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_CHAR, C_CHAR, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addByteAndBytesFromStructWithNestedStructArray_reverseOrder").get();
@@ -649,14 +688,14 @@ public class StructTests {
 	}
 	
 	@Test
-	public void test_add2ByteStructs() throws Throwable {
+	public void test_add2ByteStructs_returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"), C_CHAR.withName("elem2"));
 		VarHandle byteHandle1 = structLayout.varHandle(byte.class, PathElement.groupElement("elem1"));
 		VarHandle byteHandle2 = structLayout.varHandle(byte.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2ByteStructs").get();
+		Symbol functionSymbol = nativeLib.lookup("add2ByteStructs_returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -666,13 +705,44 @@ public class StructTests {
 		byteHandle1.set(structSegmt2, (byte)24);
 		byteHandle2.set(structSegmt2, (byte)13);
 
-		MemorySegment result = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
-		Assert.assertEquals((byte)byteHandle1.get(result), (byte)49);
-		Assert.assertEquals((byte)byteHandle2.get(result), (byte)24);
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals((byte)byteHandle1.get(resultSegmt), (byte)49);
+		Assert.assertEquals((byte)byteHandle2.get(resultSegmt), (byte)24);
 		structSegmt1.close();
 		structSegmt2.close();
-		result.close();
+		resultSegmt.close();
 	}
+	
+	@Test
+	public void test_add3ByteStructs_returnStruct() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_CHAR.withName("elem1"), C_CHAR.withName("elem2"),
+				C_CHAR.withName("elem3"), MemoryLayout.ofPaddingBits(C_CHAR.bitSize()));
+		VarHandle byteHandle1 = structLayout.varHandle(byte.class, PathElement.groupElement("elem1"));
+		VarHandle byteHandle2 = structLayout.varHandle(byte.class, PathElement.groupElement("elem2"));
+		VarHandle byteHandle3 = structLayout.varHandle(byte.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3ByteStructs_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		byteHandle1.set(structSegmt1, (byte)25);
+		byteHandle2.set(structSegmt1, (byte)11);
+		byteHandle3.set(structSegmt1, (byte)12);
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		byteHandle1.set(structSegmt2, (byte)24);
+		byteHandle2.set(structSegmt2, (byte)13);
+		byteHandle3.set(structSegmt2, (byte)16);
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals((byte)byteHandle1.get(resultSegmt), (byte)49);
+		Assert.assertEquals((byte)byteHandle2.get(resultSegmt), (byte)24);
+		Assert.assertEquals((byte)byteHandle3.get(resultSegmt), (byte)28);
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+}
 	
 	@Test
 	public void test_add2ByteStructs_returnStructPointer() throws Throwable {
@@ -815,7 +885,8 @@ public class StructTests {
 	@Test
 	public void test_addCharAndCharsFromNestedStruct_reverseOrder() throws Throwable {
 		GroupLayout nestedStructLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"));
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), nestedStructLayout.withName("struct_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"),
+				nestedStructLayout.withName("struct_elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(char.class, char.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addCharAndCharsFromNestedStruct_reverseOrder").get();
@@ -834,7 +905,8 @@ public class StructTests {
 	@Test
 	public void test_addCharAndCharsFromStructWithNestedCharArray() throws Throwable {
 		SequenceLayout charArray = MemoryLayout.ofSequence(2, C_SHORT);
-		GroupLayout structLayout = MemoryLayout.ofStruct(charArray.withName("array_elem1"), C_SHORT.withName("elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(charArray.withName("array_elem1"),
+				C_SHORT.withName("elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(char.class, char.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addCharAndCharsFromStructWithNestedCharArray").get();
@@ -853,7 +925,8 @@ public class StructTests {
 	@Test
 	public void test_addCharAndCharsFromStructWithNestedCharArray_reverseOrder() throws Throwable {
 		SequenceLayout charArray = MemoryLayout.ofSequence(2, C_SHORT);
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), charArray.withName("array_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"),
+				charArray.withName("array_elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(char.class, char.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addCharAndCharsFromStructWithNestedCharArray_reverseOrder").get();
@@ -872,7 +945,7 @@ public class StructTests {
 	@Test
 	public void test_addCharAndCharsFromStructWithNestedCharArray_withoutLayoutName() throws Throwable {
 		SequenceLayout charArray = MemoryLayout.ofSequence(2, C_SHORT);
-		GroupLayout structLayout = MemoryLayout.ofStruct(charArray,C_SHORT);
+		GroupLayout structLayout = MemoryLayout.ofStruct(charArray, C_SHORT, MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(char.class, char.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addCharAndCharsFromStructWithNestedCharArray").get();
@@ -914,7 +987,8 @@ public class StructTests {
 	public void test_addCharAndCharsFromStructWithNestedStructArray_reverseOrder() throws Throwable {
 		GroupLayout charStruct = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"));
 		SequenceLayout structArray = MemoryLayout.ofSequence(2, charStruct);
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), structArray.withName("struct_array_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"),
+				structArray.withName("struct_array_elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(char.class, char.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addCharAndCharsFromStructWithNestedStructArray_reverseOrder").get();
@@ -955,14 +1029,14 @@ public class StructTests {
 	}
 	
 	@Test
-	public void test_add2CharStructs() throws Throwable {
+	public void test_add2CharStructs_returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"));
 		VarHandle charHandle1 = structLayout.varHandle(char.class, PathElement.groupElement("elem1"));
 		VarHandle charHandle2 = structLayout.varHandle(char.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2CharStructs").get();
+		Symbol functionSymbol = nativeLib.lookup("add2CharStructs_returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -972,12 +1046,12 @@ public class StructTests {
 		charHandle1.set(structSegmt2, 'C');
 		charHandle2.set(structSegmt2, 'D');
 
-		MemorySegment result = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
-		Assert.assertEquals(charHandle1.get(result), 'C');
-		Assert.assertEquals(charHandle2.get(result), 'E');
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(charHandle1.get(resultSegmt), 'C');
+		Assert.assertEquals(charHandle2.get(resultSegmt), 'E');
 		structSegmt1.close();
 		structSegmt2.close();
-		result.close();
+		resultSegmt.close();
 	}
 	
 	@Test
@@ -1007,6 +1081,36 @@ public class StructTests {
 		resultSegmt.close();
 	}
 	
+	@Test
+	public void test_add3CharStructs_returnStruct() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"), C_SHORT.withName("elem3"));
+		VarHandle charHandle1 = structLayout.varHandle(char.class, PathElement.groupElement("elem1"));
+		VarHandle charHandle2 = structLayout.varHandle(char.class, PathElement.groupElement("elem2"));
+		VarHandle charHandle3 = structLayout.varHandle(char.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3CharStructs_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		charHandle1.set(structSegmt1, 'A');
+		charHandle2.set(structSegmt1, 'B');
+		charHandle3.set(structSegmt1, 'C');
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		charHandle1.set(structSegmt2, 'B');
+		charHandle2.set(structSegmt2, 'C');
+		charHandle3.set(structSegmt2, 'D');
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(charHandle1.get(resultSegmt), 'B');
+		Assert.assertEquals(charHandle2.get(resultSegmt), 'D');
+		Assert.assertEquals(charHandle3.get(resultSegmt), 'F');
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+	}
+
 	@Test
 	public void test_addShortAndShortsFromStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"));
@@ -1100,7 +1204,8 @@ public class StructTests {
 	@Test
 	public void test_addShortAndShortsFromNestedStruct() throws Throwable {
 		GroupLayout nestedStructLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"));
-		GroupLayout structLayout = MemoryLayout.ofStruct(nestedStructLayout.withName("struct_elem1"), C_SHORT.withName("elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(nestedStructLayout.withName("struct_elem1"),
+				C_SHORT.withName("elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(short.class, short.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addShortAndShortsFromNestedStruct").get();
@@ -1119,7 +1224,8 @@ public class StructTests {
 	@Test
 	public void test_addShortAndShortsFromNestedStruct_reverseOrder() throws Throwable {
 		GroupLayout nestedStructLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"));
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), nestedStructLayout.withName("struct_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"),
+				nestedStructLayout.withName("struct_elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(short.class, short.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addShortAndShortsFromNestedStruct_reverseOrder").get();
@@ -1157,7 +1263,8 @@ public class StructTests {
 	@Test
 	public void test_addShortAndShortsFromStructWithNestedShortArray() throws Throwable {
 		SequenceLayout shortArray = MemoryLayout.ofSequence(2, C_SHORT);
-		GroupLayout structLayout = MemoryLayout.ofStruct(shortArray.withName("array_elem1"), C_SHORT.withName("elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(shortArray.withName("array_elem1"),
+				C_SHORT.withName("elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(short.class, short.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addShortAndShortsFromStructWithNestedShortArray").get();
@@ -1176,7 +1283,8 @@ public class StructTests {
 	@Test
 	public void test_addShortAndShortsFromStructWithNestedShortArray_reverseOrder() throws Throwable {
 		SequenceLayout shortArray = MemoryLayout.ofSequence(2, C_SHORT);
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), shortArray.withName("array_elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"),
+				shortArray.withName("array_elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(short.class, short.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addShortAndShortsFromStructWithNestedShortArray_reverseOrder").get();
@@ -1195,7 +1303,7 @@ public class StructTests {
 	@Test
 	public void test_addShortAndShortsFromStructWithNestedShortArray_withoutLayoutName() throws Throwable {
 		SequenceLayout shortArray = MemoryLayout.ofSequence(2, C_SHORT);
-		GroupLayout structLayout = MemoryLayout.ofStruct(shortArray, C_SHORT);
+		GroupLayout structLayout = MemoryLayout.ofStruct(shortArray, C_SHORT, MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		MethodType mt = MethodType.methodType(short.class, short.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_SHORT, C_SHORT, structLayout);
 		Symbol functionSymbol = nativeLib.lookup("addShortAndShortsFromStructWithNestedShortArray").get();
@@ -1278,14 +1386,14 @@ public class StructTests {
 	}
 	
 	@Test
-	public void test_add2ShortStructs() throws Throwable {
+	public void test_add2ShortStructs_returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"));
 		VarHandle shortHandle1 = structLayout.varHandle(short.class, PathElement.groupElement("elem1"));
 		VarHandle shortHandle2 = structLayout.varHandle(short.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2ShortStructs").get();
+		Symbol functionSymbol = nativeLib.lookup("add2ShortStructs_returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -1331,6 +1439,37 @@ public class StructTests {
 	}
 	
 	@Test
+	public void test_add3ShortStructs_returnStruct() throws Throwable  {
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"), C_SHORT.withName("elem2"),
+				C_SHORT.withName("elem3"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
+		VarHandle shortHandle1 = structLayout.varHandle(short.class, PathElement.groupElement("elem1"));
+		VarHandle shortHandle2 = structLayout.varHandle(short.class, PathElement.groupElement("elem2"));
+		VarHandle shortHandle3 = structLayout.varHandle(short.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3ShortStructs_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		shortHandle1.set(structSegmt1, (short)25);
+		shortHandle2.set(structSegmt1, (short)26);
+		shortHandle3.set(structSegmt1, (short)27);
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		shortHandle1.set(structSegmt2, (short)34);
+		shortHandle2.set(structSegmt2, (short)35);
+		shortHandle3.set(structSegmt2, (short)36);
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals((short)shortHandle1.get(resultSegmt), (short)59);
+		Assert.assertEquals((short)shortHandle2.get(resultSegmt), (short)61);
+		Assert.assertEquals((short)shortHandle3.get(resultSegmt), (short)63);
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+	}
+	
+	@Test
 	public void test_addIntAndIntsFromStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"), C_INT.withName("elem2"));
 		VarHandle intHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
@@ -1352,7 +1491,8 @@ public class StructTests {
 	
 	@Test
 	public void test_addIntAndIntShortFromStruct() throws Throwable {
-		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"), C_SHORT.withName("elem2"));
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"),
+				C_SHORT.withName("elem2"), MemoryLayout.ofPaddingBits(C_SHORT.bitSize()));
 		VarHandle elemHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
 		VarHandle elemHandle2 = structLayout.varHandle(short.class, PathElement.groupElement("elem2"));
 
@@ -1373,8 +1513,7 @@ public class StructTests {
 	@Test
 	public void test_addIntAndShortIntFromStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_SHORT.withName("elem1"),
-				MemoryLayout.ofPaddingBits(C_SHORT.bitSize()),
-				C_INT.withName("elem2"));
+				MemoryLayout.ofPaddingBits(C_SHORT.bitSize()), C_INT.withName("elem2"));
 		VarHandle elemHandle1 = structLayout.varHandle(short.class, PathElement.groupElement("elem1"));
 		VarHandle elemHandle2 = structLayout.varHandle(int.class, PathElement.groupElement("elem2"));
 
@@ -1646,14 +1785,14 @@ public class StructTests {
 	}
 	
 	@Test
-	public static void test_add2IntStructs() throws Throwable {
+	public void test_add2IntStructs__returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"), C_INT.withName("elem2"));
 		VarHandle intHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
 		VarHandle intHandle2 = structLayout.varHandle(int.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2IntStructs").get();
+		Symbol functionSymbol = nativeLib.lookup("add2IntStructs__returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -1663,23 +1802,23 @@ public class StructTests {
 		intHandle1.set(structSegmt2, 99001122);
 		intHandle2.set(structSegmt2, 33445566);
 
-		MemorySegment result = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
-		Assert.assertEquals(intHandle1.get(result), 110224466);
-		Assert.assertEquals(intHandle2.get(result), 89113354);
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(intHandle1.get(resultSegmt), 110224466);
+		Assert.assertEquals(intHandle2.get(resultSegmt), 89113354);
 		structSegmt1.close();
 		structSegmt2.close();
-		result.close();
+		resultSegmt.close();
 	}
 	
 	@Test
-	public void test_add2IntStructs_returnStructPointer() throws Throwable {
+	public void test_add2IntStructs__returnStructPointer() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"), C_INT.withName("elem2"));
 		VarHandle intHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
 		VarHandle intHandle2 = structLayout.varHandle(int.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemoryAddress.class, MemoryAddress.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_POINTER, C_POINTER, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2IntStructs_returnStructPointer").get();
+		Symbol functionSymbol = nativeLib.lookup("add2IntStructs__returnStructPointer").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -1693,6 +1832,36 @@ public class StructTests {
 		MemorySegment resultSegmt = resultAddr.asSegmentRestricted(structLayout.byteSize());
 		Assert.assertEquals(intHandle1.get(resultSegmt), 110224466);
 		Assert.assertEquals(intHandle2.get(resultSegmt), 89113354);
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+	}
+	
+	@Test
+	public void test_add3IntStructs_returnStruct() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"), C_INT.withName("elem2"), C_INT.withName("elem3"));
+		VarHandle intHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(int.class, PathElement.groupElement("elem2"));
+		VarHandle intHandle3 = structLayout.varHandle(int.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3IntStructs_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		intHandle1.set(structSegmt1, 11223344);
+		intHandle2.set(structSegmt1, 55667788);
+		intHandle3.set(structSegmt1, 99001122);
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		intHandle1.set(structSegmt2, 33445566);
+		intHandle2.set(structSegmt2, 77889900);
+		intHandle3.set(structSegmt2, 44332211);
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(intHandle1.get(resultSegmt), 44668910);
+		Assert.assertEquals(intHandle2.get(resultSegmt), 133557688);
+		Assert.assertEquals(intHandle3.get(resultSegmt), 143333333);
 		structSegmt1.close();
 		structSegmt2.close();
 		resultSegmt.close();
@@ -1720,8 +1889,7 @@ public class StructTests {
 	@Test
 	public void test_addIntAndIntLongFromStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_INT.withName("elem1"),
-				MemoryLayout.ofPaddingBits(C_INT.bitSize()),
-				longLayout.withName("elem2"));
+				MemoryLayout.ofPaddingBits(C_INT.bitSize()), longLayout.withName("elem2"));
 		VarHandle elemHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
 		VarHandle elemHandle2 = structLayout.varHandle(long.class, PathElement.groupElement("elem2"));
 
@@ -2012,14 +2180,14 @@ public class StructTests {
 	}
 	
 	@Test
-	public void test_add2LongStructs() throws Throwable {
+	public void test_add2LongStructs_returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(longLayout.withName("elem1"), longLayout.withName("elem2"));
 		VarHandle longHandle1 = structLayout.varHandle(long.class, PathElement.groupElement("elem1"));
 		VarHandle longHandle2 = structLayout.varHandle(long.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2LongStructs").get();
+		Symbol functionSymbol = nativeLib.lookup("add2LongStructs_returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -2029,12 +2197,12 @@ public class StructTests {
 		longHandle1.set(structSegmt2, 224466880022L);
 		longHandle2.set(structSegmt2, 113355779911L);
 
-		MemorySegment result = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
-		Assert.assertEquals(longHandle1.get(result), 1212121202009L);
-		Assert.assertEquals(longHandle2.get(result), 236812569034L);
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(longHandle1.get(resultSegmt), 1212121202009L);
+		Assert.assertEquals(longHandle2.get(resultSegmt), 236812569034L);
 		structSegmt1.close();
 		structSegmt2.close();
-		result.close();
+		resultSegmt.close();
 	}
 	
 	@Test
@@ -2059,6 +2227,36 @@ public class StructTests {
 		MemorySegment resultSegmt = resultAddr.asSegmentRestricted(structLayout.byteSize());
 		Assert.assertEquals(longHandle1.get(resultSegmt), 11022446688L);
 		Assert.assertEquals(longHandle2.get(resultSegmt), 8911335576L);
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+	}
+	
+	@Test
+	public void test_add3LongStructs_returnStruct() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.ofStruct(longLayout.withName("elem1"), longLayout.withName("elem2"), longLayout.withName("elem3"));
+		VarHandle longHandle1 = structLayout.varHandle(long.class, PathElement.groupElement("elem1"));
+		VarHandle longHandle2 = structLayout.varHandle(long.class, PathElement.groupElement("elem2"));
+		VarHandle longHandle3 = structLayout.varHandle(long.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3LongStructs_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		longHandle1.set(structSegmt1, 987654321987L);
+		longHandle2.set(structSegmt1, 123456789123L);
+		longHandle3.set(structSegmt1, 112233445566L);
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		longHandle1.set(structSegmt2, 224466880022L);
+		longHandle2.set(structSegmt2, 113355779911L);
+		longHandle3.set(structSegmt2, 778899001122L);
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals(longHandle1.get(resultSegmt), 1212121202009L);
+		Assert.assertEquals(longHandle2.get(resultSegmt), 236812569034L);
+		Assert.assertEquals(longHandle3.get(resultSegmt), 891132446688L);
 		structSegmt1.close();
 		structSegmt2.close();
 		resultSegmt.close();
@@ -2337,14 +2535,14 @@ public class StructTests {
 	}
 	
 	@Test
-	public void test_add2FloatStructs() throws Throwable {
+	public void test_add2FloatStructs_returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_FLOAT.withName("elem1"), C_FLOAT.withName("elem2"));
 		VarHandle floatHandle1 = structLayout.varHandle(float.class, PathElement.groupElement("elem1"));
 		VarHandle floatHandle2 = structLayout.varHandle(float.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2FloatStructs").get();
+		Symbol functionSymbol = nativeLib.lookup("add2FloatStructs_returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -2384,6 +2582,36 @@ public class StructTests {
 		MemorySegment resultSegmt = resultAddr.asSegmentRestricted(structLayout.byteSize());
 		Assert.assertEquals((float)floatHandle1.get(resultSegmt), 49.46F, 0.01F);
 		Assert.assertEquals((float)floatHandle2.get(resultSegmt), 24.68F, 0.01F);
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+	}
+	
+	@Test
+	public void test_add3FloatStructs_returnStruct() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_FLOAT.withName("elem1"), C_FLOAT.withName("elem2"),  C_FLOAT.withName("elem3"));
+		VarHandle floatHandle1 = structLayout.varHandle(float.class, PathElement.groupElement("elem1"));
+		VarHandle floatHandle2 = structLayout.varHandle(float.class, PathElement.groupElement("elem2"));
+		VarHandle floatHandle3 = structLayout.varHandle(float.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3FloatStructs_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		floatHandle1.set(structSegmt1, 25.12F);
+		floatHandle2.set(structSegmt1, 11.23F);
+		floatHandle3.set(structSegmt1, 45.67F);
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		floatHandle1.set(structSegmt2, 24.34F);
+		floatHandle2.set(structSegmt2, 13.45F);
+		floatHandle3.set(structSegmt2, 69.72F);
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals((float)floatHandle1.get(resultSegmt), 49.46F, 0.01F);
+		Assert.assertEquals((float)floatHandle2.get(resultSegmt), 24.68F, 0.01F);
+		Assert.assertEquals((float)floatHandle3.get(resultSegmt), 115.39, 0.01F);
 		structSegmt1.close();
 		structSegmt2.close();
 		resultSegmt.close();
@@ -2431,8 +2659,7 @@ public class StructTests {
 	@Test
 	public void test_addDoubleAndFloatDoubleFromStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_FLOAT.withName("elem1"),
-				MemoryLayout.ofPaddingBits(C_FLOAT.bitSize()),
-				C_DOUBLE.withName("elem2"));
+				MemoryLayout.ofPaddingBits(C_FLOAT.bitSize()), C_DOUBLE.withName("elem2"));
 		VarHandle elemHandle1 = structLayout.varHandle(float.class, PathElement.groupElement("elem1"));
 		VarHandle elemHandle2 = structLayout.varHandle(double.class, PathElement.groupElement("elem2"));
 
@@ -2705,14 +2932,14 @@ public class StructTests {
 	}
 	
 	@Test
-	public void test_add2DoubleStructs() throws Throwable {
+	public void test_add2DoubleStructs_returnStruct() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.ofStruct(C_DOUBLE.withName("elem1"), C_DOUBLE.withName("elem2"));
 		VarHandle doubleHandle1 = structLayout.varHandle(double.class, PathElement.groupElement("elem1"));
 		VarHandle doubleHandle2 = structLayout.varHandle(double.class, PathElement.groupElement("elem2"));
 
 		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
-		Symbol functionSymbol = nativeLib.lookup("add2DoubleStructs").get();
+		Symbol functionSymbol = nativeLib.lookup("add2DoubleStructs_returnStruct").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
 
 		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
@@ -2722,12 +2949,12 @@ public class StructTests {
 		doubleHandle1.set(structSegmt2, 33.444D);
 		doubleHandle2.set(structSegmt2, 44.555D);
 
-		MemorySegment result = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
-		Assert.assertEquals((double)doubleHandle1.get(result), 44.666D, 0.001D);
-		Assert.assertEquals((double)doubleHandle2.get(result), 66.888D, 0.001D);
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals((double)doubleHandle1.get(resultSegmt), 44.666D, 0.001D);
+		Assert.assertEquals((double)doubleHandle2.get(resultSegmt), 66.888D, 0.001D);
 		structSegmt1.close();
 		structSegmt2.close();
-		result.close();
+		resultSegmt.close();
 	}
 	
 	@Test
@@ -2752,6 +2979,36 @@ public class StructTests {
 		MemorySegment resultSegmt = resultAddr.asSegmentRestricted(structLayout.byteSize());
 		Assert.assertEquals((double)doubleHandle1.get(resultSegmt), 44.666D, 0.001D);
 		Assert.assertEquals((double)doubleHandle2.get(resultSegmt), 66.888D, 0.001D);
+		structSegmt1.close();
+		structSegmt2.close();
+		resultSegmt.close();
+	}
+	
+	@Test
+	public void test_add3DoubleStructs_returnStruct() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.ofStruct(C_DOUBLE.withName("elem1"), C_DOUBLE.withName("elem2"), C_DOUBLE.withName("elem3"));
+		VarHandle doubleHandle1 = structLayout.varHandle(double.class, PathElement.groupElement("elem1"));
+		VarHandle doubleHandle2 = structLayout.varHandle(double.class, PathElement.groupElement("elem2"));
+		VarHandle doubleHandle3 = structLayout.varHandle(double.class, PathElement.groupElement("elem3"));
+
+		MethodType mt = MethodType.methodType(MemorySegment.class, MemorySegment.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Symbol functionSymbol = nativeLib.lookup("add3DoubleStructs_returnStruct").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+
+		MemorySegment structSegmt1 = MemorySegment.allocateNative(structLayout);
+		doubleHandle1.set(structSegmt1, 11.222D);
+		doubleHandle2.set(structSegmt1, 22.333D);
+		doubleHandle3.set(structSegmt1, 33.123D);
+		MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout);
+		doubleHandle1.set(structSegmt2, 33.444D);
+		doubleHandle2.set(structSegmt2, 44.555D);
+		doubleHandle3.set(structSegmt2, 55.456D);
+
+		MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(structSegmt1, structSegmt2);
+		Assert.assertEquals((double)doubleHandle1.get(resultSegmt), 44.666D, 0.001D);
+		Assert.assertEquals((double)doubleHandle2.get(resultSegmt), 66.888D, 0.001D);
+		Assert.assertEquals((double)doubleHandle3.get(resultSegmt), 88.579D, 0.001D);
 		structSegmt1.close();
 		structSegmt2.close();
 		resultSegmt.close();
