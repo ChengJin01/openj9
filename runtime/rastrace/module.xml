@@ -48,7 +48,7 @@
 		<makefilestubs>
 			<makefilestub data="UMA_TREAT_WARNINGS_AS_ERRORS=1"/>
 			<makefilestub data="UMA_ENABLE_ALL_WARNINGS=1"/>
-			<makefilestub data="CFLAGS+=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1"/>
+			<makefilestub data="CFLAGS+=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"/>
 			<makefilestub data="trclog.o: CFLAGS+=-U_FORTIFY_SOURCE">
 				<include-if condition="spec.linux_aarch64.*"/>
 			</makefilestub>

@@ -34,6 +34,7 @@ import jdk.incubator.foreign.ValueLayout;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.MemoryLayouts;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.LibraryLookup;
 import static jdk.incubator.foreign.LibraryLookup.Symbol;
 
@@ -383,4 +384,12 @@ public class InvalidDownCallTests {
 		fail("Failed to throw out IllegalArgumentException in the case of the unsupported String type");
 	}
 
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "GroupLayout is expected: .*")
+	public void test_unsupportedStructLayout() throws Throwable {
+		MethodType mt = MethodType.methodType(boolean.class, boolean.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, MemoryLayouts.BITS_64_LE);
+		Symbol functionSymbol = nativeLib.lookup("addBoolAndBoolsFromStructWithXor").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the unsupported layout for struct");
+	}
 }
