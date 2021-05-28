@@ -27,6 +27,7 @@
 	<test name="Jep389Tests_testClinkerFfi">
 		<classes>
 			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests"/>
+			<class name="org.openj9.test.jep389.downcall.StructTests"/>
 			<class name="org.openj9.test.jep389.downcall.MultiCallTests"/>
 			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests1"/>
 			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests2"/>

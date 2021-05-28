@@ -122,9 +122,9 @@
 		<groups>
 			<group>functional</group>
 		</groups>
-		<subsets>
-			<subset>16+</subset>
-		</subsets>
+		<versions>
+			<version>16+</version>
+		</versions>
 	</test>
 	
 	<test>
@@ -141,7 +141,7 @@
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
 		</command>
-		<platformRequirements>bits.64,^arch.ppc,^arch.390,^arch.riscv,^os.zos,^os.sunos,^arch.arm</platformRequirements>
+		<platformRequirements>bits.64,^arch.riscv,^os.zos,^os.sunos,^arch.arm</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
