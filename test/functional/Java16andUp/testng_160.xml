@@ -24,7 +24,7 @@
 
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
 <suite name="Java16 test suites" parallel="none" verbose="2">
-	<test name="Jep389Tests_testClinkerFfi">
+	<test name="Jep389Tests_testClinkerFfi_DownCall">
 		<classes>
 			<class name="org.openj9.test.jep389.downcall.InvalidDownCallTests"/>
 			<class name="org.openj9.test.jep389.downcall.MultiCallTests"/>
@@ -33,6 +33,12 @@
 			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests3"/>
 			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests4"/>
 			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests"/>
+			<class name="org.openj9.test.jep389.downcall.StructTests"/>
+		</classes>
+	</test>
+	<test name="Jep389Tests_testClinkerFfi_VaList">
+		<classes>
+			<class name="org.openj9.test.jep389.valist.VaListTests"/>
 		</classes>
 	</test>
 </suite>
