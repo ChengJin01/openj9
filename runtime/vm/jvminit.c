@@ -623,33 +623,6 @@ freeJavaVM(J9JavaVM * vm)
 	j9sig_set_async_signal_handler(sigxfszHandler, NULL, 0);
 #endif /* !defined(WIN32) */
 
-#if JAVA_SPEC_VERSION >= 16
-	if (NULL != vm->cifNativeCalloutDataCacheMutex) {
-		omrthread_monitor_destroy(vm->cifNativeCalloutDataCacheMutex);
-		vm->cifNativeCalloutDataCacheMutex = NULL;
-	}
-	if (NULL != vm->cifNativeCalloutDataCache) {
-		pool_kill(vm->cifNativeCalloutDataCache);
-		vm->cifNativeCalloutDataCache = NULL;
-	}
-
-	if (NULL != vm->cifArgumentTypesCacheMutex) {
-		omrthread_monitor_destroy(vm->cifArgumentTypesCacheMutex);
-		vm->cifArgumentTypesCacheMutex = NULL;
-	}
-
-	if (NULL != vm->cifArgumentTypesCache) {
-		pool_state poolState;
-		J9CifArgumentTypes *cifArgTypesNode = pool_startDo(vm->cifArgumentTypesCache, &poolState);
-		while (NULL != cifArgTypesNode) {
-			j9mem_free_memory(cifArgTypesNode->argumentTypes);
-			cifArgTypesNode = pool_nextDo(&poolState);
-		}
-		pool_kill(vm->cifArgumentTypesCache);
-		vm->cifArgumentTypesCache = NULL;
-	}
-#endif /* JAVA_SPEC_VERSION >= 16 */
-
 	/* Remove the predefinedHandlerWrapper. */
 	j9sig_set_single_async_signal_handler(predefinedHandlerWrapper, vm, 0, NULL);
 
@@ -3719,10 +3692,8 @@ processVMArgsFromFirstToLast(J9JavaVM * vm)
 
 #if defined(OMR_GC_COMPRESSED_POINTERS) && defined(OMR_GC_FULL_POINTERS)
 	{
-		IDATA compressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL),
-			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXUSECOMPRESSEDOOPS, NULL));
-		IDATA nocompressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL),
-			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXNOUSECOMPRESSEDOOPS, NULL));
+		IDATA compressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL);
+		IDATA nocompressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL);
 		/* Compressed refs by default */
 		if (compressed >= nocompressed) {
 			/* switching to nocompressedrefs based on -Xmx, similar logic as redirector.c:chooseJVM() */
@@ -6523,17 +6494,8 @@ protectedInitializeJavaVM(J9PortLibrary* portLibrary, void * userData)
 #if JAVA_SPEC_VERSION >= 16
 	/* ffi_cif should be allocated on demand */
 	vm->cifNativeCalloutDataCache = NULL;
-<<<<<<< Upstream, based on upstream/master
 	/* The thunk block should be allocated on demand */
 	vm->thunkHeapWrapper = NULL;
-=======
-	vm->cifArgumentTypesCache = NULL;
-	if ((0 != omrthread_monitor_init_with_name(&vm->cifNativeCalloutDataCacheMutex, 0, "CIF cache mutex"))
-	|| (0 != omrthread_monitor_init_with_name(&vm->cifArgumentTypesCacheMutex, 0, "CIF argument types mutex"))
-	) {
-		goto error;
-	}
->>>>>>> b9c4892 JEP389 Foreign Linker API: DownCall (Phase 1 / Primitive support)
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
 #if defined(J9X86) || defined(J9HAMMER)
