@@ -29,12 +29,12 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import jdk.incubator.foreign.CLinker;
 import static jdk.incubator.foreign.CLinker.*;
+import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.ValueLayout;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.MemoryLayouts;
 import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.SymbolLookup;
 import jdk.incubator.foreign.ResourceScope;
 

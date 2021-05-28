@@ -29,13 +29,13 @@ import java.lang.invoke.MethodType;
 import jdk.incubator.foreign.CLinker;
 import static jdk.incubator.foreign.CLinker.*;
 import static jdk.incubator.foreign.CLinker.VaList.Builder;
+import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.ValueLayout;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.MemoryAccess;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemorySegment;
-import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.SymbolLookup;
 import jdk.incubator.foreign.SegmentAllocator;
 import jdk.incubator.foreign.ResourceScope;
@@ -262,20 +262,6 @@ public class PrimitiveTypeTests2 {
 	}
 
 	@Test
-	public void test_addIntsWithVaList_2() throws Throwable {
-		Addressable functionSymbol = nativeLibLookup.lookup("addIntsFromVaList").get();
-		MethodType mt = MethodType.methodType(int.class, int.class, VaList.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_VA_LIST);
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 700)
-				.vargFromInt(C_INT, 800)
-				.vargFromInt(C_INT, 900)
-				.vargFromInt(C_INT, 1000), resourceScope);
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, allocator, mt, fd);
-		int result = (int)mh.invoke(4, vaList);
-		Assert.assertEquals(result, 3400);
-	}
-
-	@Test
 	public void test_addTwoIntsReturnVoid_2() throws Throwable {
 		MethodType mt = MethodType.methodType(void.class, int.class, int.class);
 		FunctionDescriptor fd = FunctionDescriptor.ofVoid(C_INT, C_INT);
@@ -350,20 +336,6 @@ public class PrimitiveTypeTests2 {
 	}
 
 	@Test
-	public void test_addLongsWithVaList_2() throws Throwable {
-		Addressable functionSymbol = nativeLibLookup.lookup("addLongsFromVaList").get();
-		MethodType mt = MethodType.methodType(long.class, int.class, VaList.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, C_INT, C_VA_LIST);
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromLong(longLayout, 700000L)
-				.vargFromLong(longLayout, 800000L)
-				.vargFromLong(longLayout, 900000L)
-				.vargFromLong(longLayout, 1000000L), resourceScope);
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, allocator, mt, fd);
-		long result = (long)mh.invoke(4, vaList);
-		Assert.assertEquals(result, 3400000L);
-	}
-
-	@Test
 	public void test_addTwoFloats_2() throws Throwable {
 		MethodType mt = MethodType.methodType(float.class, float.class, float.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_FLOAT, C_FLOAT, C_FLOAT);
@@ -429,20 +401,6 @@ public class PrimitiveTypeTests2 {
 		MethodHandle mh = clinker.downcallHandle(memAddr, allocator, mt, fd);
 		double result = (double)mh.invokeExact(159.748d, 262.795d);
 		Assert.assertEquals(result, 422.543d, 0.001d);
-	}
-
-	@Test
-	public void test_addDoublesWithVaList_2() throws Throwable {
-		Addressable functionSymbol = nativeLibLookup.lookup("addDoublesFromVaList").get();
-		MethodType mt = MethodType.methodType(double.class, int.class, VaList.class);
-		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_INT, C_VA_LIST);
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromDouble(C_DOUBLE, 150.1001D)
-				.vargFromDouble(C_DOUBLE, 160.2002D)
-				.vargFromDouble(C_DOUBLE, 170.1001D)
-				.vargFromDouble(C_DOUBLE, 180.2002D), resourceScope);
-		MethodHandle mh = clinker.downcallHandle(functionSymbol, allocator, mt, fd);
-		double result = (double)mh.invoke(4, vaList);
-		Assert.assertEquals(result, 660.6006D);
 	}
 
 	@Test
@@ -534,44 +492,5 @@ public class PrimitiveTypeTests2 {
 		MethodHandle mh = clinker.downcallHandle(memAddr, allocator, mt, fd);
 		MemorySegment formatMemSegment = CLinker.toCString("\n%d + %d = %d\n", resourceScope);
 		mh.invoke(formatMemSegment.address(), 15, 27, 42);
-	}
-
-	@Test
-	public void test_vprintfFromDefaultLibWithVaList_2() throws Throwable {
-		/* Disable the test on Windows given a misaligned access exception coming from
-		 * java.base/java.lang.invoke.MemoryAccessVarHandleBase triggered by CLinker.toCString()
-		 * is also captured on OpenJDK/Hotspot.
-		 */
-		if (!isWinOS) {
-			Addressable functionSymbol = defaultLibLookup.lookup("vprintf").get();
-			MethodType mt = MethodType.methodType(int.class, MemoryAddress.class, VaList.class);
-			FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_POINTER, C_VA_LIST);
-			MemorySegment formatMemSegment = CLinker.toCString("%d * %d = %d\n", resourceScope);
-			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 7)
-					.vargFromInt(C_INT, 8)
-					.vargFromInt(C_INT, 56), resourceScope);
-			MethodHandle mh = clinker.downcallHandle(functionSymbol, allocator, mt, fd);
-			mh.invoke(formatMemSegment.address(), vaList);
-		}
-	}
-
-	@Test
-	public void test_vprintfFromDefaultLibWithVaList_fromMemAddr_2() throws Throwable {
-		/* Disable the test on Windows given a misaligned access exception coming from
-		 * java.base/java.lang.invoke.MemoryAccessVarHandleBase triggered by CLinker.toCString()
-		 * is also captured on OpenJDK/Hotspot.
-		 */
-		if (!isWinOS) {
-			Addressable functionSymbol = defaultLibLookup.lookup("vprintf").get();
-			MemoryAddress memAddr = functionSymbol.address();
-			MethodType mt = MethodType.methodType(int.class, MemoryAddress.class, VaList.class);
-			FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_POINTER, C_VA_LIST);
-			MemorySegment formatMemSegment = CLinker.toCString("%d * %d = %d\n", resourceScope);
-			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 7)
-					.vargFromInt(C_INT, 8)
-					.vargFromInt(C_INT, 56), resourceScope);
-			MethodHandle mh = clinker.downcallHandle(memAddr, allocator, mt, fd);
-			mh.invoke(formatMemSegment.address(), vaList);
-		}
 	}
 }

@@ -22,7 +22,7 @@
 
 #include "FFITypeHelpers.hpp"
 
-#if JAVA_SPEC_VERSION >= 16
+#ifdef J9VM_OPT_PANAMA
 ffi_type**
 FFITypeHelpers::getStructFFITypeElements(char **layout, bool inPtr)
 {
@@ -170,4 +170,4 @@ FFITypeHelpers::freeStructFFIType(ffi_type *ffiType)
 		}
 	}
 }
-#endif /* JAVA_SPEC_VERSION >= 16 */
+#endif /* J9VM_OPT_PANAMA */

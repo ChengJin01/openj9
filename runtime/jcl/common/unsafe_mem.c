@@ -127,6 +127,8 @@ unsafeFreeMemory(J9VMThread* vmThread, void* oldAddress)
 		omrthread_monitor_enter(mutex);
 		J9_LINKED_LIST_REMOVE(vmThread->javaVM->unsafeMemoryListHead, memBlock);
 		omrthread_monitor_exit(mutex);
+
+		printf("\nunsafeFreeMemory: oldAddress = %p, memBlock = %p\n", oldAddress, memBlock);
 		j9mem_free_memory(memBlock);
 	}
 	Trc_JCL_sun_misc_Unsafe_freeMemory_Exit(vmThread);
