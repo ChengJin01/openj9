@@ -133,6 +133,7 @@ set(main_sources
 	jvminitcommon.c
 	jvmrisup.c
 	KeyHashTable.c
+	LayoutFFITypeHelpers.cpp
 	leconditionexceptionsup.c
 	linearswalk.c
 	lockwordconfig.c
@@ -165,6 +166,8 @@ set(main_sources
 	threadhelp.cpp
 	threadpark.c
 	throwexception.c
+	UpcallThunkMem.cpp
+	UpcallVMHelpers.cpp
 	ValueTypeHelpers.cpp
 	visible.c
 	VMAccess.cpp

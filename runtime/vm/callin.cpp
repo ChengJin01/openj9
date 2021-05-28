@@ -1351,4 +1351,40 @@ sidecarInvokeReflectConstructor(J9VMThread *currentThread, jobject constructorRe
 	VM_VMAccess::inlineExitVMToJNI(currentThread);
 }
 
+#if JAVA_SPEC_VERSION >= 16
+void JNICALL
+sendResolveUpcallInvokeHandle(J9VMThread *currentThread, j9object_t mhMetaData)
+{
+	J9VMEntryLocalStorage newELS;
+	Trc_VM_sendResolveUpcallInvokeHandle_Entry(currentThread);
+
+	if (buildCallInStackFrame(currentThread, &newELS, true, false)) {
+		J9JavaVM *vm = currentThread->javaVM;
+		j9object_t handler = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_HANDLER(currentThread, mhMetaData);
+		J9Class *callerClazz = J9OBJECT_CLAZZ(currentThread, handler);
+		j9object_t methodHandle = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
+		J9Class *mhClazz = J9OBJECT_CLAZZ(currentThread, methodHandle);
+		j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(_currentThread, methodHandle);
+		j9object_t nameString = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKENAME(currentThread, mhMetaData);
+		j9object_t sigString = J9VMJAVALANGINVOKEMETHODTYPE_METHODDESCRIPTOR(currentThread, methodType);
+
+		if ((NULL != nameString) && (NULL != sigString)) {
+			/* Run the method in the upcall */
+			*--currentThread->sp = (UDATA)J9VM_J9CLASS_TO_HEAPCLASS(callerClazz);
+			*(I_32*)--currentThread->sp = MH_REF_INVOKEVIRTUAL;
+			*--currentThread->sp = (UDATA)J9VM_J9CLASS_TO_HEAPCLASS(mhClazz);
+			*--currentThread->sp = (UDATA)nameString;
+			*--currentThread->sp = (UDATA)sigString;
+			currentThread->returnValue = J9_BCLOOP_RUN_METHOD;
+			currentThread->returnValue2 = (UDATA)J9VMJAVALANGINVOKEMETHODHANDLERESOLVER_LINKCALLERMETHOD_METHOD(vm);
+			c_cInterpreter(currentThread);
+		}
+
+		restoreCallInFrame(currentThread);
+	}
+
+	Trc_VM_sendResolveUpcallInvokeHandle_Exit(currentThread);
+}
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
 } /* extern "C" */

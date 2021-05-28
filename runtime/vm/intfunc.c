@@ -408,4 +408,15 @@ J9InternalVMFunctions J9InternalFunctions = {
 	isCheckpointAllowed,
 #endif /* defined(J9VM_OPT_CRIU_SUPPORT) */
 	getClassNameString,
+#if JAVA_SPEC_VERSION >= 16
+	createUpcallThunk,
+	allocateUpcallThunkMemory,
+	doneUpcallThunkGeneration,
+	icallVMprJavaUpcall0,
+	icallVMprJavaUpcall1,
+	icallVMprJavaUpcallJ,
+	icallVMprJavaUpcallF,
+	icallVMprJavaUpcallD,
+	icallVMprJavaUpcallStruct,
+#endif /* JAVA_SPEC_VERSION >= 16 */
 };

@@ -2280,3 +2280,30 @@ resolveInvokeDynamic(J9VMThread *vmThread, J9ConstantPool *ramCP, UDATA callSite
 	Trc_VM_resolveInvokeDynamic_Exit(vmThread, result);
 	return result;
 }
+
+#if JAVA_SPEC_VERSION >= 16
+void
+resolveUpcallInvokeHandle(J9VMThread *vmThread, j9object_t mhMetaData)
+{
+	J9Class *mhMetaDataClazz = J9OBJECT_CLAZZ(vmThread, mhMetaData);
+	j9object_t invokeCache = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE(vmThread, mhMetaData);
+	Trc_VM_resolveUpcallInvokeHandle_Entry(vmThread, resolveFlags);
+
+	if (NULL == invokeCache) {
+		sendResolveUpcallInvokeHandle(vmThread, mhMetaData);
+		invokeCache = (j9object_t)vmThread->returnValue;
+
+		if (NULL != vmThread->currentException) {
+			/* Already a pending exception */
+			result = NULL;
+		} else if (NULL == result) {
+			setCurrentExceptionUTF(vmThread, J9VMCONSTANTPOOL_JAVALANGNULLPOINTEREXCEPTION, NULL);
+		} else {
+			VM_AtomicSupport::writeBarrier();
+			J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_SET_INVOKECACHE(currentThread, mhMetaData, invokeCache);
+		}
+	}
+
+	Trc_VM_resolveUpcallInvokeHandle_Exit(vmThread, result);
+}
+#endif /* JAVA_SPEC_VERSION >= 16 */
