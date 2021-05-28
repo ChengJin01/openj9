@@ -34,6 +34,7 @@ import jdk.incubator.foreign.ValueLayout;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.MemoryLayouts;
 import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.LibraryLookup;
 import static jdk.incubator.foreign.LibraryLookup.Symbol;
 
@@ -44,8 +45,10 @@ import static jdk.incubator.foreign.LibraryLookup.Symbol;
  */
 @Test(groups = { "level.sanity" })
 public class InvalidDownCallTests {
-	private static boolean isWinOS = System.getProperty("os.name").toLowerCase().contains("win");
-	private static ValueLayout longLayout = isWinOS ? C_LONG_LONG : C_LONG;
+	private static String osName = System.getProperty("os.name").toLowerCase();
+	private static boolean isAixOS = osName.contains("aix");
+	private static boolean isWinOS = osName.contains("win");
+	private static ValueLayout longLayout = (isWinOS || isAixOS) ? C_LONG_LONG : C_LONG;
 	LibraryLookup nativeLib = LibraryLookup.ofLibrary("clinkerffitests");
 	LibraryLookup defaultLib = LibraryLookup.ofDefault();
 	CLinker clinker = CLinker.getInstance();
@@ -383,4 +386,12 @@ public class InvalidDownCallTests {
 		fail("Failed to throw out IllegalArgumentException in the case of the unsupported String type");
 	}
 
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "GroupLayout is expected: .*")
+	public void test_unsupportedStructLayout() throws Throwable {
+		MethodType mt = MethodType.methodType(boolean.class, boolean.class, MemorySegment.class);
+		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, MemoryLayouts.BITS_64_LE);
+		Symbol functionSymbol = nativeLib.lookup("addBoolAndBoolsFromStructWithXor").get();
+		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
+		fail("Failed to throw out IllegalArgumentException in the case of the unsupported layout for struct");
+	}
 }

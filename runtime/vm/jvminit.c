@@ -41,6 +41,9 @@
 #include <ctype.h>
 #include <limits.h>
 #include "util_api.h"
+#if JAVA_SPEC_VERSION >= 16
+#include "vm_internal.h"
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 #if !defined(stdout) 
 #ifdef stdout
@@ -634,25 +637,16 @@ freeJavaVM(J9JavaVM * vm)
 		omrthread_monitor_destroy(vm->cifNativeCalloutDataCacheMutex);
 		vm->cifNativeCalloutDataCacheMutex = NULL;
 	}
+
 	if (NULL != vm->cifNativeCalloutDataCache) {
+		pool_state poolState;
+		void *cifNode = pool_startDo(vm->cifNativeCalloutDataCache, &poolState);
+		while (NULL != cifNode) {
+			freeAllStructFFITypes(currentThread, cifNode);
+			cifNode = pool_nextDo(&poolState);
+		}
 		pool_kill(vm->cifNativeCalloutDataCache);
 		vm->cifNativeCalloutDataCache = NULL;
-	}
-
-	if (NULL != vm->cifArgumentTypesCacheMutex) {
-		omrthread_monitor_destroy(vm->cifArgumentTypesCacheMutex);
-		vm->cifArgumentTypesCacheMutex = NULL;
-	}
-
-	if (NULL != vm->cifArgumentTypesCache) {
-		pool_state poolState;
-		J9CifArgumentTypes *cifArgTypesNode = pool_startDo(vm->cifArgumentTypesCache, &poolState);
-		while (NULL != cifArgTypesNode) {
-			j9mem_free_memory(cifArgTypesNode->argumentTypes);
-			cifArgTypesNode = pool_nextDo(&poolState);
-		}
-		pool_kill(vm->cifArgumentTypesCache);
-		vm->cifArgumentTypesCache = NULL;
 	}
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
@@ -6451,10 +6445,7 @@ protectedInitializeJavaVM(J9PortLibrary* portLibrary, void * userData)
 #if JAVA_SPEC_VERSION >= 16
 	/* ffi_cif should be allocated on demand */
 	vm->cifNativeCalloutDataCache = NULL;
-	vm->cifArgumentTypesCache = NULL;
-	if ((0 != omrthread_monitor_init_with_name(&vm->cifNativeCalloutDataCacheMutex, 0, "CIF cache mutex"))
-	|| (0 != omrthread_monitor_init_with_name(&vm->cifArgumentTypesCacheMutex, 0, "CIF argument types mutex"))
-	) {
+	if (0 != omrthread_monitor_init_with_name(&vm->cifNativeCalloutDataCacheMutex, 0, "CIF cache mutex")) {
 		goto error;
 	}
 #endif /* JAVA_SPEC_VERSION >= 16 */

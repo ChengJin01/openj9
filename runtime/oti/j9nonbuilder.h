@@ -180,6 +180,7 @@
 #define J9NtcPointer 0xB
 #define J9NtcShort 0x4
 #define J9NtcVoid 0x0
+#define J9NtcStruct 0xC
 
 /* @ddr_namespace: map_to_type=J9VMRuntimeFlags */
 
@@ -5553,8 +5554,6 @@ typedef struct J9JavaVM {
 #if JAVA_SPEC_VERSION >= 16
 	struct J9Pool *cifNativeCalloutDataCache;
 	omrthread_monitor_t cifNativeCalloutDataCacheMutex;
-	struct J9Pool *cifArgumentTypesCache;
-	omrthread_monitor_t cifArgumentTypesCacheMutex;
 #endif /* JAVA_SPEC_VERSION >= 16 */
 } J9JavaVM;
 
