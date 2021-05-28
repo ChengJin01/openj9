@@ -23,6 +23,7 @@
 package jdk.internal.foreign.abi;
 
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.List;
 import java.util.HashMap;
 import java.lang.invoke.MethodHandle;
@@ -32,17 +33,12 @@ import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import static java.lang.invoke.MethodType.methodType;
 import java.lang.invoke.WrongMethodTypeException;
-
 import jdk.incubator.foreign.FunctionDescriptor;
-import jdk.incubator.foreign.ValueLayout;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.LibraryLookup;
-import static jdk.incubator.foreign.LibraryLookup.Symbol;
-import jdk.incubator.foreign.CLinker.TypeKind;
-import static jdk.incubator.foreign.CLinker.TypeKind.*;
 
 /**
  * The counterpart in OpenJDK is replaced with this class that wrap up a method handle
@@ -55,17 +51,17 @@ public class ProgrammableInvoker {
 	private final Addressable functionAddr;
 	private long cifNativeThunkAddr;
 	private long argTypesAddr;
-	private List<MemoryLayout> argLayouts;
 	private MemoryLayout[] argLayoutArray;
 	private MemoryLayout realReturnLayout;
+	private MethodHandle longObjToMemSegmtRetFilter;
 
 	static final Lookup lookup = MethodHandles.lookup();
 
 	/* The prep_cif and the corresponding argument layouts are cached & shared in multiple downcalls/threads */
 	private static final HashMap<Integer, Long> cachedCifNativeThunkAddr = new HashMap<>();
-	private static final HashMap<List<MemoryLayout>, Long> cachedArgLayouts = new HashMap<>();
+	private static final HashMap<Integer, Long> cachedArgLayouts = new HashMap<>();
 
-	/* Argument filters that convert the primitive types or MemoryAddress to long */
+	/* Argument filters that convert the primitive types/MemoryAddress/MemorySegment to long */
 	private static final MethodHandle booleanToLongArgFilter;
 	private static final MethodHandle charToLongArgFilter;
 	private static final MethodHandle byteToLongArgFilter;
@@ -74,8 +70,9 @@ public class ProgrammableInvoker {
 	private static final MethodHandle floatToLongArgFilter;
 	private static final MethodHandle doubleToLongArgFilter;
 	private static final MethodHandle memAddrToLongArgFilter;
+	private static final MethodHandle memSegmtToLongArgFilter;
 
-	/* Return value filters that convert the Long object to the primitive types or MemoryAddress */
+	/* Return value filters that convert the Long object to the primitive types/MemoryAddress/MemorySegment */
 	private static final MethodHandle longObjToVoidRetFilter;
 	private static final MethodHandle longObjToBooleanRetFilter;
 	private static final MethodHandle longObjToCharRetFilter;
@@ -107,6 +104,7 @@ public class ProgrammableInvoker {
 			floatToLongArgFilter = lookup.findStatic(ProgrammableInvoker.class, "floatToLongArg", methodType(long.class, float.class)); //$NON-NLS-1$
 			doubleToLongArgFilter = lookup.findStatic(Double.class, "doubleToLongBits", methodType(long.class, double.class)); //$NON-NLS-1$
 			memAddrToLongArgFilter = lookup.findStatic(ProgrammableInvoker.class, "memAddrToLongArg", methodType(long.class, MemoryAddress.class)); //$NON-NLS-1$
+			memSegmtToLongArgFilter = lookup.findStatic(ProgrammableInvoker.class, "memSegmtToLongArg", methodType(long.class, MemorySegment.class)); //$NON-NLS-1$
 
 			/* Set up the return value filters for the primitive types and MemoryAddress */
 			longObjToVoidRetFilter = lookup.findStatic(ProgrammableInvoker.class, "longObjToVoidRet", methodType(void.class, Object.class)); //$NON-NLS-1$
@@ -172,6 +170,11 @@ public class ProgrammableInvoker {
 		return argValue.toRawLongValue();
 	}
 
+	/* Intended for memSegmtToLongArgFilter that converts the memory segment to long */
+	private static final long memSegmtToLongArg(MemorySegment argValue) {
+		return argValue.address().toRawLongValue();
+	}
+
 	/* Intended for longObjToVoidRetFilter that converts the Long object to void */
 	private static final void longObjToVoidRet(Object retValue) {
 		return;
@@ -226,8 +229,20 @@ public class ProgrammableInvoker {
 		return MemoryAddress.ofLong(tmpValue);
 	}
 
+	/* Intended for longObjToMemSegmtRetFilter that converts the Long object to the memory address */
+	private final MemorySegment longObjToMemSegmtRet(Object retValue) {
+		long tmpValue = ((Long)retValue).longValue();
+		MemoryAddress memSegmtAddr = MemoryAddress.ofLong(tmpValue);
+		return memSegmtAddr.asSegmentRestricted(realReturnLayout.byteSize());
+	}
+
 	ProgrammableInvoker(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor functionDescriptor) {
-		checkIfValidLayoutAndType(functionMethodType, functionDescriptor);
+		List<MemoryLayout> argLayouts = functionDescriptor.argumentLayouts();
+		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayouts.size()]);
+		Optional<MemoryLayout> returnLayout = functionDescriptor.returnLayout();
+		realReturnLayout = returnLayout.orElse(null); // set to null for void
+
+		TypeLayoutCheckHelper.checkIfValidLayoutAndType(functionMethodType, argLayoutArray, realReturnLayout);
 
 		/* As explained in the Spec of LibraryLookup, the downcall must hold a strong reference to
 		 * the native library symbol to prevent the underlying native library from being unloaded
@@ -238,38 +253,68 @@ public class ProgrammableInvoker {
 		functionAddr = downcallAddr;
 		funcMethodType = functionMethodType;
 		funcDescriptor = functionDescriptor;
+
 		cifNativeThunkAddr = 0;
 		argTypesAddr = 0;
+		longObjToMemSegmtRetFilter = null;
+		/* Create the filter for the returned memory segment as the size of the memory segment
+		 * is only determined by the corresponding layout size in bytes at runtime.
+		 */
+		if (funcMethodType.returnType() == MemorySegment.class) {
+			try {
+				longObjToMemSegmtRetFilter = lookup.bind(this, "longObjToMemSegmtRet", methodType(MemorySegment.class, Object.class));
+			} catch (ReflectiveOperationException e) {
+				throw new InternalError(e);
+			}
+		}
 		generateAdapter();
 	}
 
 	/* Map the layouts of return type & argument types to the underlying prep_cif */
 	private void generateAdapter() {
-		/* Set the void layout string intended for the underlying native code as the corresponding layout doesn't exist in the Spec */
-		String retLayoutStr = (realReturnLayout == null) ? "b0[abi/kind=VOID]" : realReturnLayout.toString(); //$NON-NLS-1$
-
 		int argLayoutCount = argLayoutArray.length;
 		String[] argLayoutStrs = new String[argLayoutCount];
+		String argLayoutStrsLine = "|"; //$NON-NLS-1$
 		for (int argIndex = 0; argIndex < argLayoutCount; argIndex++) {
 			MemoryLayout argLayout = argLayoutArray[argIndex];
-			argLayoutStrs[argIndex] = argLayout.toString();
+			/* Prefix the size of layout to the layout string to be parsed in native */
+			argLayoutStrs[argIndex] = LayoutStrPreprocessor.getSimplifiedLayoutString(argLayout, true);
+			argLayoutStrsLine += argLayoutStrs[argIndex] + "|"; //$NON-NLS-1$
+		}
+		argLayoutStrsLine = "(" + argLayoutStrsLine + ")"; //$NON-NLS-1$ //$NON-NLS-2$
+
+		/* Set the void layout string intended for the underlying native code
+		 * as the corresponding layout doesn't exist in the Spec.
+		 * Note: 'V' stands for the void type and 0 means zero byte.
+		 */
+		String retLayoutStr = "0V"; //$NON-NLS-1$
+		if (realReturnLayout != null) {
+			retLayoutStr = LayoutStrPreprocessor.getSimplifiedLayoutString(realReturnLayout, true);
 		}
 
-		synchronized (privateClassLock) {
+		synchronized(privateClassLock) {
 			/* If a prep_cif for a given function descriptor exists, then the corresponding return & argument layouts
 			 * were already set up for this prep_cif, in which case there is no need to check the layouts.
 			 * If not the case, check at first whether the same return & argument layouts exist in the cache
 			 * in case of duplicate memory allocation for the same layouts.
+			 *
+			 * Note:
+			 * 1) C_LONG and C_LONG_LONG should be treated as the same layout in the cache.
+			 * 2) the same layout kind with or without the layout name should be treated as the same layout.
+			 * e.g.  C_INT without the layout name = b32[abi/kind=INT]
+			 *  and  C_INT with the layout name = b32(int)[abi/kind=INT,layout/name=int]
 			 */
-			int funcDescHash = funcDescriptor.hashCode();
-			Long cifNativeThunk = cachedCifNativeThunkAddr.get(funcDescHash);
+			String argRetLayoutStrsLine = argLayoutStrsLine + retLayoutStr;
+			Integer argRetLayoutStrLineHash = Integer.valueOf(argRetLayoutStrsLine.hashCode());
+			Integer argLayoutStrsLineHash = Integer.valueOf(argLayoutStrsLine.hashCode());
+			Long cifNativeThunk = cachedCifNativeThunkAddr.get(argRetLayoutStrLineHash);
 			if (cifNativeThunk != null) {
 				cifNativeThunkAddr = cifNativeThunk.longValue();
-				argTypesAddr = cachedArgLayouts.get(argLayouts).longValue();
+				argTypesAddr = cachedArgLayouts.get(argLayoutStrsLineHash).longValue();
 			} else {
-				boolean newArgTypes = cachedArgLayouts.containsKey(argLayouts) ? false : true;
+				boolean newArgTypes = cachedArgLayouts.containsKey(argLayoutStrsLineHash) ? false : true;
 				if (!newArgTypes) {
-					argTypesAddr = cachedArgLayouts.get(argLayouts).longValue();
+					argTypesAddr = cachedArgLayouts.get(argLayoutStrsLineHash).longValue();
 				}
 
 				/* Prepare the prep_cif for the native function specified by the arguments/return layouts */
@@ -277,9 +322,9 @@ public class ProgrammableInvoker {
 
 				/* Cache the address of prep_cif and argTypes after setting up via the out-of-line native code */
 				if (newArgTypes) {
-					cachedArgLayouts.put(argLayouts, Long.valueOf(argTypesAddr));
+					cachedArgLayouts.put(argLayoutStrsLineHash, Long.valueOf(argTypesAddr));
 				}
-				cachedCifNativeThunkAddr.put(funcDescHash, Long.valueOf(cifNativeThunkAddr));
+				cachedCifNativeThunkAddr.put(argRetLayoutStrLineHash, Long.valueOf(cifNativeThunkAddr));
 			}
 		}
 	}
@@ -346,6 +391,8 @@ public class ProgrammableInvoker {
 			filterMH = doubleToLongArgFilter;
 		} else if (argTypeClass == MemoryAddress.class) {
 			filterMH = memAddrToLongArgFilter;
+		} else if (argTypeClass == MemorySegment.class) {
+			filterMH = memSegmtToLongArgFilter;
 		}
 
 		return filterMH;
@@ -375,6 +422,8 @@ public class ProgrammableInvoker {
 			filterMH = longObjToDoubleRetFilter;
 		} else if (returnType == MemoryAddress.class) {
 			filterMH = longObjToMemAddrRetFilter;
+		} else if (returnType == MemorySegment.class) {
+			filterMH = longObjToMemSegmtRetFilter;
 		}
 
 		return filterMH;
@@ -384,189 +433,5 @@ public class ProgrammableInvoker {
 	Object runNativeMethod(long[] args) {
 		long returnVal = invokeNative(functionAddr.address().toRawLongValue(), cifNativeThunkAddr, args);
 		return Long.valueOf(returnVal);
-	}
-
-	/* Verify whether the specified layout and the corresponding type are valid and match each other.
-	 * Note: will update after the struct layout (phase 2 & 3) is fully implemented.
-	 */
-	private void checkIfValidLayoutAndType(MethodType targetMethodType, FunctionDescriptor funcDesc) {
-		Class<?> retType = targetMethodType.returnType();
-		if (!validateArgRetTypeClass(retType) && (retType != void.class)) {
-			throw new IllegalArgumentException("The return type must be primitive/void or MemoryAddress" + ": retType = " + retType);  //$NON-NLS-1$ //$NON-NLS-2$
-		}
-
-		Optional<MemoryLayout> returnLayout = funcDesc.returnLayout();
-		realReturnLayout = returnLayout.orElse(null); // set to null for void
-		validateLayoutAgainstType(realReturnLayout, targetMethodType.returnType());
-
-		Class<?>[] argTypes = targetMethodType.parameterArray();
-		int argTypeCount = argTypes.length;
-		argLayouts = funcDesc.argumentLayouts();
-		int argLayoutCount = argLayouts.size();
-		if (argTypeCount != argLayoutCount) {
-			throw new IllegalArgumentException("The arity (" + argTypeCount //$NON-NLS-1$
-				+ ") of the argument types is inconsistent with the arity ("  //$NON-NLS-1$
-				+ argLayoutCount + ") of the argument layouts");  //$NON-NLS-1$
-		}
-
-		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayoutCount]);
-		for (int argIndex = 0; argIndex < argLayoutCount; argIndex++) {
-			if (!validateArgRetTypeClass(argTypes[argIndex])) {
-				throw new IllegalArgumentException("The passed-in argument type at index " + argIndex + " is neither primitive nor MemoryAddress"); //$NON-NLS-1$ //$NON-NLS-2$
-			}
-			validateLayoutAgainstType(argLayoutArray[argIndex], argTypes[argIndex]);
-		}
-	}
-
-	/* Verify whether the specified type is primitive, MemoryAddress (for pointer) */
-	private static boolean validateArgRetTypeClass(Class<?> targetType) {
-		if (!targetType.isPrimitive() && (targetType != MemoryAddress.class)
-		) {
-			return false;
-		}
-		return true;
-	}
-
-	/* Check the validity of the layout against the corresponding type */
-	private static void validateLayoutAgainstType(MemoryLayout targetLayout, Class<?> targetType) {
-		boolean isPrimitiveLayout = false;
-
-		if (targetLayout != null) {
-			if (!targetLayout.hasSize()) {
-				throw new IllegalArgumentException("The layout's size is expected: layout = " + targetLayout); //$NON-NLS-1$
-			} else if (targetLayout.bitSize() <= 0) {
-				throw new IllegalArgumentException("The layout's size must be greater than zero: layout = " + targetLayout); //$NON-NLS-1$
-			}
-		}
-
-		if (((targetType == void.class) && (targetLayout != null))
-		|| ((targetType != void.class) && (targetLayout == null))
-		) {
-			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = "  //$NON-NLS-1$
-				+ ((targetLayout == null) ? "VOID" : targetLayout) //$NON-NLS-1$
-				+ ", type = " + targetType);  //$NON-NLS-1$
-		/* Check the primitive type and MemoryAddress against the ValueLayout */
-		} else if (targetType != void.class) {
-			if (!ValueLayout.class.isInstance(targetLayout)) {
-				throw new IllegalArgumentException("ValueLayout is expected: layout = " + targetLayout); //$NON-NLS-1$
-			}
-			/* Check the size and kind of the ValueLayout for the primitive types and MemoryAddress */
-			validateValueLayoutSize(targetLayout, targetType);
-			validateValueLayoutKind(targetLayout, targetType);
-		}
-	}
-
-	/* Check the size of the specified primitive layout to determine whether it matches the specified type */
-	private static void validateValueLayoutSize(MemoryLayout TypeLayout, Class<?> targetType) {
-		int layoutSize = (int)TypeLayout.bitSize();
-		boolean mismatchedSize = false;
-
-		switch (layoutSize) {
-		case 8:
-			/* the 8-bits layout in Java only matches with byte in C */
-			if (targetType != byte.class) {
-				mismatchedSize = true;
-			}
-			break;
-		case 16:
-			/* The 16-bits layout is shared by char and short
-			 * given the char size is 16 bits in Java.
-			 */
-			if ((targetType != char.class) && (targetType != short.class) ) {
-				mismatchedSize = true;
-			}
-			break;
-		case 32:
-			/* The 32-bits layout is shared by boolean, int and float
-			 * given the boolean type is treated as int in Java.
-			 */
-			if ((targetType != boolean.class)
-			&& (targetType != int.class)
-			&& (targetType != float.class)
-			) {
-				mismatchedSize = true;
-			}
-			break;
-		case 64:
-			/* The 32-bits layout is shared by long, double and the MemoryAddress class
-			 * given the corresponding pointer size is 32 bits in C.
-			 */
-			if ((targetType != long.class)
-			&& (targetType != double.class)
-			&& (targetType != MemoryAddress.class)
-			) {
-				mismatchedSize = true;
-			}
-			break;
-		default:
-			mismatchedSize = true;
-			break;
-		}
-
-		if (mismatchedSize) {
-			throw new IllegalArgumentException("Mismatched size between the layout and the type: layout = " //$NON-NLS-1$
-				+ TypeLayout + ", type = " + targetType.getSimpleName());  //$NON-NLS-1$
-		}
-	}
-
-	/* Check the kind (type) of the specified primitive layout to determine whether it matches the specified type */
-	private static void validateValueLayoutKind(MemoryLayout targetLayout, Class<?> targetType) {
-		boolean mismatchType = false;
-
-		if (!targetLayout.toString().contains("[abi/kind=")) { //$NON-NLS-1$
-			throw new IllegalArgumentException("The layout's ABI Class is undefined: layout = " + targetLayout); //$NON-NLS-1$
-		}
-
-		/* Extract the kind from the specified layout with the ATTR_NAME "abi/kind".
-		 * e.g. b32[abi/kind=INT]
-		 */
-		TypeKind kind = (TypeKind)targetLayout.attribute(TypeKind.ATTR_NAME)
-				.orElseThrow(() -> new IllegalArgumentException("The layout's ABI class is empty")); //$NON-NLS-1$
-		switch (kind) {
-		case CHAR:
-			/* the CHAR layout (8bits) in Java only matches with byte in C */
-			break;
-		case SHORT:
-			/* the SHORT layout (16bits) in Java only matches char and short in C */
-			break;
-		case INT:
-			/* the INT layout (32bits) in Java only matches boolean and int in C */
-			if ((targetType != boolean.class) && (targetType != int.class)) {
-				mismatchType = true;
-			}
-			break;
-		case LONG:
-		case LONG_LONG:
-			/* the LONG/LONG_LONG layout (64bits) in Java only matches long in C */
-			if (targetType != long.class) {
-				mismatchType = true;
-			}
-			break;
-		case FLOAT:
-			/* the FLOAT layout (32bits) in Java only matches float in C */
-			if (targetType != float.class) {
-				mismatchType = true;
-			}
-			break;
-		case DOUBLE:
-			/* the DOUBLE layout (64bits) in Java only matches double in C */
-			if (targetType != double.class) {
-				mismatchType = true;
-			}
-			break;
-		case POINTER:
-			/* the POINTER layout (64bits) in Java only matches MemoryAddress */
-			if (targetType != MemoryAddress.class) {
-				mismatchType = true;
-			}
-			break;
-		default:
-			mismatchType = true;
-			break;
-		}
-
-		if (mismatchType) {
-			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = " + targetLayout + ", type = " + targetType);  //$NON-NLS-1$ //$NON-NLS-2$
-		}
 	}
 }
