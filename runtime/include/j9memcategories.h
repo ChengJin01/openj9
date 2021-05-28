@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2020 IBM Corp. and others
+ * Copyright (c) 2010, 2021 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -79,5 +79,4 @@
 #define J9MEM_CATEGORY_UNUSED37 37
 #define J9MEM_CATEGORY_SUN_MISC_UNSAFE_ALLOCATEDBB 38
 #define J9MEM_CATEGORY_MODULES 39
-
 #endif /* J9MEMCATEGORIES_H */

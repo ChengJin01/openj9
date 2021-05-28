@@ -59,6 +59,9 @@
 #include "UnsafeAPI.hpp"
 #include "ObjectMonitor.hpp"
 #include "JITInterface.hpp"
+#if JAVA_SPEC_VERSION >= 16
+#include "LayoutFFITypeHelpers.hpp"
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 #if 0
 #define DEBUG_MUST_HAVE_VM_ACCESS(vmThread) Assert_VM_mustHaveVMAccess(vmThread)
@@ -696,6 +699,48 @@ throwStackOverflow:
 done:
 		return rc;
 	}
+
+#if JAVA_SPEC_VERSION >= 16
+	VMINLINE VM_BytecodeAction
+	native2InterpreterTransition(REGISTER_ARGS_LIST)
+	{
+retry:
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+		j9object_t mhMetaData = (j9object_t)currentThread->returnValue2;
+		j9object_t invokeCacheArray = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE(_currentThread, mhMetaData);
+
+		/* Resolve the method handle at first to get the MemberName and appendix given
+		 * the passed-in method handle is an adapter from OpenJDK MH perspective rather
+		 * than the resolved handle.
+		 */
+		if (J9_EXPECTED(NULL != invokeCacheArray)) {
+			j9object_t memberName = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 0);
+			_sendMethod = (J9Method *)(UDATA)J9OBJECT_U64_LOAD(_currentThread, memberName, _vm->vmtargetOffset);
+			j9object_t appendix = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 1);
+			if (NULL != appendix) {
+				_sp -= 1;
+				*_sp = (UDATA)appendix;
+			}
+		} else {
+			buildGenericSpecialStackFrame(REGISTER_ARGS, 0);
+			updateVMStruct(REGISTER_ARGS);
+			/* The resolution is performed by MethodHandleNatives.linkMethod(*).
+			 * The resolved values consist of a MemberName object and a MethodHandle object
+			 * which is stored in a Java Object array.
+			 */
+			resolveUpcallInvokeHandle(_currentThread, mhMetaData);
+			VMStructHasBeenUpdated(REGISTER_ARGS);
+			restoreGenericSpecialStackFrame(REGISTER_ARGS);
+			if (VM_VMHelpers::exceptionPending(_currentThread)) {
+				rc = GOTO_THROW_CURRENT_EXCEPTION;
+			} else {
+				goto retry;
+			}
+		}
+
+		return rc;
+	}
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 	VMINLINE VM_BytecodeAction
 	promotedMethodOnTransitionFromJIT(REGISTER_ARGS_LIST, void *returnAddress, void *jumpAddress)
@@ -4904,37 +4949,54 @@ done:
 
 #if JAVA_SPEC_VERSION >= 16
 	/**
-	 * @brief Convert argument or return type from ffi_type to J9NativeTypeCode
-	 * @param type[in] The pointer to the J9Class of the type
+	 * @brief Convert argument or return type from the type of ffi_type to J9NativeTypeCode
+	 * @param ffiType[in] The pointer to ff_type
 	 * @return The J9NativeTypeCode corresponding to the J9Class
 	 */
 	VMINLINE U_8
-	getJ9NativeTypeCodeFromFFIType(ffi_type *type)
+	getJ9NativeTypeCodeFromFFIType(ffi_type *ffiType)
 	{
 		U_8 typeCode = 0;
-		if (&ffi_type_void == type) {
+
+		switch (ffiType->type) {
+		case FFI_TYPE_VOID:
 			typeCode = J9NtcVoid;
-		} else if (&ffi_type_uint32 == type) {
+			break;
+		case FFI_TYPE_UINT32:
 			typeCode = J9NtcBoolean;
-		} else if (&ffi_type_sint8 == type) {
+			break;
+		case FFI_TYPE_SINT8:
 			typeCode = J9NtcByte;
-		} else if (&ffi_type_uint16 == type) {
+			break;
+		case FFI_TYPE_UINT16:
 			typeCode = J9NtcChar;
-		} else if (&ffi_type_sint16 == type) {
+			break;
+		case FFI_TYPE_SINT16:
 			typeCode = J9NtcShort;
-		} else if (&ffi_type_sint32 == type) {
+			break;
+		case FFI_TYPE_SINT32:
 			typeCode = J9NtcInt;
-		} else if (&ffi_type_sint64 == type) {
+			break;
+		case FFI_TYPE_SINT64:
 			typeCode = J9NtcLong;
-		} else if (&ffi_type_float == type) {
+			break;
+		case FFI_TYPE_FLOAT:
 			typeCode = J9NtcFloat;
-		} else if (&ffi_type_double == type) {
+			break;
+		case FFI_TYPE_DOUBLE:
 			typeCode = J9NtcDouble;
-		} else if (&ffi_type_pointer == type) {
+			break;
+		case FFI_TYPE_POINTER:
 			typeCode = J9NtcPointer;
-		} else {
+			break;
+		case FFI_TYPE_STRUCT:
+			typeCode = J9NtcStruct;
+			break;
+		default:
 			Assert_VM_unreachable();
+			break;
 		}
+
 		return typeCode;
 	}
 
@@ -4945,6 +5007,7 @@ done:
 	inlProgrammableInvokerInvokeNative(REGISTER_ARGS_LIST)
 	{
 		VM_BytecodeAction rc = EXECUTE_BYTECODE;
+		LayoutFFITypeHelpers ffiTypeHelpers(_currentThread);
 #if !defined(J9VM_ENV_LITTLE_ENDIAN)
 		/* Move forward by 4 bytes to the starting address of the int numbers on the platforms
 		 * with big-endianness given UDATA (8 bytes) is used to hold all types of arguments.
@@ -4972,12 +5035,30 @@ done:
 		j9object_t argValues = *(j9object_t *)_sp; // argValues
 		ffi_cif *cif = (ffi_cif *)(UDATA)*(I_64 *)(_sp + 1); // calloutThunk
 		void *function = (void *)(UDATA)*(I_64 *)(_sp + 3); // functionAddr
-		U_8 returnType = getJ9NativeTypeCodeFromFFIType(cif->rtype);
+		ffi_type *ffiRetType = cif->rtype;
+		U_8 returnType = getJ9NativeTypeCodeFromFFIType(ffiRetType);
 		U_32 ffiArgCount = J9INDEXABLEOBJECT_SIZE(currentThread, argValues);
 		const U_8 minimalCallout = 16;
 		bool isMinimal = (ffiArgCount <= minimalCallout);
 
 		PORT_ACCESS_FROM_JAVAVM(_vm);
+
+		if (J9NtcStruct == returnType) {
+			UDATA structValueSize = ffiRetType->size;
+#if defined(WIN64)
+			/* Set up the size of the returned struct as specified in ffi_call() on 64bit Windows
+			 * See runtime/libffi/x86/ffi64.c for details.
+			 */
+			if (0 == (structValueSize & 0xF)) {
+				structValueSize = (structValueSize + 0xF) & ~0xF;
+			}
+#endif /* defined(WIN64) */
+			/* The memory of struct must be allocated so as to return to Java as ffi_call invokes alloca()
+			 * to allocate the returned struct in which case it will be removed from the stack
+			 * when the native function exits.
+			 */
+			returnStorage = (UDATA *)j9mem_allocate_memory(structValueSize, OMRMEM_CATEGORY_VM);
+		}
 
 		if (isMinimal) {
 			values = sValues;
@@ -5031,6 +5112,9 @@ done:
 				/* ffi_call expects the address of the pointer is the address of the stackslot */
 				pointerValues[i] = (U_64)ffiArgs[i];
 				values[i] = &pointerValues[i];
+			} else if (J9NtcStruct == argType) {
+				/* ffi_call expects the address of the struct is the address of the native memory that stores the struct */
+				values[i] = (void *)(U_64)ffiArgs[i];
 			} else {
 				values[i] = &(ffiArgs[i]);
 #if !defined(J9VM_ENV_LITTLE_ENDIAN)
@@ -5055,15 +5139,15 @@ done:
 #endif /* FFI_NATIVE_RAW_API */
 		VM_VMAccess::inlineEnterVMFromJNI(_currentThread);
 
-		VM_VMHelpers::convertJNIReturnValue(returnType, returnStorage);
+		if (J9NtcStruct == returnType) {
+			/* returnStorage is not the address of _currentThread->returnValue any more
+			 * given it stores the address of struct allocated previously.
+			 */
+			_currentThread->returnValue = (UDATA)returnStorage;
+		} else {
+			VM_VMHelpers::convertJNIReturnValue(returnType, returnStorage);
+		}
 		returnDoubleFromINL(REGISTER_ARGS, _currentThread->returnValue, 6);
-		goto done;
-
-ffi_OOM:
-		updateVMStruct(REGISTER_ARGS);
-		setNativeOutOfMemoryError(_currentThread, J9NLS_VM_NATIVE_OOM);
-		VMStructHasBeenUpdated(REGISTER_ARGS);
-		rc = GOTO_THROW_CURRENT_EXCEPTION;
 
 done:
 		if (!isMinimal) {
@@ -5075,6 +5159,13 @@ done:
 		}
 
 		return rc;
+
+ffi_OOM:
+		updateVMStruct(REGISTER_ARGS);
+		setNativeOutOfMemoryError(_currentThread, J9NLS_VM_NATIVE_OOM);
+		VMStructHasBeenUpdated(REGISTER_ARGS);
+		rc = GOTO_THROW_CURRENT_EXCEPTION;
+		goto done;
 	}
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
@@ -10040,6 +10131,10 @@ public:
 		j9tty_printf(PORTLIB, "<%p> enter: J9_BCLOOP_I2J_TRANSITION %s\n", vmThread, currentMethodName);
 #endif
 		goto i2j;
+#if JAVA_SPEC_VERSION >= 16
+	case J9_BCLOOP_N2I_TRANSITION:
+		PERFORM_ACTION(native2InterpreterTransition(REGISTER_ARGS));
+#endif /* JAVA_SPEC_VERSION >= 16 */
 	case J9_BCLOOP_RETURN_FROM_JIT:
 		PERFORM_ACTION(returnFromJIT(REGISTER_ARGS, (UDATA)actionData, false));
 	case J9_BCLOOP_RETURN_FROM_JIT_CTOR:
