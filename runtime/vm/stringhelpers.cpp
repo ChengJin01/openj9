@@ -406,8 +406,6 @@ verifyQualifiedName(J9VMThread *vmThread, U_8 *className, UDATA classNameLength,
 			className[i] = '/';
 			separator = TRUE;
 			break;
-		case '/':
-			return CLASSNAME_INVALID;
 		case ';':
 			/* Valid at the end of array classes */
 			if (arity && (1 == remainingLength)) {
@@ -418,6 +416,13 @@ verifyQualifiedName(J9VMThread *vmThread, U_8 *className, UDATA classNameLength,
 		case '>':
 			separator = FALSE; /* allow /<>/ as a pattern, per test suites */
 			break;
+		case '+': /* Fall through */
+		case '-': /* Fall through */
+		case ',': /* Fall through */
+		case '*': /* Fall through */
+		case '?': /* Fall through */
+		case '/': /* Fall through */
+		case '\\': /* Fall through */
 		case '[':
 			return CLASSNAME_INVALID;
 		default:
