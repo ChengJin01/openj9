@@ -600,7 +600,7 @@ public class J9BCUtil {
 		long innerClassCount = romClass.innerClassCount().longValue();
 		if (innerClassCount != 0) {
 			SelfRelativePointer innerClasses = romClass.innerClasses();
-			out.append(String.format("Declared Classes (%d):" + nl, innerClassCount));
+			out.append(String.format("Inner Classes (%d):" + nl, innerClassCount));
 
 			for (int i = 0; i < innerClassCount; i++) {
 				J9UTF8Pointer innerClassName = J9UTF8Pointer.cast(innerClasses.get());

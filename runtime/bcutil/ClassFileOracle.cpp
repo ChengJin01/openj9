@@ -168,6 +168,7 @@ ClassFileOracle::ClassFileOracle(BufferManager *bufferManager, J9CfrClassFile *c
 	_doubleScalarStaticCount(0),
 	_memberAccessFlags(0),
 	_innerClassCount(0),
+	_skippedInnerClassCount(0),
 #if JAVA_SPEC_VERSION >= 11
 	_nestMembersCount(0),
 	_nestHost(0),
@@ -203,6 +204,7 @@ ClassFileOracle::ClassFileOracle(BufferManager *bufferManager, J9CfrClassFile *c
 	_isClassContended(false),
 	_isClassUnmodifiable(context->isClassUnmodifiable()),
 	_isInnerClass(false),
+	_isSkippedInnerClass(false),
 	_needsStaticConstantInit(false),
 	_isRecord(false),
 #if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
@@ -450,12 +452,23 @@ ClassFileOracle::walkAttributes()
 
 				/* In some cases, there might be two entries for the same class.
 				 * But the UTF8 classname entry will be only one.
-				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not
+				 * Therefore comparing the UTF8 will find the matches,
+				 * while comparing the class entries will not.
+				 *
+				 * Note: we need to set the inner classes (the outer class index is 0) of the enclosing class
+				 * (not the direct outer class) to do the consistency check between the inner classes and
+				 * the enclosing class based on the InnerClass attribute in getDeclaringClass().
 				 */
-				if (outerClassUTF8 == thisClassUTF8) {
+				bool isEnclosedInnerClass = ((0 == outerClassUTF8) && (innerClassUTF8 != thisClassUTF8));
+				if ((outerClassUTF8 == thisClassUTF8) || isEnclosedInnerClass) {
 					/* Member class - mark the class' name. */
 					markClassNameAsReferenced(entry->innerClassInfoIndex);
 					_innerClassCount++;
+
+					if (0 == isEnclosedInnerClass) {
+						/* Those inner classes without the outer class must be skipped in getDeclaredClassesImpl() */
+						_skippedInnerClassCount++;
+					}
 				} else if (innerClassUTF8 == thisClassUTF8) {
 					_isInnerClass = true;
 					_memberAccessFlags = entry->innerClassAccessFlags;
@@ -464,6 +477,9 @@ ClassFileOracle::walkAttributes()
 						/* We are a member class - mark the outer class name. */
 						markClassNameAsReferenced(entry->outerClassInfoIndex);
 						_outerClassNameIndex = outerClassUTF8;
+					} else {
+						/* An inner class without the outer class will be skipped in getDeclaredClassesImpl() */
+						_isSkippedInnerClass = true;
 					}
 					if (entry->innerNameIndex != 0) {
 						/* mark the simple class name of member, local, and anonymous classes */

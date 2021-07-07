@@ -1364,6 +1364,9 @@ ROMClassBuilder::computeOptionalFlags(ClassFileOracle *classFileOracle, ROMClass
 	if (classFileOracle->isSealed()) {
 		optionalFlags |= J9_ROMCLASS_OPTINFO_PERMITTEDSUBCLASSES_ATTRIBUTE;
 	}
+	if (classFileOracle->isSkippedInnerClass()) {
+		optionalFlags |= J9_ROMCLASS_OPTINFO_SKIPPED_INNER_CLASS;
+	}
 #if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
 	if (_interfaceInjectionInfo.numOfInterfaces > 0) {
 		optionalFlags |= J9_ROMCLASS_OPTINFO_INJECTED_INTERFACE_INFO;

@@ -243,6 +243,7 @@ Java_java_lang_Class_isClassADeclaredClass(JNIEnv *env, jobject jlClass, jobject
 	U_32 innerClassCount = 0;
 	J9UTF8* declaredClassName = NULL;
 	J9VMThread *vmThread = (J9VMThread *) env;
+	J9InternalVMFunctions *vmFuncs = vmThread->javaVM->internalVMFunctions;
 
 	enterVMFromJNI(vmThread);
 
@@ -254,8 +255,50 @@ Java_java_lang_Class_isClassADeclaredClass(JNIEnv *env, jobject jlClass, jobject
 	srpCursor = J9ROMCLASS_INNERCLASSES(declaringClass->romClass);
 	for ( i=0; i<innerClassCount; i++ ) {
 		J9UTF8 *innerClassName = SRP_PTR_GET(srpCursor, J9UTF8 *);
-		if (compareUTF8Length(J9UTF8_DATA(declaredClassName), J9UTF8_LENGTH(declaredClassName),
-		                      J9UTF8_DATA(innerClassName), J9UTF8_LENGTH(innerClassName)) == 0) {
+		J9Class *innerClazz = vmFuncs->internalFindClassUTF8(vmThread, J9UTF8_DATA(innerClassName), J9UTF8_LENGTH(innerClassName), declaringClass->classLoader, J9_FINDCLASS_FLAG_THROW_ON_FAIL);
+		if (NULL == innerClazz) {
+			break;
+		}
+		if ((0 == compareUTF8Length(J9UTF8_DATA(declaredClassName), J9UTF8_LENGTH(declaredClassName),
+				J9UTF8_DATA(innerClassName), J9UTF8_LENGTH(innerClassName)))
+		&& !J9_ARE_ANY_BITS_SET(innerClazz->romClass->optionalFlags, J9_ROMCLASS_OPTINFO_SKIPPED_INNER_CLASS)
+		) {
+			/* aClass' class name matches one of the inner classes of 'this',
+			 * therefore aClass is one of this' declared classes */
+			result = JNI_TRUE;
+			break;
+		}
+		srpCursor ++;
+	}
+
+	exitVMToJNI(vmThread);
+	return result;
+}
+
+jboolean JNICALL
+Java_java_lang_Class_isClassAEnclosedClass(JNIEnv *env, jobject jlClass, jobject aClass)
+{
+	jboolean result = JNI_FALSE;
+	J9Class *declaringClass = NULL;
+	J9Class *declaredClass = NULL;
+	J9SRP *srpCursor = NULL;
+	U_32 i = 0;
+	U_32 innerClassCount = 0;
+	J9UTF8* declaredClassName = NULL;
+	J9VMThread *vmThread = (J9VMThread *) env;
+
+	enterVMFromJNI(vmThread);
+
+	declaringClass = J9VM_J9CLASS_FROM_HEAPCLASS(vmThread, J9_JNI_UNWRAP_REFERENCE(jlClass));
+	declaredClass = J9VM_J9CLASS_FROM_HEAPCLASS(vmThread, J9_JNI_UNWRAP_REFERENCE(aClass));
+
+	declaredClassName = J9ROMCLASS_CLASSNAME(declaredClass->romClass);
+	innerClassCount = declaringClass->romClass->innerClassCount;
+	srpCursor = J9ROMCLASS_INNERCLASSES(declaringClass->romClass);
+	for ( i=0; i<innerClassCount; i++ ) {
+		J9UTF8 *innerClassName = SRP_PTR_GET(srpCursor, J9UTF8 *);
+		if (0 == compareUTF8Length(J9UTF8_DATA(declaredClassName), J9UTF8_LENGTH(declaredClassName),
+				J9UTF8_DATA(innerClassName), J9UTF8_LENGTH(innerClassName))) {
 			/* aClass' class name matches one of the inner classes of 'this',
 			 * therefore aClass is one of this' declared classes */
 			result = JNI_TRUE;
@@ -651,10 +694,14 @@ retry:
 	J9Class *clazz = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, J9_JNI_UNWRAP_REFERENCE(recv));
 	J9ROMClass *romClass = clazz->romClass;
 	U_32 size = romClass->innerClassCount;
+	U_32 skippedSize = romClass->skippedInnerClassCount;
+	U_32 actualSize = size - skippedSize;
+	U_32 actualSkippedSize = 0;
+	U_32 noOuterClassSize = 0;
 	UDATA preCount = vm->hotSwapCount;
-	
+
 	if (NULL != arrayClass) {
-		resultObject = mmFuncs->J9AllocateIndexableObject(currentThread, arrayClass, size, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+		resultObject = mmFuncs->J9AllocateIndexableObject(currentThread, arrayClass, actualSize, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 		if (vm->hotSwapCount != preCount) {
 			goto retry;
 		} else if (NULL == resultObject) {
@@ -662,6 +709,7 @@ retry:
 		} else {
 			J9ClassLoader *classLoader = clazz->classLoader;
 			J9SRP *innerClasses = J9ROMCLASS_INNERCLASSES(romClass);
+			U_32 araryIndex = 0;
 
 			for (U_32 i = 0; i < size; ++i) {
 				J9UTF8 *className = NNSRP_PTR_GET(innerClasses, J9UTF8*);
@@ -674,10 +722,30 @@ retry:
 				if (NULL == innerClazz) {
 					break;
 				}
-				J9JAVAARRAYOFOBJECT_STORE(currentThread, resultObject, i, J9VM_J9CLASS_TO_HEAPCLASS(innerClazz));
 				innerClasses += 1;
+
+				/* Those inner classes without the direct declaring class (namely the outer class) must be
+				 * skipped given they are only intended for the consistency check of the InnerClass attribute
+				 * between the inner classes and the enclosing class.
+				 * See ClassFileOracle::walkAttributes() and innerClassesDo() for details.
+				 */
+				J9UTF8 *outerClassName = J9ROMCLASS_OUTERCLASSNAME(innerClazz->romClass);
+				if (NULL == outerClassName) {
+					noOuterClassSize += 1;
+				}
+				if (J9_ARE_ANY_BITS_SET(innerClazz->romClass->optionalFlags, J9_ROMCLASS_OPTINFO_SKIPPED_INNER_CLASS)) {
+					actualSkippedSize += 1;
+					continue;
+				}
+				J9JAVAARRAYOFOBJECT_STORE(currentThread, resultObject, araryIndex, J9VM_J9CLASS_TO_HEAPCLASS(innerClazz));
+				araryIndex += 1;
 			}
 		}
+		printf("\ngetDeclaredClassesImpl: size = %d", (int)size);
+		printf("\ngetDeclaredClassesImpl: skippedSize = %d", (int)skippedSize);
+		printf("\ngetDeclaredClassesImpl: actualSkippedSize = %d", (int)actualSkippedSize);
+		printf("\ngetDeclaredClassesImpl: noOuterClassSize = %d\n\n", (int)noOuterClassSize);
+		Assert_JCL_true(skippedSize == actualSkippedSize);
 	}
 	jobject result = vmFuncs->j9jni_createLocalRef(env, resultObject);
 	vmFuncs->internalExitVMToJNI(currentThread);

@@ -275,6 +275,8 @@ public final class Class<T> implements java.io.Serializable, GenericDeclaration,
 
 	private transient Class<?> cachedEnclosingClass;
 	private static long cachedEnclosingClassOffset = -1;
+	
+	private transient boolean cachedCheckInnerClassAttr;
 
 	private static Annotation[] EMPTY_ANNOTATION_ARRAY = new Annotation[0];
 	
@@ -1291,6 +1293,13 @@ public Class<?> getDeclaringClass() {
 	 */
 	Class<?> declaringClass = cachedDeclaringClass == ClassReflectNullPlaceHolder.class ? null : cachedDeclaringClass;
 	if (declaringClass == null) {
+		if (cachedCheckInnerClassAttr == false) {
+			/* Check the enclosing class holds the InnerClass attribute
+			 * that contains an valid entry to the current class.
+			 */
+			checkInnerClassAttrOfEnclosingClass();
+			cachedCheckInnerClassAttr = true;
+		}
 		return declaringClass;
 	}
 	if (declaringClass.isClassADeclaredClass(this)) {
@@ -1318,7 +1327,23 @@ public Class<?> getDeclaringClass() {
 	
 	/*[MSG "K0555", "incompatible InnerClasses attribute between \"{0}\" and \"{1}\""]*/
 	throw new IncompatibleClassChangeError(
-			com.ibm.oti.util.Msg.getString("K0555", this.getName(),	declaringClass.getName())); //$NON-NLS-1$
+			com.ibm.oti.util.Msg.getString("K0555", this.getName(), declaringClass.getName())); //$NON-NLS-1$
+}
+
+/**
+ * Check whether the current class exists in the InnerClass attribute of the enclosing class when
+ * this class is defined as an inner class inside a method rather than the enclosing class.
+ * 
+ * Note: The innerClass attribute of the declaring class is already checked in getDeclaringClass()
+ * as the enclosing class is the declaring class in such case.
+ */
+private void checkInnerClassAttrOfEnclosingClass() {
+	Class<?> enclosingClass = getEnclosingObjectClass();
+	if ((enclosingClass != null) && !enclosingClass.isClassAEnclosedClass(this)) {
+		/*[MSG "K0555", "incompatible InnerClasses attribute between \"{0}\" and \"{1}\""]*/
+		throw new IncompatibleClassChangeError(
+				com.ibm.oti.util.Msg.getString("K0555", this.getName(), enclosingClass.getName())); //$NON-NLS-1$
+	}
 }
 
 /**
@@ -1339,6 +1364,18 @@ private native boolean isCircularDeclaringClass();
  *
  */
 private native boolean isClassADeclaredClass(Class<?> aClass);
+
+/**
+ * Returns true if the class passed in to the method is an enclosed class of
+ * this class, which include both the declared classes and the classes defined
+ * inside a method of this class.
+ *
+ * @param		aClass		The class to validate
+ * @return		true if aClass an enclosed class of this class
+ * 				false otherwise.
+ *
+ */
+private native boolean isClassAEnclosedClass(Class<?> aClass);
 
 /**
  * Answers the class which declared the class represented

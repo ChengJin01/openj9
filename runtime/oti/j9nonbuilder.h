@@ -253,6 +253,7 @@
 #define J9_ROMCLASS_OPTINFO_RECORD_ATTRIBUTE 0x800000
 #define J9_ROMCLASS_OPTINFO_PERMITTEDSUBCLASSES_ATTRIBUTE 0x1000000
 #define J9_ROMCLASS_OPTINFO_INJECTED_INTERFACE_INFO 0x2000000
+#define J9_ROMCLASS_OPTINFO_SKIPPED_INNER_CLASS 0x4000000
 
 /* Constants for checkVisibility return results */
 #define J9_VISIBILITY_ALLOWED 1
@@ -3401,7 +3402,8 @@ typedef struct J9ROMClass {
 	J9SRP cpShapeDescription;
 	J9SRP outerClassName;
 	U_32 memberAccessFlags;
-	U_32 innerClassCount;
+	U_16 innerClassCount;
+	U_16 skippedInnerClassCount;
 	J9SRP innerClasses;
 #if JAVA_SPEC_VERSION >= 11
 	J9SRP nestHost;
