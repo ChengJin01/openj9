@@ -168,6 +168,7 @@ ClassFileOracle::ClassFileOracle(BufferManager *bufferManager, J9CfrClassFile *c
 	_doubleScalarStaticCount(0),
 	_memberAccessFlags(0),
 	_innerClassCount(0),
+	_skippedInnerClassCount(0),
 #if JAVA_SPEC_VERSION >= 11
 	_nestMembersCount(0),
 	_nestHost(0),
@@ -470,6 +471,15 @@ ClassFileOracle::walkAttributes()
 						markConstantUTF8AsReferenced(entry->innerNameIndex);
 						_simpleNameIndex = entry->innerNameIndex;
 					}
+				/* Count all remaining entries in the InnerClass attribute to as we need to add the inner classes
+				 * without the outer class (not the direct outer class) to the enclosing class do the consistency
+				 * check on the InnerClass attribute between the inner classes and the enclosing class.
+				 * See getDeclaringClass() for details.
+				 */
+				} else {
+					markClassNameAsReferenced(entry->innerClassInfoIndex);
+					_innerClassCount++;
+					_skippedInnerClassCount++;
 				}
 			}
 			Trc_BCU_Assert_Equals(NULL, _innerClasses);

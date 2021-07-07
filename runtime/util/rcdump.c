@@ -171,7 +171,7 @@ IDATA j9bcutil_dumpRomClass( J9ROMClass *romClass, J9PortLibrary *portLib, J9Tra
 	{
 		J9SRP * inners = J9ROMCLASS_INNERCLASSES(romClass);
 
-		j9tty_printf( PORTLIB,  "Declared Classes (%i):\n", romClass->innerClassCount);
+		j9tty_printf( PORTLIB,  "Inner Classes (%i):\n", romClass->innerClassCount);
 		for(i = 0; i < romClass->innerClassCount; i++)
 		{
 			j9tty_printf( PORTLIB, "  ");
