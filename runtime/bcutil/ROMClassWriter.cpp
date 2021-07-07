@@ -395,7 +395,8 @@ ROMClassWriter::writeROMClass(Cursor *cursor,
 		cursor->writeSRP(_cpDescriptionShapeSRPKey, Cursor::SRP_TO_GENERIC);
 		cursor->writeSRP(_srpKeyProducer->mapCfrConstantPoolIndexToKey(_classFileOracle->getOuterClassNameIndex()), Cursor::SRP_TO_UTF8);
 		cursor->writeU32(_classFileOracle->getMemberAccessFlags(), Cursor::GENERIC);
-		cursor->writeU32(_classFileOracle->getInnerClassCount(), Cursor::GENERIC);
+		cursor->writeU16(_classFileOracle->getInnerClassCount(), Cursor::GENERIC);
+		cursor->writeU16(_classFileOracle->getSkippedInnerClassCount(), Cursor::GENERIC);
 		cursor->writeSRP(_innerClassesSRPKey, Cursor::SRP_TO_GENERIC);
 #if JAVA_SPEC_VERSION >= 11
 		cursor->writeSRP(_srpKeyProducer->mapCfrConstantPoolIndexToKey(_classFileOracle->getNestHostNameIndex()), Cursor::SRP_TO_UTF8);

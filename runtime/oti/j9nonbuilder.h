@@ -3401,7 +3401,8 @@ typedef struct J9ROMClass {
 	J9SRP cpShapeDescription;
 	J9SRP outerClassName;
 	U_32 memberAccessFlags;
-	U_32 innerClassCount;
+	U_16 innerClassCount;
+	U_16 skippedInnerClassCount;
 	J9SRP innerClasses;
 #if JAVA_SPEC_VERSION >= 11
 	J9SRP nestHost;

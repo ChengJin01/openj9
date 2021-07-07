@@ -651,10 +651,11 @@ retry:
 	J9Class *clazz = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, J9_JNI_UNWRAP_REFERENCE(recv));
 	J9ROMClass *romClass = clazz->romClass;
 	U_32 size = romClass->innerClassCount;
+	U_32 skippedCount = romClass->skippedInnerClassCount;
 	UDATA preCount = vm->hotSwapCount;
 	
 	if (NULL != arrayClass) {
-		resultObject = mmFuncs->J9AllocateIndexableObject(currentThread, arrayClass, size, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+		resultObject = mmFuncs->J9AllocateIndexableObject(currentThread, arrayClass, size - skippedCount, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 		if (vm->hotSwapCount != preCount) {
 			goto retry;
 		} else if (NULL == resultObject) {
@@ -662,6 +663,7 @@ retry:
 		} else {
 			J9ClassLoader *classLoader = clazz->classLoader;
 			J9SRP *innerClasses = J9ROMCLASS_INNERCLASSES(romClass);
+			U_32 araryIndex = 0;
 
 			for (U_32 i = 0; i < size; ++i) {
 				J9UTF8 *className = NNSRP_PTR_GET(innerClasses, J9UTF8*);
@@ -674,8 +676,19 @@ retry:
 				if (NULL == innerClazz) {
 					break;
 				}
-				J9JAVAARRAYOFOBJECT_STORE(currentThread, resultObject, i, J9VM_J9CLASS_TO_HEAPCLASS(innerClazz));
 				innerClasses += 1;
+				
+				/* Those inner classes without the direct declaring class (namely the outer class) must be
+				 * skipped given they are only intended for the consistency check between the inner class
+				 * and the enclosing class by adding to the enclosing class in ClassFileOracle::walkAttributes()
+				 * and innerClassesDo().
+				 */
+				J9UTF8 *outerClassName = J9ROMCLASS_OUTERCLASSNAME(innerClazz->romClass);
+				if ((NULL == outerClassName) && (innerClazz->romClass != clazz->romClass)) {
+					continue;
+				}
+				J9JAVAARRAYOFOBJECT_STORE(currentThread, resultObject, araryIndex, J9VM_J9CLASS_TO_HEAPCLASS(innerClazz));
+				araryIndex += 1;
 			}
 		}
 	}

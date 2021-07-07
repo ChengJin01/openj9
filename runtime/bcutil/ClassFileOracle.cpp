@@ -168,6 +168,7 @@ ClassFileOracle::ClassFileOracle(BufferManager *bufferManager, J9CfrClassFile *c
 	_doubleScalarStaticCount(0),
 	_memberAccessFlags(0),
 	_innerClassCount(0),
+	_skippedInnerClassCount(0),
 #if JAVA_SPEC_VERSION >= 11
 	_nestMembersCount(0),
 	_nestHost(0),
@@ -450,12 +451,22 @@ ClassFileOracle::walkAttributes()
 
 				/* In some cases, there might be two entries for the same class.
 				 * But the UTF8 classname entry will be only one.
-				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not
+				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not.
+				 *
+				 * Note: we need to set the inner classes (the outer class index is 0) of the enclosing class
+				 * (not the direct outer class) to do the consistency check between the inner classes and
+				 * the enclosing class based on the InnerClass attribute in getDeclaringClass().
 				 */
-				if (outerClassUTF8 == thisClassUTF8) {
+				bool isSkippedInnerClass = ((0 == outerClassUTF8) && (innerClassUTF8 != thisClassUTF8));
+				if ((outerClassUTF8 == thisClassUTF8)|| isSkippedInnerClass) {
 					/* Member class - mark the class' name. */
 					markClassNameAsReferenced(entry->innerClassInfoIndex);
 					_innerClassCount++;
+
+					/* Those inner classes without the outer class must be skipped in getDeclaredClassesImpl() */
+					if (isSkippedInnerClass) {
+						_skippedInnerClassCount++;
+					}
 				} else if (innerClassUTF8 == thisClassUTF8) {
 					_isInnerClass = true;
 					_memberAccessFlags = entry->innerClassAccessFlags;

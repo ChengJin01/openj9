@@ -843,11 +843,18 @@ class RecordComponentIterator
 			U_16 thisClassUTF8 = UTF8_INDEX_FROM_CLASS_INDEX(_classFile->constantPool, _classFile->thisClass);
 			for (J9CfrClassesEntry *entry = _innerClasses->classes; entry != end; ++entry) {
 				U_16  outerClassUTF8 = UTF8_INDEX_FROM_CLASS_INDEX(_classFile->constantPool, entry->outerClassInfoIndex);
+				U_16  innerClassUTF8 = UTF8_INDEX_FROM_CLASS_INDEX(_classFile->constantPool, entry->innerClassInfoIndex);
 				/* In some cases, there might be two entries for the same class.
 				 * But the UTF8 classname entry will be only one.
-				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not
+				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not.
+				 *
+				 * Note: we need to set the inner classes (the outer class index is 0) of the enclosing class
+				 * (not the direct outer class) to do the consistency check between the inner classes and
+				 * the enclosing class based on the InnerClass attribute in getDeclaringClass().
 				 */
-				if (thisClassUTF8 == outerClassUTF8) {
+				if ((outerClassUTF8 == thisClassUTF8)
+				|| ((0 == outerClassUTF8) && (innerClassUTF8 != thisClassUTF8))
+				) {
 					/* Member class - use slot1 to get at the underlying UTF8. */
 					U_16  innerClassUTF8 = UTF8_INDEX_FROM_CLASS_INDEX(_classFile->constantPool, entry->innerClassInfoIndex);
 					visitor->visitConstantPoolIndex(innerClassUTF8);
@@ -913,6 +920,7 @@ class RecordComponentIterator
 	U_16 getDoubleScalarStaticCount() const { return _doubleScalarStaticCount; }
 	U_16 getMemberAccessFlags() const { return _memberAccessFlags; }
 	U_16 getInnerClassCount() const { return _innerClassCount; }
+	U_16 getSkippedInnerClassCount() const { return _skippedInnerClassCount; }
 #if JAVA_SPEC_VERSION >= 11
 	U_16 getNestMembersCount() const { return _nestMembersCount; }
 	U_16 getNestHostNameIndex() const { return _nestHost; }
@@ -1064,6 +1072,7 @@ private:
 	U_16 _doubleScalarStaticCount;
 	U_16 _memberAccessFlags;
 	U_16 _innerClassCount;
+	U_16 _skippedInnerClassCount;
 #if JAVA_SPEC_VERSION >= 11
 	U_16 _nestMembersCount;
 	U_16 _nestHost;
