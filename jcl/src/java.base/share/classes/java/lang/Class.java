@@ -1291,6 +1291,7 @@ public Class<?> getDeclaringClass() {
 	 */
 	Class<?> declaringClass = cachedDeclaringClass == ClassReflectNullPlaceHolder.class ? null : cachedDeclaringClass;
 	if (declaringClass == null) {
+		checkInnerClassAttrOfEnclosingClass();
 		return declaringClass;
 	}
 	if (declaringClass.isClassADeclaredClass(this)) {
@@ -1319,6 +1320,22 @@ public Class<?> getDeclaringClass() {
 	/*[MSG "K0555", "incompatible InnerClasses attribute between \"{0}\" and \"{1}\""]*/
 	throw new IncompatibleClassChangeError(
 			com.ibm.oti.util.Msg.getString("K0555", this.getName(),	declaringClass.getName())); //$NON-NLS-1$
+}
+
+/**
+ * Check whether the current class exists in the InnerClass attribute of the enclosing class when
+ * this class is defined as an inner class inside a method rather than the enclosing class.
+ * 
+ * Note: The innerClass attribute of the declaring class is already checked in getDeclaringClass()
+ * as the enclosing class is the declaring class in such case.
+ */
+private void checkInnerClassAttrOfEnclosingClass() {
+	Class<?> enclosingClass = getEnclosingObjectClass();
+	if ((enclosingClass != null) && !enclosingClass.isClassADeclaredClass(this)) {
+		/*[MSG "K0555", "incompatible InnerClasses attribute between \"{0}\" and \"{1}\""]*/
+		throw new IncompatibleClassChangeError(
+				com.ibm.oti.util.Msg.getString("K0555", this.getName(), enclosingClass.getName())); //$NON-NLS-1$
+	}
 }
 
 /**

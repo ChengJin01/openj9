@@ -451,8 +451,11 @@ ClassFileOracle::walkAttributes()
 				/* In some cases, there might be two entries for the same class.
 				 * But the UTF8 classname entry will be only one.
 				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not
+				 *
+				 * Note: we also need to set the inner classes of the enclosing class (not the direct outer class)
+				 * in which case the outer class index in the InnerClass attribute is 0.
 				 */
-				if (outerClassUTF8 == thisClassUTF8) {
+				if ((outerClassUTF8 == thisClassUTF8) || (0 == outerClassUTF8)) {
 					/* Member class - mark the class' name. */
 					markClassNameAsReferenced(entry->innerClassInfoIndex);
 					_innerClassCount++;

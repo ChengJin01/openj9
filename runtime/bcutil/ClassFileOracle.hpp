@@ -845,9 +845,12 @@ class RecordComponentIterator
 				U_16  outerClassUTF8 = UTF8_INDEX_FROM_CLASS_INDEX(_classFile->constantPool, entry->outerClassInfoIndex);
 				/* In some cases, there might be two entries for the same class.
 				 * But the UTF8 classname entry will be only one.
-				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not
+				 * Therefore comparing the UTF8 will find the matches, while comparing the class entries will not.
+				 *
+				 * Note: we also need to set the inner classes of the enclosing class (not the direct outer class)
+				 * in which case the outer class index in the InnerClass attribute is 0.
 				 */
-				if (thisClassUTF8 == outerClassUTF8) {
+				if ((thisClassUTF8 == outerClassUTF8) || (0 == outerClassUTF8)) {
 					/* Member class - use slot1 to get at the underlying UTF8. */
 					U_16  innerClassUTF8 = UTF8_INDEX_FROM_CLASS_INDEX(_classFile->constantPool, entry->innerClassInfoIndex);
 					visitor->visitConstantPoolIndex(innerClassUTF8);
