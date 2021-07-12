@@ -1274,6 +1274,11 @@ private native Method[] getDeclaredMethodsImpl();
  */
 @CallerSensitive
 public Class<?> getDeclaringClass() {
+	/* Check the enclosing class holds the InnerClass attribute
+	 * that contains an valid entry to the current class.
+	 */
+	checkInnerClassAttrOfEnclosingClass();
+	
 	if (cachedDeclaringClassOffset == -1) {
 		cachedDeclaringClassOffset = getFieldOffset("cachedDeclaringClass"); //$NON-NLS-1$
 	}
@@ -1319,6 +1324,25 @@ public Class<?> getDeclaringClass() {
 	/*[MSG "K0555", "incompatible InnerClasses attribute between \"{0}\" and \"{1}\""]*/
 	throw new IncompatibleClassChangeError(
 			com.ibm.oti.util.Msg.getString("K0555", this.getName(),	declaringClass.getName())); //$NON-NLS-1$
+}
+
+/**
+ * Check whether the current class exists in the InnerClass attribute of the enclosing class when
+ * this class is defined as an inner class inside a method rather than the enclosing class.
+ * 
+ * Note: The innerClass attribute of the declaring class is already checked in getDeclaringClass()
+ * as the enclosing class is the declaring class in such case.
+ */
+private void checkInnerClassAttrOfEnclosingClass() {
+	Method enclosingMethod = getEnclosingMethod();
+	if (enclosingMethod != null) {
+		Class<?> enclosingClass = enclosingMethod.getDeclaringClass();
+		if (!enclosingClass.isClassADeclaredClass(this)) {
+			/*[MSG "K0555", "incompatible InnerClasses attribute between \"{0}\" and \"{1}\""]*/
+			throw new IncompatibleClassChangeError(
+					com.ibm.oti.util.Msg.getString("K0555", this.getName(), enclosingClass.getName())); //$NON-NLS-1$
+		} 
+	}
 }
 
 /**
