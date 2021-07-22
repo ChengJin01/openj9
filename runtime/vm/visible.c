@@ -92,11 +92,19 @@ checkVisibility(J9VMThread *currentThread, J9Class* sourceClass, J9Class* destCl
 	Trc_VM_checkVisibility_Entry(currentThread, sourceClass, destClass, modifiers);
 	sourceClass = J9_CURRENT_CLASS(sourceClass);
 	destClass = J9_CURRENT_CLASS(destClass);
-#ifdef DEBUG
-	printf("checkModVis: [%*s] [%*s]\n",
-				J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(sourceClass->romClass)), J9UTF8_DATA(J9ROMCLASS_CLASSNAME(sourceClass->romClass)),
-				J9UTF8_LENGTH(J9ROMCLASS_CLASSNAME(destClass->romClass)), J9UTF8_DATA(J9ROMCLASS_CLASSNAME(destClass->romClass)));
-#endif
+//#ifdef DEBUG
+	{
+		J9UTF8 *sourceClassName = J9ROMCLASS_CLASSNAME(sourceClass->romClass);
+		J9UTF8 *destClassName = J9ROMCLASS_CLASSNAME(destClass->romClass);
+		if((0 == strncmp((const char*)J9UTF8_DATA(sourceClassName),"sun/reflect/misc/Trampoline",strlen("sun/reflect/misc/Trampoline")))
+		&& (0 == strncmp((const char*)J9UTF8_DATA(destClassName),"java/util/Collections$CheckedRandomAccessList",strlen("java/util/Collections$CheckedRandomAccessList")))
+		) {
+			printf("checkModVis: [%*s] [%*s]\n",
+						J9UTF8_LENGTH(sourceClassName), J9UTF8_DATA(sourceClassName),
+						J9UTF8_LENGTH(destClassName), J9UTF8_DATA(destClassName));
+		}
+	}
+//#endif
 	if (!J9CLASS_IS_EXEMPT_FROM_VALIDATION(sourceClass)) {
 		if ( modifiers & J9AccPublic ) {
 			/* Public */

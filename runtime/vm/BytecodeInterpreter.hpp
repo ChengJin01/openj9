@@ -3136,8 +3136,30 @@ done:
 			}
 
 			senderClass = J9VM_J9CLASS_FROM_HEAPCLASS(_currentThread, walkState->userData2);
+
+			{
+				J9UTF8 *destClassName = J9ROMCLASS_CLASSNAME(j9clazz->romClass);
+				if(0 == strncmp((const char*)J9UTF8_DATA(destClassName),"java/util/Collections$CheckedRandomAccessList",strlen("java/util/Collections$CheckedRandomAccessList"))) {
+					printf("inlInternalsNewInstanceImpl: senderClass = %p, destClassName: [%*s]\n",
+							senderClass, J9UTF8_LENGTH(destClassName), J9UTF8_DATA(destClassName));
+				}
+			}
+
 			/* See if the class is visible to the sender */
 			if (NULL != senderClass) {
+
+				{
+					J9UTF8 *sourceClassName = J9ROMCLASS_CLASSNAME(senderClass->romClass);
+					J9UTF8 *destClassName = J9ROMCLASS_CLASSNAME(j9clazz->romClass);
+					if((0 == strncmp((const char*)J9UTF8_DATA(sourceClassName),"sun/reflect/misc/Trampoline",strlen("sun/reflect/misc/Trampoline")))
+					&& (0 == strncmp((const char*)J9UTF8_DATA(destClassName),"java/util/Collections$CheckedRandomAccessList",strlen("java/util/Collections$CheckedRandomAccessList")))
+					) {
+						printf("inlInternalsNewInstanceImpl: checkModVis: [%*s] [%*s]\n",
+									J9UTF8_LENGTH(sourceClassName), J9UTF8_DATA(sourceClassName),
+									J9UTF8_LENGTH(destClassName), J9UTF8_DATA(destClassName));
+					}
+				}
+
 				IDATA checkResult = checkVisibility(_currentThread, senderClass, j9clazz, j9clazz->romClass->modifiers, J9_LOOK_REFLECT_CALL);
 				VMStructHasBeenUpdated(REGISTER_ARGS);
 				if (checkResult < J9_VISIBILITY_ALLOWED) {
