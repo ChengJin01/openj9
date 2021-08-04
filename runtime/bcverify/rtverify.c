@@ -106,6 +106,29 @@ j9rtv_verifierGetRAMClass( J9BytecodeVerificationData *verifyData, J9ClassLoader
 
 			/* Find the requested class, fully loading it, but not initializing it. */
 
+			{
+				J9UTF8 *className1 = J9ROMCLASS_CLASSNAME(verifyData->romClass);
+				J9UTF8* methodName1 = J9ROMMETHOD_NAME(verifyData->romMethod);
+
+				if(0 == strncmp((const char*)J9UTF8_DATA(className1),"oracle/jdbc/driver/PhysicalConnection",strlen("oracle/jdbc/driver/PhysicalConnection"))
+				&& 0 == strncmp((const char*)J9UTF8_DATA(methodName1),"getSecretStoreCredentials",strlen("getSecretStoreCredentials"))
+				) {
+					printf("\nj9bcv_verifyBytecodes1: Class.Method = %.*s.%.*s, className = %s\n",
+					(int)J9UTF8_LENGTH(className1), J9UTF8_DATA(className1),
+					(int)J9UTF8_LENGTH(methodName1), J9UTF8_DATA(methodName1), (const char*)className);
+				}
+
+				if(0 == strncmp((const char*)J9UTF8_DATA(className1),"oracle/jdbc/driver/PhysicalConnection",strlen("oracle/jdbc/driver/PhysicalConnection"))
+				&& 0 == strncmp((const char*)J9UTF8_DATA(methodName1),"getSecretStoreCredentials",strlen("getSecretStoreCredentials"))
+				&& 0 == strncmp((const char*)className,"oracle/security/pki/OracleWallet",strlen("oracle/security/pki/OracleWallet"))
+				) {
+					printf("\nj9bcv_verifyBytecodes2: Class.Method = %.*s.%.*s, className = %s\n",
+					(int)J9UTF8_LENGTH(className1), J9UTF8_DATA(className1),
+					(int)J9UTF8_LENGTH(methodName1), J9UTF8_DATA(methodName1), (const char*)className);
+				}
+			}
+
+
 			found = tmpVMC->javaVM->internalVMFunctions->internalFindClassUTF8(
 				tmpVMC,
 				className,
