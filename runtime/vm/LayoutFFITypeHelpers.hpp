@@ -535,51 +535,54 @@ done:
 		) {
 			/* The aggregate subtype is set for the struct {float, padding, double} */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_SP_DP;
-		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_F == first8ByteComposType)
+		} else if ((J9_FFI_UPCALL_COMPOSITION_TYPE_F == first8ByteComposType)
 		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_D == second8ByteComposType)
 		) {
 			/* The aggregate subtype is set for the struct {float, float, double} */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_SP_SP_DP;
-		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_D == first8ByteComposType)
+		} else if ((J9_FFI_UPCALL_COMPOSITION_TYPE_D == first8ByteComposType)
 		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_F_E == second8ByteComposType)
 		) {
 			/* The aggregate subtype is set for the struct {double, float, padding} */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_DP_SP;
-		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_D == first8ByteComposType)
+		} else if ((J9_FFI_UPCALL_COMPOSITION_TYPE_D == first8ByteComposType)
 		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_F == second8ByteComposType)
 		) {
 			/* The aggregate subtype is set for the struct {double, float, float} */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_DP_SP_SP;
-		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_M == first8ByteComposType)
-		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_F == second8ByteComposType)
+		} else if ((J9_FFI_UPCALL_COMPOSITION_TYPE_M == first8ByteComposType)
+		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_F_E == second8ByteComposType)
 		) {
 			/* The aggregate subtype is set for structs starting with the mix of any integer type/float(the first 8 bytes)
-			 * followed by two floats(the next 8 bytes).
+			 * followed by one floats(the next 8 bytes).
 			 * e.g struct {int, float, float} or stuct {float, int, float}.
 			 */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MISC_SP;
-		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_M == first8ByteComposType)
-		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_D == second8ByteComposType)
+		} else if ((J9_FFI_UPCALL_COMPOSITION_TYPE_M == first8ByteComposType)
+		&& ((J9_FFI_UPCALL_COMPOSITION_TYPE_D == second8ByteComposType) ||
+		    (J9_FFI_UPCALL_COMPOSITION_TYPE_F == second8ByteComposType))
 		) {
 			/* The aggregate subtype is set for a struct starting with the mix of any integer type/float(the first 8 bytes)
-			 * followed by a double(the next 8 bytes).
-			 * e.g struct {int, float, double}, struct {float, int, double}, or struct{long, double}
+			 * followed by a double or two floats (the next 8 bytes, treated as a double).
+			 * e.g struct {int, float, double}, struct {float, int, double}, or struct{long, double}, or
+			 * {int, float, float, float}, or {long, float, float}
 			 */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MISC_DP;
-		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_F == first8ByteComposType)
+		} else if ((J9_FFI_UPCALL_COMPOSITION_TYPE_F_E == first8ByteComposType)
 		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_M == second8ByteComposType)
 		) {
-			/* The aggregate subtype is set for a struct starting with two floats(the first 8 bytes)
-			 * followed by the mix of any integer type/float(the next 8 bytes).
-			 * e.g struct {float, float, float, int}, or struct {float, float, long}
+			/* The aggregate subtype is set for a struct starting with one floats(the first 8 bytes)
+			 * followed by the mix of any integer type/float(the next 8 bytes), e.g. long.
+			 * such as, struct {float, long}
 			 */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_SP_MISC;
-		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_D == first8ByteComposType)
+		} else if (((J9_FFI_UPCALL_COMPOSITION_TYPE_D == first8ByteComposType) ||
+                            (J9_FFI_UPCALL_COMPOSITION_TYPE_F == first8ByteComposType))
 		&& (J9_FFI_UPCALL_COMPOSITION_TYPE_M == second8ByteComposType)
 		) {
 			/* The aggregate subtype is set for a struct starting with a double(the first 8 bytes)
-			 * followed by the mix of any integer type/float(the next 8 bytes).
-			 * e.g struct {double, float, int}, or struct {double, long}
+			 * or two floats, followed by the mix of any integer type/float(the next 8 bytes).
+			 * e.g struct {double, float, int}, or struct {double, long}, or {float, float, long}
 			 */
 			structSigType = J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_DP_MISC;
 		} else {
