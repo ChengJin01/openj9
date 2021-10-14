@@ -28,6 +28,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import jdk.incubator.foreign.CLinker;
 import static jdk.incubator.foreign.CLinker.*;
+import static jdk.incubator.foreign.CLinker.VaList.Builder;
 import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.ValueLayout;
 import jdk.incubator.foreign.MemoryLayout;
@@ -35,14 +36,11 @@ import jdk.incubator.foreign.MemoryAccess;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.LibraryLookup;
-import jdk.incubator.foreign.NativeScope;
 import static jdk.incubator.foreign.LibraryLookup.Symbol;
-import static jdk.incubator.foreign.CLinker.VaList.Builder;
-import org.openj9.test.jep389.upcall.UpcallMethodHandles;
-import static org.openj9.test.jep389.upcall.UpcallMethodHandles.*;
+import jdk.incubator.foreign.NativeScope;
 
 /**
- * Test cases for JEP 389: Foreign Linker API (Incubator) DownCall & Upcall for the vararg list.
+ * Test cases for JEP 389: Foreign Linker API (Incubator) DownCall for the vararg list.
  */
 @Test(groups = { "level.sanity" })
 public class VaListTests {
@@ -51,7 +49,7 @@ public class VaListTests {
 	private static boolean isWinOS = osName.contains("win");
 	/* long long is 64 bits on AIX/ppc64, which is the same as Windows */
 	private static ValueLayout longLayout = (isWinOS || isAixOS) ? C_LONG_LONG : C_LONG;
-	
+
 	private static LibraryLookup nativeLib = LibraryLookup.ofLibrary("clinkerffitests");
 	private static LibraryLookup defaultLib = LibraryLookup.ofDefault();
 	private static CLinker clinker = CLinker.getInstance();
@@ -61,46 +59,52 @@ public class VaListTests {
 		Symbol functionSymbol = nativeLib.lookup("addIntsFromVaList").get();
 		MethodType mt = MethodType.methodType(int.class, int.class, VaList.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_VA_LIST);
-		NativeScope nativeScope = NativeScope.unboundedScope();
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 700)
-				.vargFromInt(C_INT, 800)
-				.vargFromInt(C_INT, 900)
-				.vargFromInt(C_INT, 1000), nativeScope);
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		int result = (int)mh.invoke(4, vaList);
-		Assert.assertEquals(result, 3400);
+
+		try (NativeScope scope = NativeScope.unboundedScope()) {
+			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 700)
+					.vargFromInt(C_INT, 800)
+					.vargFromInt(C_INT, 900)
+					.vargFromInt(C_INT, 1000), scope);
+			int result = (int)mh.invoke(4, vaList);
+			Assert.assertEquals(result, 3400);
+		}
 	}
-	
+
 	@Test
 	public void test_addLongsWithVaList() throws Throwable {
 		Symbol functionSymbol = nativeLib.lookup("addLongsFromVaList").get();
 		MethodType mt = MethodType.methodType(long.class, int.class, VaList.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, C_INT, C_VA_LIST);
-		NativeScope nativeScope = NativeScope.unboundedScope();
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromLong(longLayout, 700000L)
-				.vargFromLong(longLayout, 800000L)
-				.vargFromLong(longLayout, 900000L)
-				.vargFromLong(longLayout, 1000000L), nativeScope);
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		long result = (long)mh.invoke(4, vaList);
-		Assert.assertEquals(result, 3400000L);
+
+		try (NativeScope scope = NativeScope.unboundedScope()) {
+			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromLong(longLayout, 700000L)
+					.vargFromLong(longLayout, 800000L)
+					.vargFromLong(longLayout, 900000L)
+					.vargFromLong(longLayout, 1000000L), scope);
+			long result = (long)mh.invoke(4, vaList);
+			Assert.assertEquals(result, 3400000L);
+		}
 	}
-	
+
 	@Test
 	public void test_addDoublesWithVaList() throws Throwable {
 		Symbol functionSymbol = nativeLib.lookup("addDoublesFromVaList").get();
 		MethodType mt = MethodType.methodType(double.class, int.class, VaList.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_INT, C_VA_LIST);
-		NativeScope nativeScope = NativeScope.unboundedScope();
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromDouble(C_DOUBLE, 150.1001D)
-				.vargFromDouble(C_DOUBLE, 160.2002D)
-				.vargFromDouble(C_DOUBLE, 170.1001D)
-				.vargFromDouble(C_DOUBLE, 180.2002D), nativeScope);
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		double result = (double)mh.invoke(4, vaList);
-		Assert.assertEquals(result, 660.6006D);
+
+		try (NativeScope scope = NativeScope.unboundedScope()) {
+			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromDouble(C_DOUBLE, 150.1001D)
+					.vargFromDouble(C_DOUBLE, 160.2002D)
+					.vargFromDouble(C_DOUBLE, 170.1001D)
+					.vargFromDouble(C_DOUBLE, 180.2002D), scope);
+			double result = (double)mh.invoke(4, vaList);
+			Assert.assertEquals(result, 660.6006D);
+		}
 	}
-	
+
 	@Test
 	public void test_vprintfFromDefaultLibWithVaList() throws Throwable {
 		/* Disable the test on Windows given a misaligned access exception coming from
@@ -111,16 +115,18 @@ public class VaListTests {
 			Symbol functionSymbol = defaultLib.lookup("vprintf").get();
 			MethodType mt = MethodType.methodType(int.class, MemoryAddress.class, VaList.class);
 			FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_POINTER, C_VA_LIST);
-			NativeScope nativeScope = NativeScope.unboundedScope();
-			MemorySegment formatMemSegment = CLinker.toCString("%d * %d = %d\n", nativeScope);
-			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 7)
-					.vargFromInt(C_INT, 8)
-					.vargFromInt(C_INT, 56), nativeScope);
 			MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-			mh.invoke(formatMemSegment.address(), vaList);
+
+			try (NativeScope scope = NativeScope.unboundedScope()) {
+				MemorySegment formatMemSegment = CLinker.toCString("%d * %d = %d\n", scope);
+				VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 7)
+						.vargFromInt(C_INT, 8)
+						.vargFromInt(C_INT, 56), scope);
+				mh.invoke(formatMemSegment.address(), vaList);
+			}
 		}
 	}
-	
+
 	@Test
 	public void test_vprintfFromDefaultLibWithVaList_fromMemAddr() throws Throwable {
 		/* Disable the test on Windows given a misaligned access exception coming from
@@ -132,70 +138,75 @@ public class VaListTests {
 			MemoryAddress memAddr = functionSymbol.address();
 			MethodType mt = MethodType.methodType(int.class, MemoryAddress.class, VaList.class);
 			FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_POINTER, C_VA_LIST);
-			NativeScope nativeScope = NativeScope.unboundedScope();
-			MemorySegment formatMemSegment = CLinker.toCString("%d * %d = %d\n", nativeScope);
-			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 7)
-					.vargFromInt(C_INT, 8)
-					.vargFromInt(C_INT, 56), nativeScope);
 			MethodHandle mh = clinker.downcallHandle(memAddr, mt, fd);
-			mh.invoke(formatMemSegment.address(), vaList);
+
+			try (NativeScope scope = NativeScope.unboundedScope()) {
+				MemorySegment formatMemSegment = CLinker.toCString("%d * %d = %d\n", scope);
+				VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 7)
+						.vargFromInt(C_INT, 8)
+						.vargFromInt(C_INT, 56), scope);
+				mh.invoke(formatMemSegment.address(), vaList);
+			}
 		}
 	}
-	
+
 	@Test
 	public void test_addIntsWithVaListByUpcallMH() throws Throwable {
 		MethodType mt = MethodType.methodType(int.class, int.class, VaList.class, MemoryAddress.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_INT, C_INT, C_VA_LIST, C_POINTER);
 		Symbol functionSymbol = nativeLib.lookup("addIntsFromVaListByUpcallMH").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
-		NativeScope nativeScope = NativeScope.unboundedScope();
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 700)
-				.vargFromInt(C_INT, 800)
-				.vargFromInt(C_INT, 900)
-				.vargFromInt(C_INT, 1000), nativeScope);
-		MemorySegment upcallFunc = clinker.upcallStub(UpcallMethodHandles.MH_addIntsFromVaList,
-				FunctionDescriptor.of(C_INT, C_INT, C_VA_LIST));
-		
-		int result = (int)mh.invoke(4, vaList, upcallFunc.address());
-		Assert.assertEquals(result, 3400);
+
+		try (NativeScope scope = NativeScope.unboundedScope()) {
+			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromInt(C_INT, 700)
+					.vargFromInt(C_INT, 800)
+					.vargFromInt(C_INT, 900)
+					.vargFromInt(C_INT, 1000), scope);
+			MemorySegment upcallFunc = clinker.upcallStub(UpcallMethodHandles.MH_addIntsFromVaList,
+					FunctionDescriptor.of(C_INT, C_INT, C_VA_LIST));
+			
+			int result = (int)mh.invoke(4, vaList, upcallFunc.address());
+			Assert.assertEquals(result, 3400);
+		}
 	}
-	
+
 	@Test
 	public void test_addLongsFromVaListByUpcallMH() throws Throwable {
 		MethodType mt = MethodType.methodType(long.class, int.class, VaList.class, MemoryAddress.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(longLayout, C_INT, C_VA_LIST, C_POINTER);
 		Symbol functionSymbol = nativeLib.lookup("addLongsFromVaListByUpcallMH").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
-		NativeScope nativeScope = NativeScope.unboundedScope();
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromLong(longLayout, 700000L)
-				.vargFromLong(longLayout, 800000L)
-				.vargFromLong(longLayout, 900000L)
-				.vargFromLong(longLayout, 1000000L), nativeScope);
-		MemorySegment upcallFunc = clinker.upcallStub(UpcallMethodHandles.MH_addLongsFromVaList,
-				FunctionDescriptor.of(longLayout, C_INT, C_VA_LIST));
-		
-		long result = (long)mh.invoke(4, vaList, upcallFunc.address());
-		Assert.assertEquals(result, 3400000L);
+
+		try (NativeScope scope = NativeScope.unboundedScope()) {
+			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromLong(longLayout, 700000L)
+					.vargFromLong(longLayout, 800000L)
+					.vargFromLong(longLayout, 900000L)
+					.vargFromLong(longLayout, 1000000L), scope);
+			MemorySegment upcallFunc = clinker.upcallStub(UpcallMethodHandles.MH_addLongsFromVaList,
+					FunctionDescriptor.of(longLayout, C_INT, C_VA_LIST));
+			
+			long result = (long)mh.invoke(4, vaList, upcallFunc.address());
+			Assert.assertEquals(result, 3400000L);
+		}
 	}
-	
+
 	@Test
 	public void test_addDoublesFromVaListByUpcallMH() throws Throwable {
 		MethodType mt = MethodType.methodType(double.class, int.class, VaList.class, MemoryAddress.class);
 		FunctionDescriptor fd = FunctionDescriptor.of(C_DOUBLE, C_INT, C_VA_LIST, C_POINTER);
 		Symbol functionSymbol = nativeLib.lookup("addDoublesFromVaListByUpcallMH").get();
 		MethodHandle mh = clinker.downcallHandle(functionSymbol, mt, fd);
-		
-		NativeScope nativeScope = NativeScope.unboundedScope();
-		VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromDouble(C_DOUBLE, 150.1001D)
-				.vargFromDouble(C_DOUBLE, 160.2002D)
-				.vargFromDouble(C_DOUBLE, 170.1001D)
-				.vargFromDouble(C_DOUBLE, 180.2002D), nativeScope);
-		MemorySegment upcallFunc = clinker.upcallStub(UpcallMethodHandles.MH_addDoublesFromVaList,
-				FunctionDescriptor.of(C_DOUBLE, C_INT, C_VA_LIST));
-		
-		double result = (double)mh.invoke(4, vaList, upcallFunc.address());
-		Assert.assertEquals(result, 660.6006D);
+
+		try (NativeScope scope = NativeScope.unboundedScope()) {
+			VaList vaList = CLinker.VaList.make(vaListBuilder -> vaListBuilder.vargFromDouble(C_DOUBLE, 150.1001D)
+					.vargFromDouble(C_DOUBLE, 160.2002D)
+					.vargFromDouble(C_DOUBLE, 170.1001D)
+					.vargFromDouble(C_DOUBLE, 180.2002D), scope);
+			MemorySegment upcallFunc = clinker.upcallStub(UpcallMethodHandles.MH_addDoublesFromVaList,
+					FunctionDescriptor.of(C_DOUBLE, C_INT, C_VA_LIST));
+			
+			double result = (double)mh.invoke(4, vaList, upcallFunc.address());
+			Assert.assertEquals(result, 660.6006D);
+		}
 	}
 }

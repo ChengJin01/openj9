@@ -58,7 +58,6 @@ public class Test_SubClass {
 				break;
 			case 18:
 				latestPreviewVersion = 62; // does ASM support jdk18 yet?
-				break;
 			default:
 				latestPreviewVersion = V16; // next release
 		}

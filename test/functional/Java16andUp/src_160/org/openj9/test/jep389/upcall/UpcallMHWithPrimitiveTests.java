@@ -29,7 +29,6 @@ import java.lang.invoke.MethodType;
 
 import jdk.incubator.foreign.CLinker;
 import static jdk.incubator.foreign.CLinker.*;
-import static jdk.incubator.foreign.CLinker.VaList.Builder;
 import jdk.incubator.foreign.LibraryLookup;
 import static jdk.incubator.foreign.LibraryLookup.Symbol;
 import jdk.incubator.foreign.FunctionDescriptor;

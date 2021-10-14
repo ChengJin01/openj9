@@ -33,12 +33,12 @@
 #include "downcall.h"
 
 /**
- * Add two booleans with the OR (||) operator by invoking an upcall method handle.
+ * Add two booleans with the OR (||) operator by invoking a upcall method.
  *
  * @param boolArg1 the 1st boolean
  * @param boolArg2 the 2nd boolean
- * @param upcallMH an upcall method handle
- * @return the result returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the result value
  */
 int
 add2BoolsWithOrByUpcallMH(int boolArg1, int boolArg2, int (*upcallMH)(int, int))
@@ -48,13 +48,13 @@ add2BoolsWithOrByUpcallMH(int boolArg1, int boolArg2, int (*upcallMH)(int, int))
 }
 
 /**
- * Add two booleans with the OR (||) operator (the 2nd one dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * Add two booleans with the OR (||) operator (the 2nd one is dereferenced from a pointer)
+ * by invoking a upcall method.
  *
  * @param boolArg1 a boolean
  * @param boolArg2 a pointer to boolean
- * @param upcallMH an upcall method handle
- * @return the result returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the result value
  */
 int
 addBoolAndBoolFromPointerWithOrByUpcallMH(int boolArg1, int *boolArg2, int (*upcallMH)(int, int *))
@@ -64,12 +64,44 @@ addBoolAndBoolFromPointerWithOrByUpcallMH(int boolArg1, int *boolArg2, int (*upc
 }
 
 /**
- * Generate a new char by manipulating two chars via an upcall method handle.
+ * Add two booleans (the 2nd one assigned in native) with
+ * the OR (||) operator by invoking a upcall method.
+ *
+ * @param boolArg1 the 1st boolean
+ * @param upcallMH the function pointer to the upcall method
+ * @return the result value
+ */
+int
+addBoolAndBoolFromNativePtrWithOrByUpcallMH(int boolArg1, int (*upcallMH)(int, int *))
+{
+	int boolArg2 = 1;
+	int result = (*upcallMH)(boolArg1, &boolArg2);
+	return result;
+}
+
+/**
+ * Add two booleans with the OR (||) operator (the 2nd one is dereferenced from a pointer)
+ * by invoking a upcall method and return a pointer to the XOR result of booleans.
+ *
+ * @param boolArg1 the 1st boolean
+ * @param boolArg2 a pointer to the 2nd boolean
+ * @param upcallMH the function pointer to the upcall method
+ * @return the resulting pointer to boolean
+ */
+int *
+addBoolAndBoolFromPtrWithOr_RetPtr_ByUpcallMH(int boolArg1, int *boolArg2, int *(*upcallMH)(int, int *))
+{
+	int *resultPtr = (*upcallMH)(boolArg1, boolArg2);
+	return resultPtr;
+}
+
+/**
+ * Generate a new char by manipulating two chars by invoking a upcall method.
  *
  * @param charArg1 the 1st char
  * @param charArg2 the 2nd char
- * @param upcallMH an upcall method handle
- * @return the resulting char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the resulting char
  */
 short
 createNewCharFrom2CharsByUpcallMH(short charArg1, short charArg2, short (*upcallMH)(short, short))
@@ -79,14 +111,13 @@ createNewCharFrom2CharsByUpcallMH(short charArg1, short charArg2, short (*upcall
 }
 
 /**
- * Generate a new char by manipulating two chars
- * (the 1st one dereferenced from a pointer) via invoking
- * an upcall method handle.
+ * Generate a new char by manipulating two chars (the 1st one dereferenced from a pointer)
+ * by invoking a upcall method.
  *
- * @param charArg1 a pointer to char
+ * @param charArg1 a pointer to the 1st char
  * @param charArg2 the 2nd char
- * @param upcallMH an upcall method handle
- * @return the resulting char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the resulting char
  */
 short
 createNewCharFromCharAndCharFromPointerByUpcallMH(short *charArg1, short charArg2, short (*upcallMH)(short *, short))
@@ -96,15 +127,47 @@ createNewCharFromCharAndCharFromPointerByUpcallMH(short *charArg1, short charArg
 }
 
 /**
- * Add two bytes by invoking an upcall method handle.
+ * Generate a new char by manipulating two chars (the 1st one is assigned in native)
+ * via invoking a upcall method.
  *
- * Note: the passed-in arguments are byte given the byte size
+ * @param charArg2 the 2nd char
+ * @param upcallMH the function pointer to the upcall method
+ * @return the resulting char
+ */
+short
+createNewCharFromCharAndCharFromNativePtrByUpcallMH(short charArg2, short (*upcallMH)(short *, short))
+{
+	short charArg1 = 'B';
+	short result = (*upcallMH)(&charArg1, charArg2);
+	return result;
+}
+
+/**
+ * Generate a new char by manipulating two chars (the 1st one dereferenced from a pointer)
+ * by invoking a upcall method and return a pointer to a new char.
+ *
+ * @param charArg1 a pointer to the 1st char
+ * @param charArg2 the 2nd char
+ * @param upcallMH the function pointer to the upcall method
+ * @return the resulting pointer to a new char
+ */
+short *
+createNewCharFromCharAndCharFromPtr_RetPtr_ByUpcallMH(short *charArg1, short charArg2, short *(*upcallMH)(short *, short))
+{
+	short *resultPtr = (*upcallMH)(charArg1, charArg2);
+	return resultPtr;
+}
+
+/**
+ * Add two bytes by invoking a upcall method.
+ * Note:
+ * the passed-in arguments are byte given the byte size
  * in Java is the same size as the char in C code.
  *
- * @param byteArg1 the 1st byte to add
- * @param byteArg2 the 2nd byte to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param byteArg1 the 1st byte
+ * @param byteArg2 the 2nd byte
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 add2BytesByUpcallMH(char byteArg1, char byteArg2, char (*upcallMH)(char, char))
@@ -114,16 +177,16 @@ add2BytesByUpcallMH(char byteArg1, char byteArg2, char (*upcallMH)(char, char))
 }
 
 /**
- * Add two bytes (the 2nd one dereferenced from a pointer)
- * by invoking an upcall method handle.
- *
- * Note: the passed-in arguments are byte given the byte size
+ * Add two bytes (the 2nd one is dereferenced from a pointer)
+ * by invoking a upcall method.
+ * Note:
+ * the passed-in arguments are byte given the byte size
  * in Java is the same size as the char in C code.
  *
- * @param byteArg1 a byte to add
- * @param byteArg2 a pointer to byte in char size
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param byteArg1 the 1st byte
+ * @param byteArg2 a pointer to the 2nd byte in char size
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndByteFromPointerByUpcallMH(char byteArg1, char *byteArg2, char (*upcallMH)(char, char *))
@@ -133,12 +196,48 @@ addByteAndByteFromPointerByUpcallMH(char byteArg1, char *byteArg2, char (*upcall
 }
 
 /**
- * Add two short integers by invoking an upcall method handle.
+ * Add two bytes (the 2nd one assigned in native) by invoking a upcall method.
+ * Note: the passed-in arguments are byte given the byte size
+ * in Java is the same size as the char in C code.
  *
- * @param shortArg1 the 1st short integer to add
- * @param shortArg2 the 2nd short integer to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param byteArg1 the 1st byte
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
+ */
+char
+addByteAndByteFromNativePtrByUpcallMH(char byteArg1, char (*upcallMH)(char, char *))
+{
+	char byteArg2 = 55;
+	char byteSum = (*upcallMH)(byteArg1, &byteArg2);
+	return byteSum;
+}
+
+/**
+ * Add two bytes (the 2nd one is dereferenced from a pointer) by invoking a upcall method
+ * and return a pointer to the sum.
+ * Note:
+ * the passed-in arguments are byte given the byte size
+ * in Java is the same size as the char in C code.
+ *
+ * @param byteArg1 the 1st byte
+ * @param byteArg2 a pointer to the 2nd byte in char size
+ * @param upcallMH the function pointer to the upcall method
+ * @return the pointer to the sum
+ */
+char *
+addByteAndByteFromPtr_RetPtr_ByUpcallMH(char byteArg1, char *byteArg2, char *(*upcallMH)(char, char *))
+{
+	char *byteSum = (*upcallMH)(byteArg1, byteArg2);
+	return byteSum;
+}
+
+/**
+ * Add two shorts by invoking a upcall method.
+ *
+ * @param shortArg1 the 1st short
+ * @param shortArg2 the 2nd short
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 add2ShortsByUpcallMH(short shortArg1, short shortArg2, short (*upcallMH)(short, short))
@@ -148,13 +247,13 @@ add2ShortsByUpcallMH(short shortArg1, short shortArg2, short (*upcallMH)(short, 
 }
 
 /**
- * Add two short integers (the 1st one dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * Add two shorts (the 1st one dereferenced from a pointer)
+ * by invoking a upcall method.
  *
- * @param shortArg1 a pointer to short integer
- * @param shortArg2 a short integer
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param shortArg1 a pointer to the 1st short
+ * @param shortArg2 the 2nd short
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortFromPointerByUpcallMH(short *shortArg1, short shortArg2, short (*upcallMH)(short *, short))
@@ -164,12 +263,43 @@ addShortAndShortFromPointerByUpcallMH(short *shortArg1, short shortArg2, short (
 }
 
 /**
- * Add two integers by invoking an upcall method handle.
+ * Add two shorts (the 1st one is assigned in native) by invoking a upcall method.
  *
- * @param intArg1 an integer to add
- * @param intArg2 an integer to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param shortArg2 the 2nd short
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
+ */
+short
+addShortAndShortFromNativePtrByUpcallMH(short shortArg2, short (*upcallMH)(short *, short))
+{
+	short shortArg1 = 456;
+	short shortSum = (*upcallMH)(&shortArg1, shortArg2);
+	return shortSum;
+}
+
+/**
+ * Add two shorts (the 1st one dereferenced from a pointer) by invoking a upcall method
+ * and return a pointer to the sum.
+ *
+ * @param shortArg1 a pointer to the 1st short
+ * @param shortArg2 the 2nd short
+ * @param upcallMH the function pointer to the upcall method
+ * @return the pointer to the sum
+ */
+short *
+addShortAndShortFromPtr_RetPtr_ByUpcallMH(short *shortArg1, short shortArg2, short *(*upcallMH)(short *, short))
+{
+	short *shortSum = (*upcallMH)(shortArg1, shortArg2);
+	return shortSum;
+}
+
+/**
+ * Add two integers by invoking a upcall method.
+ *
+ * @param intArg1 the 1st integer
+ * @param intArg2 the 2nd integer
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 add2IntsByUpcallMH(int intArg1, int intArg2, int (*upcallMH)(int, int))
@@ -179,13 +309,13 @@ add2IntsByUpcallMH(int intArg1, int intArg2, int (*upcallMH)(int, int))
 }
 
 /**
- * Add two integers (the 2nd one dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * Add two integers (the 2nd one is dereferenced from a pointer)
+ * by invoking a upcall method.
  *
- * @param intArg1 an integer to add
- * @param intArg2 a pointer to integer
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param intArg1 the 1st integer
+ * @param intArg2 a pointer to the 2nd integer
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntFromPointerByUpcallMH(int intArg1, int *intArg2,  int (*upcallMH)(int, int *))
@@ -195,13 +325,44 @@ addIntAndIntFromPointerByUpcallMH(int intArg1, int *intArg2,  int (*upcallMH)(in
 }
 
 /**
- * Add three integers by invoking an upcall method handle.
+ * Add two integers (the 2nd one is assigned in native) by invoking a upcall method.
  *
- * @param intArg1 an integer to add
- * @param intArg2 an integer to add
- * @param intArg3 an integer to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param intArg1 the 1st integer
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
+ */
+int
+addIntAndIntFromNativePtrByUpcallMH(int intArg1, int (*upcallMH)(int, int *))
+{
+	int intArg2 = 444;
+	int intSum = (*upcallMH)(intArg1, &intArg2);
+	return intSum;
+}
+
+/**
+ * Add two ints (the 1st one is dereferenced from a pointer) by invoking a upcall method
+ * and return a pointer to the sum.
+ *
+ * @param intArg1 the 1st integer
+ * @param intArg2 a pointer to the 2nd integer
+ * @param upcallMH the function pointer to the upcall method
+ * @return the pointer to the sum
+ */
+int *
+addIntAndIntFromPtr_RetPtr_ByUpcallMH(int intArg1, int *intArg2, int *(*upcallMH)(int, int *))
+{
+	int *intSum = (*upcallMH)(intArg1, intArg2);
+	return intSum;
+}
+
+/**
+ * Add three integers by invoking a upcall method.
+ *
+ * @param intArg1 the 1st integer
+ * @param intArg2 the 2nd integer
+ * @param intArg3 the 3rd integer
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 add3IntsByUpcallMH(int intArg1, int intArg2, int intArg3, int (*upcallMH)(int, int, int))
@@ -212,12 +373,12 @@ add3IntsByUpcallMH(int intArg1, int intArg2, int intArg3, int (*upcallMH)(int, i
 
 /**
  * Add integers from the va_list with the specified count
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param intCount the count of the integers
  * @param intArgList the integer va_list
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntsFromVaListByUpcallMH(int intCount, va_list intVaList, int (*upcallMH)(int, va_list))
@@ -227,12 +388,12 @@ addIntsFromVaListByUpcallMH(int intCount, va_list intVaList, int (*upcallMH)(int
 }
 
 /**
- * Add an integer and a char by invoking an upcall method handle.
+ * Add an integer and a char by invoking a upcall method.
  *
- * @param intArg the integer to add
- * @param charArg the char to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param intArg an integer
+ * @param charArg a char
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndCharByUpcallMH(int intArg, char charArg,  int (*upcallMH)(int, char))
@@ -242,11 +403,11 @@ addIntAndCharByUpcallMH(int intArg, char charArg,  int (*upcallMH)(int, char))
 }
 
 /**
- * Add two integers without return value by invoking an upcall method handle.
+ * Add two integers without return value by invoking a upcall method.
  *
- * @param intArg1 the 1st integer to add
- * @param intArg2 the 2nd integer to add
- * @param upcallMH an upcall method handle
+ * @param intArg1 the 1st integer
+ * @param intArg2 the 2nd integer
+ * @param upcallMH the function pointer to the upcall method
  * @return void
  */
 void
@@ -256,12 +417,12 @@ add2IntsReturnVoidByUpcallMH(int intArg1, int intArg2, int (*upcallMH)(int, int)
 }
 
 /**
- * Add two long integers by invoking an upcall method handle.
+ * Add two longs by invoking a upcall method.
  *
- * @param longArg1 the 1st long integer to add
- * @param longArg2 the 2nd long integer to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param longArg1 the 1st long
+ * @param longArg2 the 2nd long
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 add2LongsByUpcallMH(LONG longArg1, LONG longArg2, LONG (*upcallMH)(LONG, LONG))
@@ -271,13 +432,13 @@ add2LongsByUpcallMH(LONG longArg1, LONG longArg2, LONG (*upcallMH)(LONG, LONG))
 }
 
 /**
- * Add two long integers (the 1st one dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * Add two longs (the 1st one dereferenced from a pointer)
+ * by invoking a upcall method.
  *
- * @param longArg1 a pointer to long integer
- * @param longArg2 a long integer
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param longArg1 a pointer to the 1stlong
+ * @param longArg2 the 2nd long
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongFromPointerByUpcallMH(LONG *longArg1, LONG longArg2, LONG (*upcallMH)(LONG *, LONG))
@@ -287,13 +448,44 @@ addLongAndLongFromPointerByUpcallMH(LONG *longArg1, LONG longArg2, LONG (*upcall
 }
 
 /**
- * Add long integers from the va_list with the specified count
- * by invoking an upcall method handle.
+ * Add two longs (the 1st one is assigned in native) by invoking a upcall method.
  *
- * @param longCount the count of the long integers
+ * @param longArg2 the 2nd long
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
+ */
+long
+addLongAndLongFromNativePtrByUpcallMH(long longArg2, long (*upcallMH)(long *, long))
+{
+	long longArg1 = 3333333333;
+	long longSum = (*upcallMH)(&longArg1, longArg2);
+	return longSum;
+}
+
+/**
+ * Add two longs (the 1st one dereferenced from a pointer) by invoking a upcall method
+ * and return a pointer to the sum.
+ *
+ * @param longArg1 a pointer to the 1st long
+ * @param longArg2 the 2nd long
+ * @param upcallMH the function pointer to the upcall method
+ * @return the pointer to the sum
+ */
+long *
+addLongAndLongFromPtr_RetPtr_ByUpcallMH(long *longArg1, long longArg2, long *(*upcallMH)(long *, long))
+{
+	long *longSum = (*upcallMH)(longArg1, longArg2);
+	return longSum;
+}
+
+/**
+ * Add longs from the va_list with the specified count
+ * by invoking a upcall method.
+ *
+ * @param longCount the count of the longs
  * @param longArgList the long va_list
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongsFromVaListByUpcallMH(int longCount, va_list longVaList, LONG (*upcallMH)(int, va_list))
@@ -303,12 +495,12 @@ addLongsFromVaListByUpcallMH(int longCount, va_list longVaList, LONG (*upcallMH)
 }
 
 /**
- * Add two floats by invoking an upcall method handle.
+ * Add two floats by invoking a upcall method.
  *
- * @param floatArg1 the 1st float to add
- * @param floatArg2 the 2nd float to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param floatArg1 the 1st float
+ * @param floatArg2 the 2nd float
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 add2FloatsByUpcallMH(float floatArg1, float floatArg2, float (*upcallMH)(float, float))
@@ -318,13 +510,13 @@ add2FloatsByUpcallMH(float floatArg1, float floatArg2, float (*upcallMH)(float, 
 }
 
 /**
- * Add two floats (the 2nd one dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * Add two floats (the 2nd one is dereferenced from a pointer)
+ * by invoking a upcall method.
  *
- * @param floatArg1 a float
- * @param floatArg2 a pointer to float
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param floatArg1 the 1st float
+ * @param floatArg2 a pointer to the 2nd float
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatFromPointerByUpcallMH(float floatArg1, float *floatArg2, float (*upcallMH)(float, float *))
@@ -334,12 +526,43 @@ addFloatAndFloatFromPointerByUpcallMH(float floatArg1, float *floatArg2, float (
 }
 
 /**
- * Add two doubles by invoking an upcall method handle.
+ * Add two floats (the 2nd one is assigned in native) by invoking a upcall method.
  *
- * @param doubleArg1 the 1st double to add
- * @param doubleArg2 the 2nd double to add
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param floatArg1 the 1st float
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
+ */
+float
+addFloatAndFloatFromNativePtrByUpcallMH(float floatArg1, float (*upcallMH)(float, float *))
+{
+	float floatArg2 = 6.79;
+	float floatSum = (*upcallMH)(floatArg1, &floatArg2);
+	return floatSum;
+}
+
+/**
+ * Add two floats (the 2nd one is dereferenced from a pointer) by invoking a upcall method
+ * and return a pointer to the sum.
+ *
+ * @param floatArg1 the 1st float
+ * @param floatArg2 a pointer to the 2nd float
+ * @param upcallMH the function pointer to the upcall method
+ * @return the pointer to the sum
+ */
+float *
+addFloatAndFloatFromPtr_RetPtr_ByUpcallMH(float floatArg1, float *floatArg2, float *(*upcallMH)(float, float *))
+{
+	float *floatSum = (*upcallMH)(floatArg1, floatArg2);
+	return floatSum;
+}
+
+/**
+ * Add two doubles by invoking a upcall method.
+ *
+ * @param doubleArg1 the 1st double
+ * @param doubleArg2 the 2nd double
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 add2DoublesByUpcallMH(double doubleArg1, double doubleArg2, double (*upcallMH)(double, double))
@@ -350,12 +573,12 @@ add2DoublesByUpcallMH(double doubleArg1, double doubleArg2, double (*upcallMH)(d
 
 /**
  * Add two doubles (the 1st one dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
- * @param doubleArg1 a pointer to double
- * @param doubleArg2 a double
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param doubleArg1 a pointer to the 1st double
+ * @param doubleArg2 the 2nd double
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoubleFromPointerByUpcallMH(double *doubleArg1, double doubleArg2, double (*upcallMH)(double *, double))
@@ -365,13 +588,44 @@ addDoubleAndDoubleFromPointerByUpcallMH(double *doubleArg1, double doubleArg2, d
 }
 
 /**
+ * Add two doubles (the 1st one is assigned in native) by invoking a upcall method.
+ *
+ * @param doubleArg2 the 2nd double
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
+ */
+double
+addDoubleAndDoubleFromNativePtrByUpcallMH(double doubleArg2, double (*upcallMH)(double *, double))
+{
+	double doubleArg1 = 1159.748;
+	double doubleSum = (*upcallMH)(&doubleArg1, doubleArg2);
+	return doubleSum;
+}
+
+/**
+ * Add two doubles (the 1st one dereferenced from a pointer) by invoking a upcall method
+ * and return a pointer to the sum.
+ *
+ * @param doubleArg1 a pointer to the 1st double
+ * @param doubleArg2 the 2nd double
+ * @param upcallMH the function pointer to the upcall method
+ * @return the pointer to the sum
+ */
+double *
+addDoubleAndDoubleFromPtr_RetPtr_ByUpcallMH(double *doubleArg1, double doubleArg2, double *(*upcallMH)(double *, double))
+{
+	double *doubleSum = (*upcallMH)(doubleArg1, doubleArg2);
+	return doubleSum;
+}
+
+/**
  * Add doubles from the va_list with the specified count
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param doubleCount the count of the double arguments
  * @param doubleArgList the double va_list
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoublesFromVaListByUpcallMH(int doubleCount, va_list doubleVaList, double (*upcallMH)(int, va_list))
@@ -382,12 +636,12 @@ addDoublesFromVaListByUpcallMH(int doubleCount, va_list doubleVaList, double (*u
 
 /**
  * Add a boolean and all boolean elements of a struct with the XOR (^) operator
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a struct with two booleans
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromStructWithXorByUpcallMH(int arg1, stru_Bool_Bool arg2, int (*upcallMH)(int, stru_Bool_Bool))
@@ -398,12 +652,12 @@ addBoolAndBoolsFromStructWithXorByUpcallMH(int arg1, stru_Bool_Bool arg2, int (*
 
 /**
  * Add a boolean (dereferenced from a pointer) and all boolean elements of
- * a struct with the XOR (^) operator by invoking an upcall method handle.
+ * a struct with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a pointer to boolean
  * @param arg2 a struct with two booleans
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolFromPointerAndBoolsFromStructWithXorByUpcallMH(int *arg1, stru_Bool_Bool arg2, int (*upcallMH)(int *, stru_Bool_Bool))
@@ -414,12 +668,12 @@ addBoolFromPointerAndBoolsFromStructWithXorByUpcallMH(int *arg1, stru_Bool_Bool 
 
 /**
  * Get a pointer to boolean by adding a boolean (dereferenced from a pointer) and all boolean elements
- * of a struct with the XOR (^) operator by invoking an upcall method handle.
+ * of a struct with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a pointer to boolean
  * @param arg2 a struct with two booleans
- * @param upcallMH an upcall method handle
- * @return a pointer to the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to the XOR result of booleans
  */
 int *
 addBoolFromPointerAndBoolsFromStructWithXor_returnBoolPointerByUpcallMH(int *arg1, stru_Bool_Bool arg2, int * (*upcallMH)(int *, stru_Bool_Bool))
@@ -430,12 +684,12 @@ addBoolFromPointerAndBoolsFromStructWithXor_returnBoolPointerByUpcallMH(int *arg
 
 /**
  * Add a boolean and two booleans of a struct (dereferenced from a pointer)
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a pointer to struct with two booleans
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromStructPointerWithXorByUpcallMH(int arg1, stru_Bool_Bool *arg2, int (*upcallMH)(int, stru_Bool_Bool *))
@@ -446,12 +700,12 @@ addBoolAndBoolsFromStructPointerWithXorByUpcallMH(int arg1, stru_Bool_Bool *arg2
 
 /**
  * Add a boolean and all booleans of a struct with a nested struct and a boolean
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a struct with a nested struct and a boolean
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromNestedStructWithXorByUpcallMH(int arg1, stru_NestedStruct_Bool arg2, int (*upcallMH)(int, stru_NestedStruct_Bool))
@@ -462,12 +716,12 @@ addBoolAndBoolsFromNestedStructWithXorByUpcallMH(int arg1, stru_NestedStruct_Boo
 
 /**
  * Add a boolean and all booleans of a struct with a boolean and a nested struct (in reverse order)
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a struct with a boolean and a nested struct
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromNestedStructWithXor_reverseOrderByUpcallMH(int arg1, stru_Bool_NestedStruct arg2, int (*upcallMH)(int, stru_Bool_NestedStruct))
@@ -478,12 +732,12 @@ addBoolAndBoolsFromNestedStructWithXor_reverseOrderByUpcallMH(int arg1, stru_Boo
 
 /**
  * Add a boolean and all booleans of a struct with a nested array and a boolean
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a struct with a nested array and a boolean
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromStructWithNestedBoolArrayByUpcallMH(int arg1, stru_NestedBoolArray_Bool arg2, int (*upcallMH)(int, stru_NestedBoolArray_Bool))
@@ -494,12 +748,12 @@ addBoolAndBoolsFromStructWithNestedBoolArrayByUpcallMH(int arg1, stru_NestedBool
 
 /**
  * Add a boolean and all booleans of a struct with a boolean and a nested array (in reverse order)
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a struct with a boolean and a nested array
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromStructWithNestedBoolArray_reverseOrderByUpcallMH(int arg1, stru_Bool_NestedBoolArray arg2, int (*upcallMH)(int, stru_Bool_NestedBoolArray))
@@ -510,12 +764,12 @@ addBoolAndBoolsFromStructWithNestedBoolArray_reverseOrderByUpcallMH(int arg1, st
 
 /**
  * Add a boolean and all booleans of a struct with a nested struct array and a boolean
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a struct with a nested struct array and a boolean
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromStructWithNestedStructArrayByUpcallMH(int arg1, stru_NestedStruArray_Bool arg2, int (*upcallMH)(int, stru_NestedStruArray_Bool))
@@ -526,12 +780,12 @@ addBoolAndBoolsFromStructWithNestedStructArrayByUpcallMH(int arg1, stru_NestedSt
 
 /**
  * Add a boolean and all booleans of a struct with a boolean and a nested struct array
- * (in reverse order) with the XOR (^) operator by invoking an upcall method handle.
+ * (in reverse order) with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a boolean
  * @param arg2 a struct with a boolean and a nested struct array
- * @param upcallMH an upcall method handle
- * @return the XOR result of booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the XOR result of booleans
  */
 int
 addBoolAndBoolsFromStructWithNestedStructArray_reverseOrderByUpcallMH(int arg1, stru_Bool_NestedStruArray arg2, int (*upcallMH)(int, stru_Bool_NestedStruArray))
@@ -542,12 +796,12 @@ addBoolAndBoolsFromStructWithNestedStructArray_reverseOrderByUpcallMH(int arg1, 
 
 /**
  * Get a new struct by adding each boolean element of two structs
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two booleans
  * @param arg2 the 2nd struct with two booleans
- * @param upcallMH an upcall method handle
- * @return a struct with two booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with two booleans
  */
 stru_Bool_Bool
 add2BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool arg1, stru_Bool_Bool arg2, stru_Bool_Bool (*upcallMH)(stru_Bool_Bool, stru_Bool_Bool))
@@ -558,12 +812,12 @@ add2BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool arg1, stru_Bool_Boo
 
 /**
  * Get a pointer to struct by adding each boolean element of two structs
- * with the XOR (^) operator by invoking an upcall method handle.
+ * with the XOR (^) operator by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two booleans
  * @param arg2 the 2nd struct with two booleans
- * @param upcallMH an upcall method handle
- * @return a pointer to struct with two booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to struct with two booleans
  */
 stru_Bool_Bool *
 add2BoolStructsWithXor_returnStructPointerByUpcallMH(stru_Bool_Bool *arg1, stru_Bool_Bool arg2, stru_Bool_Bool * (*upcallMH)(stru_Bool_Bool *, stru_Bool_Bool))
@@ -574,12 +828,12 @@ add2BoolStructsWithXor_returnStructPointerByUpcallMH(stru_Bool_Bool *arg1, stru_
 
 /**
  * Get a new struct by adding each boolean element of two structs with
- * three boolean elements by invoking an upcall method handle.
+ * three boolean elements by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three booleans
  * @param arg2 the 2nd struct with three booleans
- * @param upcallMH an upcall method handle
- * @return a struct with three booleans returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with three booleans
  */
 stru_Bool_Bool_Bool
 add3BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool_Bool arg1, stru_Bool_Bool_Bool arg2, stru_Bool_Bool_Bool (*upcallMH)(stru_Bool_Bool_Bool, stru_Bool_Bool_Bool))
@@ -589,12 +843,12 @@ add3BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool_Bool arg1, stru_Boo
 }
 
 /**
- * Add a byte and two bytes of a struct by invoking an upcall method handle.
+ * Add a byte and two bytes of a struct by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a struct with two bytes
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromStructByUpcallMH(char arg1, stru_Byte_Byte arg2, char (*upcallMH)(char, stru_Byte_Byte))
@@ -605,12 +859,12 @@ addByteAndBytesFromStructByUpcallMH(char arg1, stru_Byte_Byte arg2, char (*upcal
 
 /**
  * Add a byte (dereferenced from a pointer) and two bytes
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to byte
  * @param arg2 a struct with two bytes
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteFromPointerAndBytesFromStructByUpcallMH(char *arg1, stru_Byte_Byte arg2, char (*upcallMH)(char *, stru_Byte_Byte))
@@ -621,12 +875,12 @@ addByteFromPointerAndBytesFromStructByUpcallMH(char *arg1, stru_Byte_Byte arg2, 
 
 /**
  * Get a pointer to byte by adding a byte (dereferenced from a pointer)
- * and two bytes of a struct by invoking an upcall method handle.
+ * and two bytes of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to byte
  * @param arg2 a struct with two bytes
- * @param upcallMH an upcall method handle
- * @return a pointer to the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to the sum
  */
 char *
 addByteFromPointerAndBytesFromStruct_returnBytePointerByUpcallMH(char *arg1, stru_Byte_Byte arg2, char * (*upcallMH)(char *, stru_Byte_Byte))
@@ -637,12 +891,12 @@ addByteFromPointerAndBytesFromStruct_returnBytePointerByUpcallMH(char *arg1, str
 
 /**
  * Add a byte and two bytes of a struct (dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a pointer to struct with two bytes
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromStructPointerByUpcallMH(char arg1, stru_Byte_Byte *arg2, char (*upcallMH)(char, stru_Byte_Byte *))
@@ -653,12 +907,12 @@ addByteAndBytesFromStructPointerByUpcallMH(char arg1, stru_Byte_Byte *arg2, char
 
 /**
  * Add a byte and all bytes of a struct with a nested struct
- * and a byte by invoking an upcall method handle.
+ * and a byte by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a struct with a nested struct and a byte
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromNestedStructByUpcallMH(char arg1, stru_NestedStruct_Byte arg2, char (*upcallMH)(char, stru_NestedStruct_Byte))
@@ -669,12 +923,12 @@ addByteAndBytesFromNestedStructByUpcallMH(char arg1, stru_NestedStruct_Byte arg2
 
 /**
  * Add a byte and all bytes of a struct with a byte and a nested struct
- * (in reverse order) by invoking an upcall method handle.
+ * (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a struct with a byte and a nested struct
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromNestedStruct_reverseOrderByUpcallMH(char arg1, stru_Byte_NestedStruct arg2, char (*upcallMH)(char, stru_Byte_NestedStruct))
@@ -685,12 +939,12 @@ addByteAndBytesFromNestedStruct_reverseOrderByUpcallMH(char arg1, stru_Byte_Nest
 
 /**
  * Add a byte and all byte elements of a struct with a nested byte array
- * and a byte by invoking an upcall method handle.
+ * and a byte by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a struct with a nested byte array and a byte
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromStructWithNestedByteArrayByUpcallMH(char arg1, stru_NestedByteArray_Byte arg2, char (*upcallMH)(char, stru_NestedByteArray_Byte))
@@ -701,12 +955,12 @@ addByteAndBytesFromStructWithNestedByteArrayByUpcallMH(char arg1, stru_NestedByt
 
 /**
  * Add a byte and all byte elements of a struct with a byte and a nested byte array
- * (in reverse order) by invoking an upcall method handle.
+ * (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a struct with a byte and a nested byte array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromStructWithNestedByteArray_reverseOrderByUpcallMH(char arg1, stru_Byte_NestedByteArray arg2, char (*upcallMH)(char, stru_Byte_NestedByteArray))
@@ -717,12 +971,12 @@ addByteAndBytesFromStructWithNestedByteArray_reverseOrderByUpcallMH(char arg1, s
 
 /**
  * Add a byte and all byte elements of a struct with a nested struct array
- * and a byte by invoking an upcall method handle.
+ * and a byte by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a struct with a nested struct array and a byte
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromStructWithNestedStructArrayByUpcallMH(char arg1, stru_NestedStruArray_Byte arg2, char (*upcallMH)(char, stru_NestedStruArray_Byte))
@@ -733,12 +987,12 @@ addByteAndBytesFromStructWithNestedStructArrayByUpcallMH(char arg1, stru_NestedS
 
 /**
  * Add a byte and all byte elements of a struct with a byte and a nested
- * struct array (in reverse order) by invoking an upcall method handle.
+ * struct array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a byte
  * @param arg2 a struct with a byte and a nested byte array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 char
 addByteAndBytesFromStructWithNestedStructArray_reverseOrderByUpcallMH(char arg1, stru_Byte_NestedStruArray arg2, char (*upcallMH)(char, stru_Byte_NestedStruArray))
@@ -749,12 +1003,12 @@ addByteAndBytesFromStructWithNestedStructArray_reverseOrderByUpcallMH(char arg1,
 
 /**
  * Get a new struct by adding each byte element of two structs with
- * two byte elements by invoking an upcall method handle.
+ * two byte elements by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two bytes
  * @param arg2 the 2nd struct with two bytes
- * @param upcallMH an upcall method handle
- * @return a struct with two bytes returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with two bytes
  */
 stru_Byte_Byte
 add2ByteStructs_returnStructByUpcallMH(stru_Byte_Byte arg1, stru_Byte_Byte arg2, stru_Byte_Byte (*upcallMH)(stru_Byte_Byte, stru_Byte_Byte))
@@ -765,12 +1019,12 @@ add2ByteStructs_returnStructByUpcallMH(stru_Byte_Byte arg1, stru_Byte_Byte arg2,
 
 /**
  * Get a pointer to struct by adding each byte element of two structs
- * with two byte elements by invoking an upcall method handle.
+ * with two byte elements by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two bytes
  * @param arg2 the 2nd struct with two bytes
- * @param upcallMH an upcall method handle
- * @return a pointer to struct with two bytes returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to struct with two bytes
  */
 stru_Byte_Byte *
 add2ByteStructs_returnStructPointerByUpcallMH(stru_Byte_Byte *arg1, stru_Byte_Byte arg2, stru_Byte_Byte * (*upcallMH)(stru_Byte_Byte *, stru_Byte_Byte))
@@ -781,12 +1035,12 @@ add2ByteStructs_returnStructPointerByUpcallMH(stru_Byte_Byte *arg1, stru_Byte_By
 
 /**
  * Get a new struct by adding each byte element of two structs with
- * three byte elements by invoking an upcall method handle.
+ * three byte elements by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three bytes
  * @param arg2 the 2nd struct with three bytes
- * @param upcallMH an upcall method handle
- * @return a struct with three bytes returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with three bytes
  */
 stru_Byte_Byte_Byte
 add3ByteStructs_returnStructByUpcallMH(stru_Byte_Byte_Byte arg1, stru_Byte_Byte_Byte arg2, stru_Byte_Byte_Byte (*upcallMH)(stru_Byte_Byte_Byte, stru_Byte_Byte_Byte))
@@ -797,12 +1051,12 @@ add3ByteStructs_returnStructByUpcallMH(stru_Byte_Byte_Byte arg1, stru_Byte_Byte_
 
 /**
  * Generate a new char by adding a char and two chars of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a struct with two chars
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromStructByUpcallMH(short arg1, stru_Char_Char arg2, short (*upcallMH)(short, stru_Char_Char))
@@ -814,12 +1068,12 @@ addCharAndCharsFromStructByUpcallMH(short arg1, stru_Char_Char arg2, short (*upc
 
 /**
  * Generate a new char by adding a char (dereferenced from a pointer)
- * and two chars of a struct by invoking an upcall method handle.
+ * and two chars of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to char
  * @param arg2 a struct with two chars
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharFromPointerAndCharsFromStructByUpcallMH(short *arg1, stru_Char_Char arg2, short (*upcallMH)(short *, stru_Char_Char))
@@ -830,12 +1084,12 @@ addCharFromPointerAndCharsFromStructByUpcallMH(short *arg1, stru_Char_Char arg2,
 
 /**
  * Get a pointer to char by adding a char (dereferenced from a pointer)
- * and two chars of a struct by invoking an upcall method handle.
+ * and two chars of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to char
  * @param arg2 a struct with two chars
- * @param upcallMH an upcall method handle
- * @return a pointer to a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to a new char
  */
 short *
 addCharFromPointerAndCharsFromStruct_returnCharPointerByUpcallMH(short *arg1, stru_Char_Char arg2, short * (*upcallMH)(short *, stru_Char_Char))
@@ -846,12 +1100,12 @@ addCharFromPointerAndCharsFromStruct_returnCharPointerByUpcallMH(short *arg1, st
 
 /**
  * Generate a new char by adding a char and two chars of struct (dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a pointer to struct with two chars
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromStructPointerByUpcallMH(short arg1, stru_Char_Char *arg2, short (*upcallMH)(short, stru_Char_Char *))
@@ -862,12 +1116,12 @@ addCharAndCharsFromStructPointerByUpcallMH(short arg1, stru_Char_Char *arg2, sho
 
 /**
  * Generate a new char by adding a char and all char elements of a struct
- * with a nested struct and a char by invoking an upcall method handle.
+ * with a nested struct and a char by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a struct with a nested struct
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromNestedStructByUpcallMH(short arg1, stru_NestedStruct_Char arg2, short (*upcallMH)(short, stru_NestedStruct_Char))
@@ -878,12 +1132,12 @@ addCharAndCharsFromNestedStructByUpcallMH(short arg1, stru_NestedStruct_Char arg
 
 /**
  * Generate a new char by adding a char and all char elements of a struct with a char
- * and a nested struct (in reverse order) by invoking an upcall method handle.
+ * and a nested struct (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a struct with a char and a nested struct
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromNestedStruct_reverseOrderByUpcallMH(short arg1, stru_Char_NestedStruct arg2, short (*upcallMH)(short, stru_Char_NestedStruct))
@@ -894,12 +1148,12 @@ addCharAndCharsFromNestedStruct_reverseOrderByUpcallMH(short arg1, stru_Char_Nes
 
 /**
  * Generate a new char by adding a char and all char elements of a struct with
- * a nested char array and a char by invoking an upcall method handle.
+ * a nested char array and a char by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a struct with a nested char array and a char
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromStructWithNestedCharArrayByUpcallMH(short arg1, stru_NestedCharArray_Char arg2, short (*upcallMH)(short, stru_NestedCharArray_Char))
@@ -910,12 +1164,12 @@ addCharAndCharsFromStructWithNestedCharArrayByUpcallMH(short arg1, stru_NestedCh
 
 /**
  * Generate a new char by adding a char and all char elements of a struct with a char
- * and a nested char array (in reverse order) by invoking an upcall method handle.
+ * and a nested char array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a struct with a char and a nested char array
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromStructWithNestedCharArray_reverseOrderByUpcallMH(short arg1, stru_Char_NestedCharArray arg2, short (*upcallMH)(short, stru_Char_NestedCharArray))
@@ -926,12 +1180,12 @@ addCharAndCharsFromStructWithNestedCharArray_reverseOrderByUpcallMH(short arg1, 
 
 /**
  * Generate a new char by adding a char and all char elements of a struct with
- * a nested struct array and a char by invoking an upcall method handle.
+ * a nested struct array and a char by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a struct with a nested char array and a char
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromStructWithNestedStructArrayByUpcallMH(short arg1, stru_NestedStruArray_Char arg2, short (*upcallMH)(short, stru_NestedStruArray_Char))
@@ -942,12 +1196,12 @@ addCharAndCharsFromStructWithNestedStructArrayByUpcallMH(short arg1, stru_Nested
 
 /**
  * Generate a new char by adding a char and all char elements of a struct with a char
- * and a nested struct array (in reverse order) by invoking an upcall method handle.
+ * and a nested struct array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a char
  * @param arg2 a struct with a char and a nested char array
- * @param upcallMH an upcall method handle
- * @return a new char returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new char
  */
 short
 addCharAndCharsFromStructWithNestedStructArray_reverseOrderByUpcallMH(short arg1, stru_Char_NestedStruArray arg2, short (*upcallMH)(short, stru_Char_NestedStruArray))
@@ -958,12 +1212,12 @@ addCharAndCharsFromStructWithNestedStructArray_reverseOrderByUpcallMH(short arg1
 
 /**
  * Create a new struct by adding each char element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two chars
  * @param arg2 the 2nd struct with two chars
- * @param upcallMH an upcall method handle
- * @return a new struct of with two chars returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new struct of with two chars
  */
 stru_Char_Char
 add2CharStructs_returnStructByUpcallMH(stru_Char_Char arg1, stru_Char_Char arg2, stru_Char_Char (*upcallMH)(stru_Char_Char, stru_Char_Char))
@@ -974,12 +1228,12 @@ add2CharStructs_returnStructByUpcallMH(stru_Char_Char arg1, stru_Char_Char arg2,
 
 /**
  * Get a pointer to a struct by adding each element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two chars
  * @param arg2 the 2nd struct with two chars
- * @param upcallMH an upcall method handle
- * @return a pointer to a struct of with two chars returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to a struct of with two chars
  */
 stru_Char_Char *
 add2CharStructs_returnStructPointerByUpcallMH(stru_Char_Char *arg1, stru_Char_Char arg2, stru_Char_Char * (*upcallMH)(stru_Char_Char *, stru_Char_Char))
@@ -990,12 +1244,12 @@ add2CharStructs_returnStructPointerByUpcallMH(stru_Char_Char *arg1, stru_Char_Ch
 
 /**
  * Create a new struct by adding each char element of two structs
- * with three chars by invoking an upcall method handle.
+ * with three chars by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three chars
  * @param arg2 the 2nd struct with three chars
- * @param upcallMH an upcall method handle
- * @return a new struct of with three chars returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a new struct of with three chars
  */
 stru_Char_Char_Char
 add3CharStructs_returnStructByUpcallMH(stru_Char_Char_Char arg1, stru_Char_Char_Char arg2, stru_Char_Char_Char (*upcallMH)(stru_Char_Char_Char, stru_Char_Char_Char))
@@ -1005,12 +1259,12 @@ add3CharStructs_returnStructByUpcallMH(stru_Char_Char_Char arg1, stru_Char_Char_
 }
 
 /**
- * Add a short and two shorts of a struct by invoking an upcall method handle.
+ * Add a short and two shorts of a struct by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a struct with two shorts
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromStructByUpcallMH(short arg1, stru_Short_Short arg2, short (*upcallMH)(short, stru_Short_Short))
@@ -1021,12 +1275,12 @@ addShortAndShortsFromStructByUpcallMH(short arg1, stru_Short_Short arg2, short (
 
 /**
  * Add a short (dereferenced from a pointer) and two shorts of
- * a struct by invoking an upcall method handle.
+ * a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to short
  * @param arg2 a struct with two shorts
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortFromPointerAndShortsFromStructByUpcallMH(short *arg1, stru_Short_Short arg2, short (*upcallMH)(short *, stru_Short_Short))
@@ -1037,12 +1291,12 @@ addShortFromPointerAndShortsFromStructByUpcallMH(short *arg1, stru_Short_Short a
 
 /**
  * Add a short (dereferenced from a pointer) and two shorts
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to short
  * @param arg2 a struct with two shorts
- * @param upcallMH an upcall method handle
- * @return a pointer to the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to the sum
  */
 short *
 addShortFromPointerAndShortsFromStruct_returnShortPointerByUpcallMH(short *arg1, stru_Short_Short arg2, short * (*upcallMH)(short *, stru_Short_Short))
@@ -1053,12 +1307,12 @@ addShortFromPointerAndShortsFromStruct_returnShortPointerByUpcallMH(short *arg1,
 
 /**
  * Add a short and two shorts of a struct (dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a pointer to struct with two shorts
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromStructPointerByUpcallMH(short arg1, stru_Short_Short *arg2, short (*upcallMH)(short, stru_Short_Short *))
@@ -1069,12 +1323,12 @@ addShortAndShortsFromStructPointerByUpcallMH(short arg1, stru_Short_Short *arg2,
 
 /**
  * Add a short and all short elements of a struct with a nested struct
- * and a short by invoking an upcall method handle.
+ * and a short by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a struct with a nested struct and a short
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromNestedStructByUpcallMH(short arg1, stru_NestedStruct_Short arg2, short (*upcallMH)(short, stru_NestedStruct_Short))
@@ -1085,12 +1339,12 @@ addShortAndShortsFromNestedStructByUpcallMH(short arg1, stru_NestedStruct_Short 
 
 /**
  * Add a short and all short elements of a struct with a short and a nested struct
- * (in reverse order) by invoking an upcall method handle.
+ * (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a struct with a short and a nested struct
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromNestedStruct_reverseOrderByUpcallMH(short arg1, stru_Short_NestedStruct arg2, short (*upcallMH)(short, stru_Short_NestedStruct))
@@ -1101,12 +1355,12 @@ addShortAndShortsFromNestedStruct_reverseOrderByUpcallMH(short arg1, stru_Short_
 
 /**
  * Add a short and all short elements of a struct with a nested short array
- * and a short by invoking an upcall method handle.
+ * and a short by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a struct with a nested short array and a short
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromStructWithNestedShortArrayByUpcallMH(short arg1, stru_NestedShortArray_Short arg2, short (*upcallMH)(short, stru_NestedShortArray_Short))
@@ -1117,12 +1371,12 @@ addShortAndShortsFromStructWithNestedShortArrayByUpcallMH(short arg1, stru_Neste
 
 /**
  * Add a short and all short elements of a struct with a short and a nested
- * short array (in reverse order) by invoking an upcall method handle.
+ * short array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a struct with a short and a nested short array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromStructWithNestedShortArray_reverseOrderByUpcallMH(short arg1, stru_Short_NestedShortArray arg2, short (*upcallMH)(short, stru_Short_NestedShortArray))
@@ -1133,12 +1387,12 @@ addShortAndShortsFromStructWithNestedShortArray_reverseOrderByUpcallMH(short arg
 
 /**
  * Add a short and all short elements of a struct with a nested struct
- * array and a short by invoking an upcall method handle.
+ * array and a short by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a struct with a nested short array and a short
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromStructWithNestedStructArrayByUpcallMH(short arg1, stru_NestedStruArray_Short arg2, short (*upcallMH)(short, stru_NestedStruArray_Short))
@@ -1149,12 +1403,12 @@ addShortAndShortsFromStructWithNestedStructArrayByUpcallMH(short arg1, stru_Nest
 
 /**
  * Add a short and all short elements of a struct with a short and a nested
- * struct array (in reverse order) by invoking an upcall method handle.
+ * struct array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a short
  * @param arg2 a struct with a short and a nested short array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 short
 addShortAndShortsFromStructWithNestedStructArray_reverseOrderByUpcallMH(short arg1, stru_Short_NestedStruArray arg2, short (*upcallMH)(short, stru_Short_NestedStruArray))
@@ -1165,12 +1419,12 @@ addShortAndShortsFromStructWithNestedStructArray_reverseOrderByUpcallMH(short ar
 
 /**
  * Get a new struct by adding each short element of two structs
- * with two short elements by invoking an upcall method handle.
+ * with two short elements by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two shorts
  * @param arg2 the 2nd struct with two shorts
- * @param upcallMH an upcall method handle
- * @return a struct with two shorts returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with two shorts
  */
 stru_Short_Short
 add2ShortStructs_returnStructByUpcallMH(stru_Short_Short arg1, stru_Short_Short arg2, stru_Short_Short (*upcallMH)(stru_Short_Short, stru_Short_Short))
@@ -1181,12 +1435,12 @@ add2ShortStructs_returnStructByUpcallMH(stru_Short_Short arg1, stru_Short_Short 
 
 /**
  * Get a pointer to struct by adding each short element of two structs
- * with two short elements by invoking an upcall method handle.
+ * with two short elements by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two shorts
  * @param arg2 the 2nd struct with two shorts
- * @param upcallMH an upcall method handle
- * @return a pointer to struct with two shorts from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to struct with two shorts
  */
 stru_Short_Short *
 add2ShortStructs_returnStructPointerByUpcallMH(stru_Short_Short *arg1, stru_Short_Short arg2, stru_Short_Short * (*upcallMH)(stru_Short_Short *, stru_Short_Short))
@@ -1197,12 +1451,12 @@ add2ShortStructs_returnStructPointerByUpcallMH(stru_Short_Short *arg1, stru_Shor
 
 /**
  * Get a new struct by adding each short element of two structs with
- * three short elements by invoking an upcall method handle.
+ * three short elements by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three shorts
  * @param arg2 the 2nd struct with three shorts
- * @param upcallMH an upcall method handle
- * @return a struct with three shorts returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with three shorts
  */
 stru_Short_Short_Short
 add3ShortStructs_returnStructByUpcallMH(stru_Short_Short_Short arg1, stru_Short_Short_Short arg2, stru_Short_Short_Short (*upcallMH)(stru_Short_Short_Short, stru_Short_Short_Short))
@@ -1213,12 +1467,12 @@ add3ShortStructs_returnStructByUpcallMH(stru_Short_Short_Short arg1, stru_Short_
 
 /**
  * Add an integer and two integers of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with two integers
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromStructByUpcallMH(int arg1, stru_Int_Int arg2, int (*upcallMH)(int, stru_Int_Int))
@@ -1229,12 +1483,12 @@ addIntAndIntsFromStructByUpcallMH(int arg1, stru_Int_Int arg2, int (*upcallMH)(i
 
 /**
  * Add an integer and all elements (integer & short) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with an integer and a short
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntShortFromStructByUpcallMH(int arg1, stru_Int_Short arg2, int (*upcallMH)(int, stru_Int_Short))
@@ -1245,12 +1499,12 @@ addIntAndIntShortFromStructByUpcallMH(int arg1, stru_Int_Short arg2, int (*upcal
 
 /**
  * Add an integer and all elements (short & integer) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with a short and an integer
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndShortIntFromStructByUpcallMH(int arg1, stru_Short_Int arg2, int (*upcallMH)(int, stru_Short_Int))
@@ -1261,12 +1515,12 @@ addIntAndShortIntFromStructByUpcallMH(int arg1, stru_Short_Int arg2, int (*upcal
 
 /**
  * Add an integer (dereferenced from a pointer) and two integers
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to integer
  * @param arg2 a struct with two integers
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntFromPointerAndIntsFromStructByUpcallMH(int *arg1, stru_Int_Int arg2,  int (*upcallMH)(int *, stru_Int_Int))
@@ -1277,12 +1531,12 @@ addIntFromPointerAndIntsFromStructByUpcallMH(int *arg1, stru_Int_Int arg2,  int 
 
 /**
  * Add an integer (dereferenced from a pointer) and two integers
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to integer
  * @param arg2 a struct with two integers
- * @param upcallMH an upcall method handle
- * @return a pointer to the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to the sum
  */
 int *
 addIntFromPointerAndIntsFromStruct_returnIntPointerByUpcallMH(int *arg1, stru_Int_Int arg2, int *(*upcallMH)(int *, stru_Int_Int))
@@ -1293,12 +1547,12 @@ addIntFromPointerAndIntsFromStruct_returnIntPointerByUpcallMH(int *arg1, stru_In
 
 /**
  * Add an integer and two integers of a struct (dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a pointer to struct with two integers
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromStructPointerByUpcallMH(int arg1, stru_Int_Int *arg2, int (*upcallMH)(int, stru_Int_Int *))
@@ -1309,12 +1563,12 @@ addIntAndIntsFromStructPointerByUpcallMH(int arg1, stru_Int_Int *arg2, int (*upc
 
 /**
  * Add an integer and all integer elements of a struct with a nested struct
- * and an integer by invoking an upcall method handle.
+ * and an integer by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with a nested struct and an integer
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromNestedStructByUpcallMH(int arg1, stru_NestedStruct_Int arg2, int (*upcallMH)(int, stru_NestedStruct_Int))
@@ -1325,12 +1579,12 @@ addIntAndIntsFromNestedStructByUpcallMH(int arg1, stru_NestedStruct_Int arg2, in
 
 /**
  * Add an integer and all integer elements of a struct with an integer and
- * a nested struct (in reverse order) by invoking an upcall method handle.
+ * a nested struct (in reverse order) by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with an integer and a nested struct
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromNestedStruct_reverseOrderByUpcallMH(int arg1, stru_Int_NestedStruct arg2, int (*upcallMH)(int, stru_Int_NestedStruct))
@@ -1341,12 +1595,12 @@ addIntAndIntsFromNestedStruct_reverseOrderByUpcallMH(int arg1, stru_Int_NestedSt
 
 /**
  * Add an integer and all integer elements of a struct with a nested integer array
- * and an integer by invoking an upcall method handle.
+ * and an integer by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with a nested integer array and an integer
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromStructWithNestedIntArrayByUpcallMH(int arg1, stru_NestedIntArray_Int arg2, int (*upcallMH)(int, stru_NestedIntArray_Int))
@@ -1357,12 +1611,12 @@ addIntAndIntsFromStructWithNestedIntArrayByUpcallMH(int arg1, stru_NestedIntArra
 
 /**
  * Add an integer and all integer elements of a struct with an integer and a
- * nested integer array (in reverse order) by invoking an upcall method handle.
+ * nested integer array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with an integer and a nested integer array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromStructWithNestedIntArray_reverseOrderByUpcallMH(int arg1, stru_Int_NestedIntArray arg2, int (*upcallMH)(int, stru_Int_NestedIntArray))
@@ -1373,12 +1627,12 @@ addIntAndIntsFromStructWithNestedIntArray_reverseOrderByUpcallMH(int arg1, stru_
 
 /**
  * Add an integer and all integer elements of a struct with a nested struct array
- * and an integer by invoking an upcall method handle.
+ * and an integer by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with a nested integer array and an integer
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromStructWithNestedStructArrayByUpcallMH(int arg1, stru_NestedStruArray_Int arg2, int (*upcallMH)(int, stru_NestedStruArray_Int))
@@ -1389,12 +1643,12 @@ addIntAndIntsFromStructWithNestedStructArrayByUpcallMH(int arg1, stru_NestedStru
 
 /**
  * Add an integer and all integer elements of a struct with an integer and a nested
- * struct array (in reverse order) by invoking an upcall method handle.
+ * struct array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 an integer
  * @param arg2 a struct with an integer and a nested integer array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 int
 addIntAndIntsFromStructWithNestedStructArray_reverseOrderByUpcallMH(int arg1, stru_Int_NestedStruArray arg2, int (*upcallMH)(int, stru_Int_NestedStruArray))
@@ -1405,12 +1659,12 @@ addIntAndIntsFromStructWithNestedStructArray_reverseOrderByUpcallMH(int arg1, st
 
 /**
  * Get a new struct by adding each integer element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two integers
  * @param arg2 the 2nd struct with two integers
- * @param upcallMH an upcall method handle
- * @return a struct with two integers returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with two integers
  */
 stru_Int_Int
 add2IntStructs_returnStructByUpcallMH(stru_Int_Int arg1, stru_Int_Int arg2, stru_Int_Int (*upcallMH)(stru_Int_Int, stru_Int_Int))
@@ -1421,12 +1675,12 @@ add2IntStructs_returnStructByUpcallMH(stru_Int_Int arg1, stru_Int_Int arg2, stru
 
 /**
  * Get a pointer to struct by adding each integer element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two integers
  * @param arg2 the 2nd struct with two integers
- * @param upcallMH an upcall method handle
- * @return a pointer to struct with two integers returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to struct with two integers
  */
 stru_Int_Int *
 add2IntStructs_returnStructPointerByUpcallMH(stru_Int_Int *arg1, stru_Int_Int arg2, stru_Int_Int * (*upcallMH)(stru_Int_Int *, stru_Int_Int))
@@ -1437,12 +1691,12 @@ add2IntStructs_returnStructPointerByUpcallMH(stru_Int_Int *arg1, stru_Int_Int ar
 
 /**
  * Get a new struct by adding each integer element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three integers
  * @param arg2 the 2nd struct with three integers
- * @param upcallMH an upcall method handle
- * @return a struct with three integers returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with three integers
  */
 stru_Int_Int_Int
 add3IntStructs_returnStructByUpcallMH(stru_Int_Int_Int arg1, stru_Int_Int_Int arg2, stru_Int_Int_Int (*upcallMH)(stru_Int_Int_Int, stru_Int_Int_Int))
@@ -1452,12 +1706,12 @@ add3IntStructs_returnStructByUpcallMH(stru_Int_Int_Int arg1, stru_Int_Int_Int ar
 }
 
 /**
- * Add a long and two longs of a struct by invoking an upcall method handle.
+ * Add a long and two longs of a struct by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a struct with two longs
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromStructByUpcallMH(LONG arg1, stru_Long_Long arg2, LONG (*upcallMH)(LONG, stru_Long_Long))
@@ -1468,12 +1722,12 @@ addLongAndLongsFromStructByUpcallMH(LONG arg1, stru_Long_Long arg2, LONG (*upcal
 
 /**
  * Add an integer and all elements (int & long) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 an int
  * @param arg2 a struct with an integer and a long
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addIntAndIntLongFromStructByUpcallMH(int arg1, stru_Int_Long arg2, LONG (*upcallMH)(int, stru_Int_Long))
@@ -1484,12 +1738,12 @@ addIntAndIntLongFromStructByUpcallMH(int arg1, stru_Int_Long arg2, LONG (*upcall
 
 /**
  * Add an integer and all elements (long & int) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 an int
  * @param arg2 a struct with a long and an int
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addIntAndLongIntFromStructByUpcallMH(int arg1, stru_Long_Int arg2, LONG (*upcallMH)(int, stru_Long_Int))
@@ -1500,12 +1754,12 @@ addIntAndLongIntFromStructByUpcallMH(int arg1, stru_Long_Int arg2, LONG (*upcall
 
 /**
  * Add a long (dereferenced from a pointer) and two longs
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to long
  * @param arg2 a struct with two longs
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongFromPointerAndLongsFromStructByUpcallMH(LONG *arg1, stru_Long_Long arg2, LONG (*upcallMH)(LONG *, stru_Long_Long))
@@ -1516,12 +1770,12 @@ addLongFromPointerAndLongsFromStructByUpcallMH(LONG *arg1, stru_Long_Long arg2, 
 
 /**
  * Add a long (dereferenced from a pointer) and two longs
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to long
  * @param arg2 a struct with two longs
- * @param upcallMH an upcall method handle
- * @return a pointer to the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to the sum
  */
 LONG *
 addLongFromPointerAndLongsFromStruct_returnLongPointerByUpcallMH(LONG *arg1, stru_Long_Long arg2, LONG * (*upcallMH)(LONG *, stru_Long_Long))
@@ -1532,12 +1786,12 @@ addLongFromPointerAndLongsFromStruct_returnLongPointerByUpcallMH(LONG *arg1, str
 
 /**
  * Add a long and two longs of a struct (dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a pointer to struct with two longs
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromStructPointerByUpcallMH(LONG arg1, stru_Long_Long *arg2, LONG (*upcallMH)(LONG, stru_Long_Long *))
@@ -1548,12 +1802,12 @@ addLongAndLongsFromStructPointerByUpcallMH(LONG arg1, stru_Long_Long *arg2, LONG
 
 /**
  * Add a long and all long elements of a struct with a nested struct
- * and a long by invoking an upcall method handle.
+ * and a long by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a struct with a nested struct and long
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromNestedStructByUpcallMH(LONG arg1, stru_NestedStruct_Long arg2, LONG (*upcallMH)(LONG, stru_NestedStruct_Long))
@@ -1564,12 +1818,12 @@ addLongAndLongsFromNestedStructByUpcallMH(LONG arg1, stru_NestedStruct_Long arg2
 
 /**
  * Add a long and all long elements of a struct with a long and a nested
- * struct (in reverse order) by invoking an upcall method handle.
+ * struct (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a struct with a long and a nested struct
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromNestedStruct_reverseOrderByUpcallMH(LONG arg1, stru_Long_NestedStruct arg2, LONG (*upcallMH)(LONG, stru_Long_NestedStruct))
@@ -1580,12 +1834,12 @@ addLongAndLongsFromNestedStruct_reverseOrderByUpcallMH(LONG arg1, stru_Long_Nest
 
 /**
  * Add a long and all long elements of a struct with a nested long
- * array and a long by invoking an upcall method handle.
+ * array and a long by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a struct with a nested long array and a long
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromStructWithNestedLongArrayByUpcallMH(LONG arg1, stru_NestedLongArray_Long arg2, LONG (*upcallMH)(LONG, stru_NestedLongArray_Long))
@@ -1596,12 +1850,12 @@ addLongAndLongsFromStructWithNestedLongArrayByUpcallMH(LONG arg1, stru_NestedLon
 
 /**
  * Add a long and all long elements of a struct with a long and a nested
- * long array (in reverse order) by invoking an upcall method handle.
+ * long array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a struct with a long and a nested long array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromStructWithNestedLongArray_reverseOrderByUpcallMH(LONG arg1, stru_Long_NestedLongArray arg2, LONG (*upcallMH)(LONG, stru_Long_NestedLongArray))
@@ -1612,12 +1866,12 @@ addLongAndLongsFromStructWithNestedLongArray_reverseOrderByUpcallMH(LONG arg1, s
 
 /**
  * Add a long and all long elements of a struct with a nested struct
- * array and a long by invoking an upcall method handle.
+ * array and a long by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a struct with a nested long array and a long
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromStructWithNestedStructArrayByUpcallMH(LONG arg1, stru_NestedStruArray_Long arg2, LONG (*upcallMH)(LONG, stru_NestedStruArray_Long))
@@ -1628,12 +1882,12 @@ addLongAndLongsFromStructWithNestedStructArrayByUpcallMH(LONG arg1, stru_NestedS
 
 /**
  * Add a long and all long elements of a struct with a long and a nested
- * struct array (in reverse order) by invoking an upcall method handle.
+ * struct array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a long
  * @param arg2 a struct with a long and a nested long array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 LONG
 addLongAndLongsFromStructWithNestedStructArray_reverseOrderByUpcallMH(LONG arg1, stru_Long_NestedStruArray arg2, LONG (*upcallMH)(LONG, stru_Long_NestedStruArray))
@@ -1644,12 +1898,12 @@ addLongAndLongsFromStructWithNestedStructArray_reverseOrderByUpcallMH(LONG arg1,
 
 /**
  * Get a new struct by adding each long element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two longs
  * @param arg2 the 2nd struct with two longs
- * @param upcallMH an upcall method handle
- * @return a struct with two longs returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with two longs
  */
 stru_Long_Long
 add2LongStructs_returnStructByUpcallMH(stru_Long_Long arg1, stru_Long_Long arg2, stru_Long_Long (*upcallMH)(stru_Long_Long, stru_Long_Long))
@@ -1660,12 +1914,12 @@ add2LongStructs_returnStructByUpcallMH(stru_Long_Long arg1, stru_Long_Long arg2,
 
 /**
  * Get a pointer to struct by adding each long element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two longs
  * @param arg2 the 2nd struct with two longs
- * @param upcallMH an upcall method handle
- * @return a pointer to struct with two longs returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to struct with two longs
  */
 stru_Long_Long *
 add2LongStructs_returnStructPointerByUpcallMH(stru_Long_Long *arg1, stru_Long_Long arg2, stru_Long_Long * (*upcallMH)(stru_Long_Long *, stru_Long_Long))
@@ -1676,12 +1930,12 @@ add2LongStructs_returnStructPointerByUpcallMH(stru_Long_Long *arg1, stru_Long_Lo
 
 /**
  * Get a new struct by adding each long element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three longs
  * @param arg2 the 2nd struct with three longs
- * @param upcallMH an upcall method handle
- * @return a struct with three longs returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with three longs
  */
 stru_Long_Long_Long
 add3LongStructs_returnStructByUpcallMH(stru_Long_Long_Long arg1, stru_Long_Long_Long arg2, stru_Long_Long_Long (*upcallMH)(stru_Long_Long_Long, stru_Long_Long_Long))
@@ -1691,12 +1945,12 @@ add3LongStructs_returnStructByUpcallMH(stru_Long_Long_Long arg1, stru_Long_Long_
 }
 
 /**
- * Add a float and two floats of a struct by invoking an upcall method handle.
+ * Add a float and two floats of a struct by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a struct with two floats
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromStructByUpcallMH(float arg1, stru_Float_Float arg2, float (*upcallMH)(float, stru_Float_Float))
@@ -1707,12 +1961,12 @@ addFloatAndFloatsFromStructByUpcallMH(float arg1, stru_Float_Float arg2, float (
 
 /**
  * Add a float (dereferenced from a pointer) and two floats
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to float
  * @param arg2 a struct with two floats
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatFromPointerAndFloatsFromStructByUpcallMH(float *arg1, stru_Float_Float arg2, float (*upcallMH)(float *, stru_Float_Float))
@@ -1723,12 +1977,12 @@ addFloatFromPointerAndFloatsFromStructByUpcallMH(float *arg1, stru_Float_Float a
 
 /**
  * Add a float (dereferenced from a pointer) and two floats
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to float
  * @param arg2 a struct with two floats
- * @param upcallMH an upcall method handle
- * @return a pointer to the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to the sum
  */
 float *
 addFloatFromPointerAndFloatsFromStruct_returnFloatPointerByUpcallMH(float *arg1, stru_Float_Float arg2, float * (*upcallMH)(float *, stru_Float_Float))
@@ -1739,12 +1993,12 @@ addFloatFromPointerAndFloatsFromStruct_returnFloatPointerByUpcallMH(float *arg1,
 
 /**
  * Add a float and two floats of a struct (dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a pointer to struct with two floats
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromStructPointerByUpcallMH(float arg1, stru_Float_Float *arg2, float (*upcallMH)(float, stru_Float_Float *))
@@ -1755,12 +2009,12 @@ addFloatAndFloatsFromStructPointerByUpcallMH(float arg1, stru_Float_Float *arg2,
 
 /**
  * Add a float and all float elements of a struct with a nested
- * struct and a float by invoking an upcall method handle.
+ * struct and a float by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a struct with a nested struct and a float
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromNestedStructByUpcallMH(float arg1, stru_NestedStruct_Float arg2, float (*upcallMH)(float, stru_NestedStruct_Float))
@@ -1771,12 +2025,12 @@ addFloatAndFloatsFromNestedStructByUpcallMH(float arg1, stru_NestedStruct_Float 
 
 /**
  * Add a float and all float elements of a struct with a float and a nested struct
- * (in reverse order) by invoking an upcall method handle.
+ * (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a struct with a float and a nested struct
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromNestedStruct_reverseOrderByUpcallMH(float arg1, stru_Float_NestedStruct arg2, float (*upcallMH)(float, stru_Float_NestedStruct))
@@ -1787,12 +2041,12 @@ addFloatAndFloatsFromNestedStruct_reverseOrderByUpcallMH(float arg1, stru_Float_
 
 /**
  * Add a float and all float elements of a struct with a nested
- * float array and a float by invoking an upcall method handle.
+ * float array and a float by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a struct with a nested float array and a float
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromStructWithNestedFloatArrayByUpcallMH(float arg1, stru_NestedFloatArray_Float arg2, float (*upcallMH)(float, stru_NestedFloatArray_Float))
@@ -1803,12 +2057,12 @@ addFloatAndFloatsFromStructWithNestedFloatArrayByUpcallMH(float arg1, stru_Neste
 
 /**
  * Add a float and all float elements of a struct with a float and a nested
- * float array (in reverse order) by invoking an upcall method handle.
+ * float array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a struct with a float and a nested float array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromStructWithNestedFloatArray_reverseOrderByUpcallMH(float arg1, stru_Float_NestedFloatArray arg2, float (*upcallMH)(float, stru_Float_NestedFloatArray))
@@ -1819,12 +2073,12 @@ addFloatAndFloatsFromStructWithNestedFloatArray_reverseOrderByUpcallMH(float arg
 
 /**
  * Add a float and all float elements of a struct with a nested
- * struct array and a float by invoking an upcall method handle.
+ * struct array and a float by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a struct with a nested float array and a float
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromStructWithNestedStructArrayByUpcallMH(float arg1, stru_NestedStruArray_Float arg2, float (*upcallMH)(float, stru_NestedStruArray_Float))
@@ -1835,12 +2089,12 @@ addFloatAndFloatsFromStructWithNestedStructArrayByUpcallMH(float arg1, stru_Nest
 
 /**
  * Add a float and all float elements of a struct with a float and a nested
- * struct array (in reverse order) by invoking an upcall method handle.
+ * struct array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a float
  * @param arg2 a struct with a float and a nested float array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 float
 addFloatAndFloatsFromStructWithNestedStructArray_reverseOrderByUpcallMH(float arg1, stru_Float_NestedStruArray arg2, float (*upcallMH)(float, stru_Float_NestedStruArray))
@@ -1851,12 +2105,12 @@ addFloatAndFloatsFromStructWithNestedStructArray_reverseOrderByUpcallMH(float ar
 
 /**
  * Create a new struct by adding each float element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two floats
  * @param arg2 the 2nd struct with two floats
- * @param upcallMH an upcall method handle
- * @return a struct with two floats returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with two floats
  */
 stru_Float_Float
 add2FloatStructs_returnStructByUpcallMH(stru_Float_Float arg1, stru_Float_Float arg2, stru_Float_Float (*upcallMH)(stru_Float_Float, stru_Float_Float))
@@ -1867,12 +2121,12 @@ add2FloatStructs_returnStructByUpcallMH(stru_Float_Float arg1, stru_Float_Float 
 
 /**
  * Get a pointer to struct by adding each float element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two floats
  * @param arg2 the 2nd struct with two floats
- * @param upcallMH an upcall method handle
- * @return a pointer to struct with two floats returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to struct with two floats
  */
 stru_Float_Float *
 add2FloatStructs_returnStructPointerByUpcallMH(stru_Float_Float *arg1, stru_Float_Float arg2, stru_Float_Float * (*upcallMH)(stru_Float_Float *, stru_Float_Float))
@@ -1883,12 +2137,12 @@ add2FloatStructs_returnStructPointerByUpcallMH(stru_Float_Float *arg1, stru_Floa
 
 /**
  * Create a new struct by adding each float element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three floats
  * @param arg2 the 2nd struct with three floats
- * @param upcallMH an upcall method handle
- * @return a struct with three floats returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with three floats
  */
 stru_Float_Float_Float
 add3FloatStructs_returnStructByUpcallMH(stru_Float_Float_Float arg1, stru_Float_Float_Float arg2, stru_Float_Float_Float (*upcallMH)(stru_Float_Float_Float, stru_Float_Float_Float))
@@ -1898,12 +2152,12 @@ add3FloatStructs_returnStructByUpcallMH(stru_Float_Float_Float arg1, stru_Float_
 }
 
 /**
- * Add a double and two doubles of a struct by invoking an upcall method handle.
+ * Add a double and two doubles of a struct by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with two doubles
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromStructByUpcallMH(double arg1, stru_Double_Double arg2, double (*upcallMH)(double, stru_Double_Double))
@@ -1914,12 +2168,12 @@ addDoubleAndDoublesFromStructByUpcallMH(double arg1, stru_Double_Double arg2, do
 
 /**
  * Add a double and all elements (float & double) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a float and a double
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndFloatDoubleFromStructByUpcallMH(double arg1, stru_Float_Double arg2, double (*upcallMH)(double, stru_Float_Double))
@@ -1930,12 +2184,12 @@ addDoubleAndFloatDoubleFromStructByUpcallMH(double arg1, stru_Float_Double arg2,
 
 /**
  * Add a double and all elements (int & double) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with an int and a double
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndIntDoubleFromStructByUpcallMH(double arg1, stru_Int_Double arg2, double (*upcallMH)(double, stru_Int_Double))
@@ -1946,12 +2200,12 @@ addDoubleAndIntDoubleFromStructByUpcallMH(double arg1, stru_Int_Double arg2, dou
 
 /**
  * Add a double and all elements (double & float) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a double and a float
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoubleFloatFromStructByUpcallMH(double arg1, stru_Double_Float arg2, double (*upcallMH)(double, stru_Double_Float))
@@ -1962,12 +2216,12 @@ addDoubleAndDoubleFloatFromStructByUpcallMH(double arg1, stru_Double_Float arg2,
 
 /**
  * Add a double and all elements (double & int) of a struct
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a double and an int
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoubleIntFromStructByUpcallMH(double arg1, stru_Double_Int arg2, double (*upcallMH)(double, stru_Double_Int))
@@ -1978,12 +2232,12 @@ addDoubleAndDoubleIntFromStructByUpcallMH(double arg1, stru_Double_Int arg2, dou
 
 /**
  * Add a double (dereferenced from a pointer) and two doubles
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to double
  * @param arg2 a struct with two doubles
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleFromPointerAndDoublesFromStructByUpcallMH(double *arg1, stru_Double_Double arg2, double (*upcallMH)(double *, stru_Double_Double))
@@ -1994,12 +2248,12 @@ addDoubleFromPointerAndDoublesFromStructByUpcallMH(double *arg1, stru_Double_Dou
 
 /**
  * Add a double (dereferenced from a pointer) and two doubles
- * of a struct by invoking an upcall method handle.
+ * of a struct by invoking a upcall method.
  *
  * @param arg1 a pointer to double
  * @param arg2 a struct with two doubles
- * @param upcallMH an upcall method handle
- * @return a pointer to the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to the sum
  */
 double *
 addDoubleFromPointerAndDoublesFromStruct_returnDoublePointerByUpcallMH(double *arg1, stru_Double_Double arg2, double * (*upcallMH)(double *, stru_Double_Double))
@@ -2010,12 +2264,12 @@ addDoubleFromPointerAndDoublesFromStruct_returnDoublePointerByUpcallMH(double *a
 
 /**
  * Add a double and two doubles of a struct (dereferenced from a pointer)
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a pointer to struct with two doubles
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromStructPointerByUpcallMH(double arg1, stru_Double_Double *arg2, double (*upcallMH)(double, stru_Double_Double *))
@@ -2026,12 +2280,12 @@ addDoubleAndDoublesFromStructPointerByUpcallMH(double arg1, stru_Double_Double *
 
 /**
  * Add a double and all doubles of a struct with a nested struct
- * and a double by invoking an upcall method handle.
+ * and a double by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a nested struct and a double
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromNestedStructByUpcallMH(double arg1, stru_NestedStruct_Double arg2, double (*upcallMH)(double, stru_NestedStruct_Double))
@@ -2042,12 +2296,12 @@ addDoubleAndDoublesFromNestedStructByUpcallMH(double arg1, stru_NestedStruct_Dou
 
 /**
  * Add a double and all doubles of a struct with a double and a nested struct
- * (in reverse order) by invoking an upcall method handle.
+ * (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a double a nested struct
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromNestedStruct_reverseOrderByUpcallMH(double arg1, stru_Double_NestedStruct arg2, double (*upcallMH)(double, stru_Double_NestedStruct))
@@ -2058,12 +2312,12 @@ addDoubleAndDoublesFromNestedStruct_reverseOrderByUpcallMH(double arg1, stru_Dou
 
 /**
  * Add a double and all double elements of a struct with a nested
- * double array and a double by invoking an upcall method handle.
+ * double array and a double by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a nested double array and a double
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromStructWithNestedDoubleArrayByUpcallMH(double arg1, stru_NestedDoubleArray_Double arg2, double (*upcallMH)(double, stru_NestedDoubleArray_Double))
@@ -2074,12 +2328,12 @@ addDoubleAndDoublesFromStructWithNestedDoubleArrayByUpcallMH(double arg1, stru_N
 
 /**
  * Add a double and all double elements of a struct with a double and a nested
- * double array (in reverse order) by invoking an upcall method handle.
+ * double array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a double and a nested double array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromStructWithNestedDoubleArray_reverseOrderByUpcallMH(double arg1, stru_Double_NestedDoubleArray arg2, double (*upcallMH)(double, stru_Double_NestedDoubleArray))
@@ -2090,12 +2344,12 @@ addDoubleAndDoublesFromStructWithNestedDoubleArray_reverseOrderByUpcallMH(double
 
 /**
  * Add a double and all double elements of a struct with a nested struct array
- * and a double by invoking an upcall method handle.
+ * and a double by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a nested double array and a double
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromStructWithNestedStructArrayByUpcallMH(double arg1, stru_NestedStruArray_Double arg2, double (*upcallMH)(double, stru_NestedStruArray_Double))
@@ -2106,12 +2360,12 @@ addDoubleAndDoublesFromStructWithNestedStructArrayByUpcallMH(double arg1, stru_N
 
 /**
  * Add a double and all double elements of a struct with a double and a nested
- * struct array (in reverse order) by invoking an upcall method handle.
+ * struct array (in reverse order) by invoking a upcall method.
  *
  * @param arg1 a double
  * @param arg2 a struct with a double and a nested double array
- * @param upcallMH an upcall method handle
- * @return the sum returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return the sum
  */
 double
 addDoubleAndDoublesFromStructWithNestedStructArray_reverseOrderByUpcallMH(double arg1, stru_Double_NestedStruArray arg2, double (*upcallMH)(double, stru_Double_NestedStruArray))
@@ -2122,12 +2376,12 @@ addDoubleAndDoublesFromStructWithNestedStructArray_reverseOrderByUpcallMH(double
 
 /**
  * Create a new struct by adding each double element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with two doubles
  * @param arg2 the 2nd struct with two doubles
- * @param upcallMH an upcall method handle
- * @return a struct with two doubles returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with two doubles
  */
 stru_Double_Double
 add2DoubleStructs_returnStructByUpcallMH(stru_Double_Double arg1, stru_Double_Double arg2, stru_Double_Double (*upcallMH)(stru_Double_Double, stru_Double_Double))
@@ -2138,12 +2392,12 @@ add2DoubleStructs_returnStructByUpcallMH(stru_Double_Double arg1, stru_Double_Do
 
 /**
  * Get a pointer to struct by adding each double element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 a pointer to the 1st struct with two doubles
  * @param arg2 the 2nd struct with two doubles
- * @param upcallMH an upcall method handle
- * @return a pointer to struct with two doubles returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a pointer to struct with two doubles
  */
 stru_Double_Double *
 add2DoubleStructs_returnStructPointerByUpcallMH(stru_Double_Double *arg1, stru_Double_Double arg2, stru_Double_Double * (*upcallMH)(stru_Double_Double *, stru_Double_Double))
@@ -2154,12 +2408,12 @@ add2DoubleStructs_returnStructPointerByUpcallMH(stru_Double_Double *arg1, stru_D
 
 /**
  * Create a new struct by adding each double element of two structs
- * by invoking an upcall method handle.
+ * by invoking a upcall method.
  *
  * @param arg1 the 1st struct with three doubles
  * @param arg2 the 2nd struct with three doubles
- * @param upcallMH an upcall method handle
- * @return a struct with three doubles returned from the upcall method handle
+ * @param upcallMH the function pointer to the upcall method
+ * @return a struct with three doubles
  */
 stru_Double_Double_Double
 add3DoubleStructs_returnStructByUpcallMH(stru_Double_Double_Double arg1, stru_Double_Double_Double arg2, stru_Double_Double_Double (*upcallMH)(stru_Double_Double_Double, stru_Double_Double_Double))

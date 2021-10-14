@@ -25,25 +25,11 @@ package jdk.internal.foreign.abi;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.List;
-import java.util.HashMap;
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import static java.lang.invoke.MethodHandles.*;
-import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
-import static java.lang.invoke.MethodType.methodType;
-import java.lang.invoke.WrongMethodTypeException;
 
 import jdk.incubator.foreign.FunctionDescriptor;
-import jdk.incubator.foreign.ValueLayout;
-import jdk.incubator.foreign.GroupLayout;
-import jdk.incubator.foreign.SequenceLayout;
 import jdk.incubator.foreign.MemoryLayout;
-import jdk.incubator.foreign.Addressable;
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.MemorySegment;
-import jdk.incubator.foreign.CLinker.TypeKind;
-import static jdk.incubator.foreign.CLinker.TypeKind.*;
 
 /**
  * The counterpart in OpenJDK is replaced with this class that wrap up
@@ -53,18 +39,8 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 
 	private MemoryLayout[] argLayoutArray;
 	private MemoryLayout realReturnLayout;
-	private final Addressable functionAddr;
 	private final long thunkAddr;
-	static final Lookup lookup = MethodHandles.lookup();
-	private final UpcallMHMetaData metaData;
-
-	/* The address of the generated native thunk is cached & shared in multiple upcalls/threads */
-	private static final HashMap<Integer, Long> cachedHandleHashToThunkAddr = new HashMap<>();
-
-	private static final class PrivateUpcallClassLock {
-		PrivateUpcallClassLock() {}
-	}
-	private static final Object privateUpcallClassLock = new PrivateUpcallClassLock();
+	private UpcallMHMetaData metaData;
 
 	/**
 	 * The method is ultimately invoked by Clinker on a given platform to generate a thunk
@@ -75,15 +51,14 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 	 * @param cDesc The FunctionDescriptor of the requested java method
 	 */
 	public ProgrammableUpcallHandler(MethodHandle target, MethodType mt, FunctionDescriptor cDesc) {
-		List<MemoryLayout> argLayouts = functionDescriptor.argumentLayouts();
+		List<MemoryLayout> argLayouts = cDesc.argumentLayouts();
 		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayouts.size()]);
-		Optional<MemoryLayout> returnLayout = functionDescriptor.returnLayout();
+		Optional<MemoryLayout> returnLayout = cDesc.returnLayout();
 		realReturnLayout = returnLayout.orElse(null); // Set to null for void
 
 		TypeLayoutCheckHelper.checkIfValidLayoutAndType(mt, argLayoutArray, realReturnLayout);
 		thunkAddr = getUpcallThunkAddr(target);
 	}
-
 
 	/**
 	 * Returns the address of the generated thunk at runtime.
@@ -117,19 +92,15 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 			nativeSignatureStrs[argLayoutCount] = LayoutStrPreprocessor.getSimplifiedLayoutString(realReturnLayout, false);
 		}
 
-		synchronized(privateUpcallClassLock) {
-			Integer targetHandleHash = Integer.valueOf(target.hashCode());
-			Long nativeThunkAddr = cachedHandleHashToThunkAddr.get(targetHandleHash);
-			long addr = 0;
-			if (nativeThunkAddr != null) {
-				addr = nativeThunkAddr.longValue();
-			} else {
-				metaData = new UpcallMHMetaData(this, target);
-				addr = allocateUpcallStub(metaData, nativeSignatureStrs);
-				cachedHandleHashToThunkAddr.put(targetHandleHash, Long.valueOf(addr));
-			}
-			return addr;
-		}
+		/* The thunk must be created for each upcall handler given the UpcallMHMetaData object uniquely bound to the thunk
+		 * is only alive for a resource scope specified in java, which means the upcall handler and its UpcallMHMetaData
+		 * object will be cleaned up automatically once their scope is closed. As a result, the UpcallMHMetaData object
+		 * (previously stored in the J9UpcallMetaData structure) plus the corresponding thunk becomes invalid and can't
+		 * be reused in native.
+		 */
+		metaData = new UpcallMHMetaData(this, target);
+		long addr = allocateUpcallStub(metaData, nativeSignatureStrs);
+		return addr;
 	}
 
 	/* This native requests the JIT to generate a upcall thunk of the specified java method

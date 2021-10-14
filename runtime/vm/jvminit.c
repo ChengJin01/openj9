@@ -700,6 +700,46 @@ freeJavaVM(J9JavaVM * vm)
 		vm->classLoadingConstraints = NULL;
 	}
 
+#if JAVA_SPEC_VERSION >= 16
+	if (NULL != vm->cifNativeCalloutDataCache) {
+		pool_state poolState;
+		void *cifNode = pool_startDo(vm->cifNativeCalloutDataCache, &poolState);
+		while (NULL != cifNode) {
+			freeAllStructFFITypes(currentThread, cifNode);
+			cifNode = pool_nextDo(&poolState);
+		}
+		pool_kill(vm->cifNativeCalloutDataCache);
+		vm->cifNativeCalloutDataCache = NULL;
+	}
+
+	/* Clean up any resources created by allocateThunkHeap and allocateUpcallThunkMemory */
+	if (NULL != vm->thunkHeapWrapper) {
+		J9UpcallThunkHeapWrapper *thunkHeapWrapper = vm->thunkHeapWrapper;
+		J9PortVmemIdentifier vmemID = thunkHeapWrapper->vmemID;
+		J9UpcallMetaDataList *metaDataNode = thunkHeapWrapper->metaDataHead;
+		UDATA byteAmount = j9vmem_supported_page_sizes()[0];
+
+		j9vmem_free_memory(vmemID.address, byteAmount, &vmemID);
+		while (NULL != metaDataNode) {
+			J9UpcallMetaDataList *nextMetaDataNode = metaDataNode->next;
+			if (NULL != nextMetaDataNode->data) {
+				J9UpcallMetaData *data = nextMetaDataNode->data;
+				if (NULL != data->nativeFuncSignature) {
+					J9UpcallNativeSignature *nativeFuncSignature = data->nativeFuncSignature;
+					j9mem_free_memory(nativeFuncSignature->sigArray);
+					j9mem_free_memory(nativeFuncSignature);
+				}
+				vm->internalVMFunctions->j9jni_deleteGlobalRef((JNIEnv *)currentThread, data->mhMetaData, JNI_FALSE);
+				j9mem_free_memory(data);
+			}
+			j9mem_free_memory(metaDataNode);
+			metaDataNode = nextMetaDataNode;
+		}
+		j9mem_free_memory(thunkHeapWrapper);
+		vm->thunkHeapWrapper = NULL;
+	}
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
 #ifdef J9VM_OPT_ZIP_SUPPORT
 	if (NULL != vm->zipCachePool) {
 		zipCachePool_kill(vm->zipCachePool);
@@ -802,44 +842,6 @@ freeJavaVM(J9JavaVM * vm)
 		vm->valueTypeVerificationStackPool = NULL;
 	}
 #endif /* defined(J9VM_OPT_VALHALLA_VALUE_TYPES) */
-
-#if JAVA_SPEC_VERSION >= 16
-	if (NULL != vm->cifNativeCalloutDataCache) {
-		pool_state poolState;
-		void *cifNode = pool_startDo(vm->cifNativeCalloutDataCache, &poolState);
-		while (NULL != cifNode) {
-			freeAllStructFFITypes(currentThread, cifNode);
-			cifNode = pool_nextDo(&poolState);
-		}
-		pool_kill(vm->cifNativeCalloutDataCache);
-		vm->cifNativeCalloutDataCache = NULL;
-	}
-
-	/* Clean up any resources created by allocateThunkHeap and during allocateUpcallThunkMemory */
-	if (NULL != vm->thunkHeapWrapper) {
-		J9HeapWrapper *thunkHeapWrapper = vm->thunkHeapWrapper;
-		J9PortVmemIdentifier vmemID = thunkHeapWrapper->vmemID;
-		J9UpcallMetaDataList *metaDataNode = thunkHeapWrapper->metaDataHead;
-
-		j9vmem_free_memory(vmemID->address, vmemID->size, vmemID);
-		while (NULL != metaDataNode) {
-			J9UpcallMetaDataList *nextMetaDataNode = metaDataNode->next;
-			if (NULL != nextMetaDataNode->data) {
-				J9UpcallMetaData *data = nextMetaDataNode->data;
-				if (NULL != data->nativeFuncSignature) {
-					J9UpcallNativeSignature *nativeFuncSignature = data->nativeFuncSignature;
-					j9mem_free_memory(nativeFuncSignature->sigArray);
-					j9mem_free_memory(nativeFuncSignature);
-				}
-				j9mem_free_memory(data);
-			}
-			j9mem_free_memory(metaDataNode);
-			metaDataNode = nextMetaDataNode;
-		}
-		j9mem_free_memory(thunkHeapWrapper);
-		vm->thunkHeapWrapper = NULL;
-	}
-#endif /* JAVA_SPEC_VERSION >= 16 */
 
 	j9mem_free_memory(vm->vTableScratch);
 	vm->vTableScratch = NULL;
@@ -3743,8 +3745,10 @@ processVMArgsFromFirstToLast(J9JavaVM * vm)
 
 #if defined(OMR_GC_COMPRESSED_POINTERS) && defined(OMR_GC_FULL_POINTERS)
 	{
-		IDATA compressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL);
-		IDATA nocompressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL);
+		IDATA compressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL),
+			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXUSECOMPRESSEDOOPS, NULL));
+		IDATA nocompressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL),
+			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXNOUSECOMPRESSEDOOPS, NULL));
 		/* Compressed refs by default */
 		if (compressed >= nocompressed) {
 			/* switching to nocompressedrefs based on -Xmx, similar logic as redirector.c:chooseJVM() */

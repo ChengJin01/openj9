@@ -33,6 +33,7 @@
 #include "rommeth.h"
 #include "j2sever.h"
 #include "objhelp.h"
+#include "jvmtiInternal.h"
 
 #include "VMHelpers.hpp"
 #include "VMAccess.hpp"
@@ -1352,36 +1353,56 @@ sidecarInvokeReflectConstructor(J9VMThread *currentThread, jobject constructorRe
 }
 
 #if JAVA_SPEC_VERSION >= 16
+bool
+buildCallInStackFrameHelper(J9VMThread *currentThread, J9VMEntryLocalStorage *newELS)
+{
+	return buildCallInStackFrame(currentThread, newELS, true, false);
+}
+
+void
+restoreCallInFrameHelper(J9VMThread *currentThread)
+{
+	restoreCallInFrame(currentThread);
+}
+
 void JNICALL
-sendResolveUpcallInvokeHandle(J9VMThread *currentThread, j9object_t mhMetaData)
+sendResolveUpcallInvokeHandle(J9VMThread *currentThread, J9UpcallMetaData *data)
 {
 	J9VMEntryLocalStorage newELS;
 	Trc_VM_sendResolveUpcallInvokeHandle_Entry(currentThread);
 
+	VM_VMAccess::inlineEnterVMFromJNI(currentThread);
 	if (buildCallInStackFrame(currentThread, &newELS, true, false)) {
 		J9JavaVM *vm = currentThread->javaVM;
-		j9object_t handler = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_HANDLER(currentThread, mhMetaData);
-		J9Class *callerClazz = J9OBJECT_CLAZZ(currentThread, handler);
-		j9object_t methodHandle = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
-		J9Class *mhClazz = J9OBJECT_CLAZZ(currentThread, methodHandle);
-		j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(_currentThread, methodHandle);
-		j9object_t nameString = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKENAME(currentThread, mhMetaData);
+		/* Set the upcall handler as the caller class */
+		j9object_t callerClazz = J9VM_J9CLASS_TO_HEAPCLASS(J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEUPCALLHANDLER(vm));
+		/* The defining class being passed into MethodHandleNatives.linkMethod()
+		 * must be MethodHandle.class which is the superclass of the callee handle.
+		 */
+		j9object_t defClazz = J9VM_J9CLASS_TO_HEAPCLASS(J9VMJAVALANGINVOKEMETHODHANDLE(vm));
+		j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+		j9object_t calleeHandle = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
+		j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread, calleeHandle);
+		j9object_t invokeNameString = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKENAME(currentThread, mhMetaData);
 		j9object_t sigString = J9VMJAVALANGINVOKEMETHODTYPE_METHODDESCRIPTOR(currentThread, methodType);
 
-		if ((NULL != nameString) && (NULL != sigString)) {
-			/* Run the method in the upcall */
-			*--currentThread->sp = (UDATA)J9VM_J9CLASS_TO_HEAPCLASS(callerClazz);
+		if ((NULL != invokeNameString) && (NULL != sigString)) {
+			/* Set all required arguments for MethodHandleNatives.linkMethod() on the java stack
+			 * to fetch the MemberName object plus appendix intended for the upcall method.
+			 * See MethodHandleResolver.linkCallerMethod() for details.
+			 */
+			*(j9object_t*)--currentThread->sp = callerClazz;
 			*(I_32*)--currentThread->sp = MH_REF_INVOKEVIRTUAL;
-			*--currentThread->sp = (UDATA)J9VM_J9CLASS_TO_HEAPCLASS(mhClazz);
-			*--currentThread->sp = (UDATA)nameString;
-			*--currentThread->sp = (UDATA)sigString;
+			*(j9object_t*)--currentThread->sp = defClazz;
+			*(j9object_t*)--currentThread->sp = invokeNameString;
+			*(j9object_t*)--currentThread->sp = sigString;
 			currentThread->returnValue = J9_BCLOOP_RUN_METHOD;
 			currentThread->returnValue2 = (UDATA)J9VMJAVALANGINVOKEMETHODHANDLERESOLVER_LINKCALLERMETHOD_METHOD(vm);
 			c_cInterpreter(currentThread);
 		}
-
 		restoreCallInFrame(currentThread);
 	}
+	VM_VMAccess::inlineExitVMToJNI(currentThread);
 
 	Trc_VM_sendResolveUpcallInvokeHandle_Exit(currentThread);
 }

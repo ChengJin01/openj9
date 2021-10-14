@@ -24,38 +24,37 @@ package jdk.internal.foreign.abi;
 
 import java.lang.invoke.MethodHandle;
 
-
 /**
  * The meta data consists of the callee MH and a cache of 2 elements for MH resolution,
  * which are used to generate a upcall handler to the requested java method.
  */
 class UpcallMHMetaData {
 	/* The upcall handler's class is treated as the caller class in MH resolution.
-	 * see sendResolveUpcallInvokeHandle() in callin.cpp for details
+	 * see sendResolveUpcallInvokeHandle() in callin.cpp for details.
 	 */
-	ProgrammableUpcallHandler handler;
+	ProgrammableUpcallHandler upcallHander;
 	private MethodHandle calleeMH;
 	private String invokeName;
-	/* MemberName and appendix object are stored in this array which
-	 * is created at MethodHandleResolver.linkCallerMethod().
-	 */
+	/* MemberName and appendix (resolved by MethodHandleResolver.linkCallerMethod()) are stored in this array */
 	private Object[] invokeCache;
-	private static synchronized native void resolveMetaDataFields();
+
+	private static synchronized native void resolveUpcallDataFields();
 
 	static {
-		/* Resolve the fields (offset in the jcl constant pool of VM) of the meta data given
-		 * the generated macros in the vmconstantpool.xml depend on their offsets to access
-		 * the corresponding fields.
+		/* Resolve the fields (offset in the JCL constant pool of VM) specific to the meta data plus the fields
+		 * of MemoryAddressImpl and NativeMemorySegmentImpl given the generated macros from vmconstantpool.xml
+		 * depend on their offsets to access the corresponding fields in the process of the upcall.
 		 */
-		resolveMetaDataFields();
+		resolveUpcallDataFields();
 	}
 
-	UpcallMHMetaData(ProgrammableUpcallHandler upcallHander, MethodHandle target) {
-		handler = upcallHander;
-		calleeMH = target;
+	UpcallMHMetaData(ProgrammableUpcallHandler upcallHander, MethodHandle calleeMH) {
+		this.upcallHander = upcallHander;
+		this.calleeMH = calleeMH;
 		invokeName = "invokeExact"; //$NON-NLS-1$
-		/* Cache the methodDexcriptor which will be used in MH resolution
-		 * see resolveUpcallInvokeHandle() in resolvesupport.cpp for details
+		/* Invoke toMethodDescriptorString() to cache the method descriptor which will
+		 * be used in the MH resolution.
+		 * See resolveUpcallInvokeHandle() in resolvesupport.cpp for details.
 		 */
 		calleeMH.type().toMethodDescriptorString();
 	}

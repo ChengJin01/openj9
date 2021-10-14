@@ -410,6 +410,7 @@ J9InternalVMFunctions J9InternalFunctions = {
 	getClassNameString,
 #if JAVA_SPEC_VERSION >= 16
 	createUpcallThunk,
+	getArgPointer,
 	allocateUpcallThunkMemory,
 	doneUpcallThunkGeneration,
 	icallVMprJavaUpcall0,
