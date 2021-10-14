@@ -25,13 +25,15 @@
 #include "jclglob.h"
 #include "jclprots.h"
 #include "jcl_internal.h"
-#include "rommeth.h"
-#include "omrlinkedlist.h"
 
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
 void JNICALL
+Java_jdk_internal_foreign_abi_UpcallStubs_registerNatives(JNIEnv *env, jclass clazz)
+{
+}
+
 /**
  * A memory segment is associated with a native scope owned by a thread, in which case the memory
  * segment in the scope will be automatically released in OpenJDK by invoking this native if the

@@ -60,7 +60,6 @@ public class StructTests {
 	private static boolean isWinOS = osName.contains("win");
 	private static ValueLayout longLayout = (isWinOS || isAixOS) ? C_LONG_LONG : C_LONG;
 	private static LibraryLookup nativeLib = LibraryLookup.ofLibrary("clinkerffitests");
-	private static LibraryLookup defaultLib = LibraryLookup.ofDefault();
 	private static CLinker clinker = CLinker.getInstance();
 
 	@Test

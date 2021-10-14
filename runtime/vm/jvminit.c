@@ -812,13 +812,14 @@ freeJavaVM(J9JavaVM * vm)
 		vm->cifNativeCalloutDataCache = NULL;
 	}
 
-	/* Clean up any resources created by allocateThunkHeap and during allocateUpcallThunkMemory */
+	/* Clean up any resources created by allocateThunkHeap and allocateUpcallThunkMemory */
 	if (NULL != vm->thunkHeapWrapper) {
-		J9HeapWrapper *thunkHeapWrapper = vm->thunkHeapWrapper;
+		J9UpcallThunkHeapWrapper *thunkHeapWrapper = vm->thunkHeapWrapper;
 		J9PortVmemIdentifier vmemID = thunkHeapWrapper->vmemID;
 		J9UpcallMetaDataList *metaDataNode = thunkHeapWrapper->metaDataHead;
+		UDATA byteAmount = j9vmem_supported_page_sizes()[0];
 
-		j9vmem_free_memory(vmemID->address, vmemID->size, vmemID);
+		j9vmem_free_memory(vmemID.address, byteAmount, &vmemID);
 		while (NULL != metaDataNode) {
 			J9UpcallMetaDataList *nextMetaDataNode = metaDataNode->next;
 			if (NULL != nextMetaDataNode->data) {
@@ -3692,8 +3693,10 @@ processVMArgsFromFirstToLast(J9JavaVM * vm)
 
 #if defined(OMR_GC_COMPRESSED_POINTERS) && defined(OMR_GC_FULL_POINTERS)
 	{
-		IDATA compressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL);
-		IDATA nocompressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL);
+		IDATA compressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL),
+			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXUSECOMPRESSEDOOPS, NULL));
+		IDATA nocompressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL),
+			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXNOUSECOMPRESSEDOOPS, NULL));
 		/* Compressed refs by default */
 		if (compressed >= nocompressed) {
 			/* switching to nocompressedrefs based on -Xmx, similar logic as redirector.c:chooseJVM() */

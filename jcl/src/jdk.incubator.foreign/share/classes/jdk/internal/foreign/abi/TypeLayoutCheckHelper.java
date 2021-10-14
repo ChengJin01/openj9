@@ -66,7 +66,7 @@ class TypeLayoutCheckHelper {
 	}
 
 	/* Verify whether the specified type is primitive, MemoryAddress (for pointer) or MemorySegment (for struct) */
-	private static boolean validateArgRetTypeClass(Class<?> targetType) {
+	public static boolean validateArgRetTypeClass(Class<?> targetType) {
 		if (!targetType.isPrimitive()
 		&& (targetType != MemoryAddress.class)
 		&& (targetType != MemorySegment.class)

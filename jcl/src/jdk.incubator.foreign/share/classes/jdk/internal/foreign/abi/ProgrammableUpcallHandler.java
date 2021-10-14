@@ -53,10 +53,9 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 
 	private MemoryLayout[] argLayoutArray;
 	private MemoryLayout realReturnLayout;
-	private final Addressable functionAddr;
+	//private final Addressable functionAddr;
 	private final long thunkAddr;
-	static final Lookup lookup = MethodHandles.lookup();
-	private final UpcallMHMetaData metaData;
+	private UpcallMHMetaData metaData;
 
 	/* The address of the generated native thunk is cached & shared in multiple upcalls/threads */
 	private static final HashMap<Integer, Long> cachedHandleHashToThunkAddr = new HashMap<>();
@@ -65,6 +64,8 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 		PrivateUpcallClassLock() {}
 	}
 	private static final Object privateUpcallClassLock = new PrivateUpcallClassLock();
+
+	static final Lookup lookup = MethodHandles.lookup();
 
 	/**
 	 * The method is ultimately invoked by Clinker on a given platform to generate a thunk
@@ -75,15 +76,26 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 	 * @param cDesc The FunctionDescriptor of the requested java method
 	 */
 	public ProgrammableUpcallHandler(MethodHandle target, MethodType mt, FunctionDescriptor cDesc) {
-		List<MemoryLayout> argLayouts = functionDescriptor.argumentLayouts();
+		List<MemoryLayout> argLayouts = cDesc.argumentLayouts();
 		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayouts.size()]);
-		Optional<MemoryLayout> returnLayout = functionDescriptor.returnLayout();
+		Optional<MemoryLayout> returnLayout = cDesc.returnLayout();
 		realReturnLayout = returnLayout.orElse(null); // Set to null for void
 
-		TypeLayoutCheckHelper.checkIfValidLayoutAndType(mt, argLayoutArray, realReturnLayout);
+		/* A method handle created by lookup.findvirtual() holds the defining class as the 1st
+		 * argument in its method type, which needs to be removed before validating against
+		 * the argument layouts.
+		 */
+		MethodType tempTargetMethodType = mt;
+		Class<?>[] paramArray1 = tempTargetMethodType.parameterArray();
+		int paramArrayLength = paramArray1.length;
+		if (!TypeLayoutCheckHelper.validateArgRetTypeClass(paramArray1[0])) {
+			Class<?>[] paramArray2 = new Class<?>[paramArrayLength - 1];
+			System.arraycopy(paramArray1, 1, paramArray2, 0, paramArray2.length);
+			tempTargetMethodType = methodType(mt.returnType(), paramArray2);
+		}
+		TypeLayoutCheckHelper.checkIfValidLayoutAndType(tempTargetMethodType, argLayoutArray, realReturnLayout);
 		thunkAddr = getUpcallThunkAddr(target);
 	}
-
 
 	/**
 	 * Returns the address of the generated thunk at runtime.
@@ -126,6 +138,7 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 			} else {
 				metaData = new UpcallMHMetaData(this, target);
 				addr = allocateUpcallStub(metaData, nativeSignatureStrs);
+				System.out.println("getUpcallThunkAddr: addr = " + Long.toHexString(addr)); //$NON-NLS-1$
 				cachedHandleHashToThunkAddr.put(targetHandleHash, Long.valueOf(addr));
 			}
 			return addr;

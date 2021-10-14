@@ -61,6 +61,7 @@ OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveMetaDataFields(J9V
 	}
 
 done:
+	printf("\n UpcallMHMetaData_resolveMetaDataFields ---- OK -------");
 	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 0);
 	return rc;
 }
