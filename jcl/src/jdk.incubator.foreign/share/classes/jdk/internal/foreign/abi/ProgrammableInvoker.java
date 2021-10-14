@@ -38,7 +38,9 @@ import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemorySegment;
-import jdk.incubator.foreign.LibraryLookup;
+/*[IF JAVA_SPEC_VERSION >= 17]*/
+import jdk.incubator.foreign.SegmentAllocator;
+/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 
 /**
  * The counterpart in OpenJDK is replaced with this class that wrap up a method handle
@@ -48,12 +50,12 @@ public class ProgrammableInvoker {
 
 	private final MethodType funcMethodType;
 	private final FunctionDescriptor funcDescriptor;
-	private final Addressable functionAddr;
+	private Addressable functionAddr;
 	private long cifNativeThunkAddr;
 	private long argTypesAddr;
 	private MemoryLayout[] argLayoutArray;
 	private MemoryLayout realReturnLayout;
-	private MethodHandle longObjToMemSegmtRetFilter;
+	private MemorySegment returnStructSegmt;
 
 	static final Lookup lookup = MethodHandles.lookup();
 
@@ -83,10 +85,11 @@ public class ProgrammableInvoker {
 	private static final MethodHandle longObjToFloatRetFilter;
 	private static final MethodHandle longObjToDoubleRetFilter;
 	private static final MethodHandle longObjToMemAddrRetFilter;
+	private MethodHandle longObjToMemSegmtRetFilter;
 
 	private static synchronized native void resolveRequiredFields();
 	private native void initCifNativeThunkData(String[] argLayouts, String retLayout, boolean newArgTypes);
-	private native long invokeNative(long functionAddress, long calloutThunk, long[] argValues);
+	private native long invokeNative(long returnStructMemAddr, long functionAddress, long calloutThunk, long[] argValues);
 
 	private static final class PrivateClassLock {
 		PrivateClassLock() {}
@@ -229,14 +232,20 @@ public class ProgrammableInvoker {
 		return MemoryAddress.ofLong(tmpValue);
 	}
 
-	/* Intended for longObjToMemSegmtRetFilter that converts the Long object to the memory address */
+	/* Intended for longObjToMemSegmtRetFilter that converts the Long object to the memory address.
+	 * Note: the returned memory address is exactly the address of the memory previously allocated
+	 * for the specified struct layout on return.
+	 */
 	private final MemorySegment longObjToMemSegmtRet(Object retValue) {
-		long tmpValue = ((Long)retValue).longValue();
-		MemoryAddress memSegmtAddr = MemoryAddress.ofLong(tmpValue);
-		return memSegmtAddr.asSegmentRestricted(realReturnLayout.byteSize());
+		return returnStructSegmt;
 	}
 
-	ProgrammableInvoker(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor functionDescriptor) {
+	/*[IF JAVA_SPEC_VERSION >= 17]*/
+	ProgrammableInvoker(MethodType functionMethodType, FunctionDescriptor functionDescriptor)
+	/*[ELSE] JAVA_SPEC_VERSION >= 17 */
+	ProgrammableInvoker(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor functionDescriptor)
+	/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
+	{
 		List<MemoryLayout> argLayouts = functionDescriptor.argumentLayouts();
 		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayouts.size()]);
 		Optional<MemoryLayout> returnLayout = functionDescriptor.returnLayout();
@@ -244,25 +253,32 @@ public class ProgrammableInvoker {
 
 		TypeLayoutCheckHelper.checkIfValidLayoutAndType(functionMethodType, argLayoutArray, realReturnLayout);
 
-		/* As explained in the Spec of LibraryLookup, the downcall must hold a strong reference to
+		/*[IF JAVA_SPEC_VERSION >= 17]*/
+		/* The native function address has been removed from the parameter lists of downcallHandle() APIs
+		 * so as to being passed in as the first argument when invoking the returned downcall handle
+		 * or bound as the first argument via MethodHandles.insertArguments() beforehand in OpenJDK.
+		 */
+		functionAddr = null;
+		/*[ELSE] JAVA_SPEC_VERSION >= 17 */
+		/* As explained in the Spec of LibraryLookup in JDK16, the downcall must hold a strong reference to
 		 * the native library symbol to prevent the underlying native library from being unloaded
 		 * during the native calls.
 		 *
 		 * Note: the passed-in addressable parameter can be either LibraryLookup.Symbol or MemoryAddress.
 		 */
 		functionAddr = downcallAddr;
+		/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 		funcMethodType = functionMethodType;
 		funcDescriptor = functionDescriptor;
 
 		cifNativeThunkAddr = 0;
 		argTypesAddr = 0;
+		returnStructSegmt = null;
 		longObjToMemSegmtRetFilter = null;
-		/* Create the filter for the returned memory segment as the size of the memory segment
-		 * is only determined by the corresponding layout size in bytes at runtime.
-		 */
+		/* Create the filter for the returned memory segment (non-static) at runtime */
 		if (funcMethodType.returnType() == MemorySegment.class) {
 			try {
-				longObjToMemSegmtRetFilter = lookup.bind(this, "longObjToMemSegmtRet", methodType(MemorySegment.class, Object.class));
+				longObjToMemSegmtRetFilter = lookup.bind(this, "longObjToMemSegmtRet", methodType(MemorySegment.class, Object.class)); //$NON-NLS-1$
 			} catch (ReflectiveOperationException e) {
 				throw new InternalError(e);
 			}
@@ -338,10 +354,25 @@ public class ProgrammableInvoker {
 	 * @param funcDesc The function descriptor of the specified native function
 	 * @return a method handle bound to the native method
 	 */
-	public static MethodHandle getBoundMethodHandle(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor funcDesc) {
+	/*[IF JAVA_SPEC_VERSION >= 17]*/
+	public static MethodHandle getBoundMethodHandle(MethodType functionMethodType, FunctionDescriptor funcDesc)
+	/*[ELSE] JAVA_SPEC_VERSION >= 17 */
+	public static MethodHandle getBoundMethodHandle(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor funcDesc)
+	/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
+	{
+		/*[IF JAVA_SPEC_VERSION >= 17]*/
+		ProgrammableInvoker nativeInvoker = new ProgrammableInvoker(functionMethodType, funcDesc);
+		/*[ELSE] JAVA_SPEC_VERSION >= 17 */
 		ProgrammableInvoker nativeInvoker = new ProgrammableInvoker(downcallAddr, functionMethodType, funcDesc);
+		/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 		try {
-			MethodHandle boundHandle = lookup.bind(nativeInvoker, "runNativeMethod", methodType(Object.class, long[].class));
+			/*[IF JAVA_SPEC_VERSION >= 17]*/
+			MethodHandle boundHandle = lookup.bind(nativeInvoker, "runNativeMethod", //$NON-NLS-1$
+					methodType(Object.class, Addressable.class, SegmentAllocator.class, long[].class));
+			/*[ELSE] JAVA_SPEC_VERSION >= 17 */
+			MethodHandle boundHandle = lookup.bind(nativeInvoker, "runNativeMethod", //$NON-NLS-1$
+					methodType(Object.class, long[].class));
+			/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 
 			/* Replace the original handle with the specified types of the C function */
 			boundHandle = nativeInvoker.permuteMH(boundHandle, functionMethodType);
@@ -355,14 +386,19 @@ public class ProgrammableInvoker {
 	private MethodHandle permuteMH(MethodHandle targetHandle, MethodType nativeMethodType) throws NullPointerException, WrongMethodTypeException {
 		Class<?>[] argTypeClasses = nativeMethodType.parameterArray();
 		int nativeArgCount = argTypeClasses.length;
-		MethodHandle resultHandle = targetHandle.asCollector(long[].class, nativeArgCount);
+		int argPosition = 0;
+		/*[IF JAVA_SPEC_VERSION >= 17]*/
+		/* Skip the native function address and the segment allocator to the native function's arguments */
+		argPosition = 2;
+		/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
+		MethodHandle resultHandle = targetHandle.asCollector(argPosition, long[].class, nativeArgCount);
 
 		/* Convert the argument values to long via filterArguments() prior to the native call */
 		MethodHandle[] argFilters = new MethodHandle[nativeArgCount];
 		for (int argIndex = 0; argIndex < nativeArgCount; argIndex++) {
 			argFilters[argIndex] = getArgumentFilter(argTypeClasses[argIndex]);
 		}
-		resultHandle = filterArguments(resultHandle, 0, argFilters);
+		resultHandle = filterArguments(resultHandle, argPosition, argFilters);
 
 		/* Convert the return value to the specified type via filterReturnValue() after the native call */
 		MethodHandle retFilter = getReturnValFilter(nativeMethodType.returnType());
@@ -430,8 +466,33 @@ public class ProgrammableInvoker {
 	}
 
 	/* The method (bound by the method handle to the native code) intends to invoke the C function via the inlined code */
-	Object runNativeMethod(long[] args) {
-		long returnVal = invokeNative(functionAddr.address().toRawLongValue(), cifNativeThunkAddr, args);
+	/*[IF JAVA_SPEC_VERSION >= 17]*/
+	Object runNativeMethod(Addressable downcallAddr, SegmentAllocator segmtAllocator, long[] args)
+	/*[ELSE] JAVA_SPEC_VERSION >= 17 */
+	Object runNativeMethod(long[] args)
+	/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
+	{
+		/*[IF JAVA_SPEC_VERSION >= 17]*/
+		/* Hold a strong reference in the downcall to the native library symbol to
+		 * prevent the underlying native library from being unloaded.
+		 */
+		functionAddr = downcallAddr;
+		/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
+
+		if (funcMethodType.returnType() == MemorySegment.class) {
+			/*[IF JAVA_SPEC_VERSION >= 17]*/
+			/* The segment allocator (introduced since Java 17 to replace NativeScope in Java 16) is confined
+			 * by the resource scope defined in user applications in which case the allocated memory will be
+			 * released automatically once the scope is closed.
+			 */
+			returnStructSegmt = segmtAllocator.allocate(realReturnLayout);
+			/*[ELSE] JAVA_SPEC_VERSION >= 17 */
+			/* The memory segment will be released explicitly by users via close() in java code in Java 16 */
+			returnStructSegmt = MemorySegment.allocateNative(realReturnLayout);
+			/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
+		}
+		long retMemAddr = (returnStructSegmt == null) ? 0 : returnStructSegmt.address().toRawLongValue();
+		long returnVal = invokeNative(retMemAddr, functionAddr.address().toRawLongValue(), cifNativeThunkAddr, args);
 		return Long.valueOf(returnVal);
 	}
 }

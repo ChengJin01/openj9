@@ -53,10 +53,9 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 
 	private MemoryLayout[] argLayoutArray;
 	private MemoryLayout realReturnLayout;
-	private final Addressable functionAddr;
+	//private final Addressable functionAddr;
 	private final long thunkAddr;
-	static final Lookup lookup = MethodHandles.lookup();
-	private final UpcallMHMetaData metaData;
+	private UpcallMHMetaData metaData;
 
 	/* The address of the generated native thunk is cached & shared in multiple upcalls/threads */
 	private static final HashMap<Integer, Long> cachedHandleHashToThunkAddr = new HashMap<>();
@@ -65,6 +64,8 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 		PrivateUpcallClassLock() {}
 	}
 	private static final Object privateUpcallClassLock = new PrivateUpcallClassLock();
+
+	static final Lookup lookup = MethodHandles.lookup();
 
 	/**
 	 * The method is ultimately invoked by Clinker on a given platform to generate a thunk
@@ -75,15 +76,14 @@ public class ProgrammableUpcallHandler implements UpcallHandler {
 	 * @param cDesc The FunctionDescriptor of the requested java method
 	 */
 	public ProgrammableUpcallHandler(MethodHandle target, MethodType mt, FunctionDescriptor cDesc) {
-		List<MemoryLayout> argLayouts = functionDescriptor.argumentLayouts();
+		List<MemoryLayout> argLayouts = cDesc.argumentLayouts();
 		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayouts.size()]);
-		Optional<MemoryLayout> returnLayout = functionDescriptor.returnLayout();
+		Optional<MemoryLayout> returnLayout = cDesc.returnLayout();
 		realReturnLayout = returnLayout.orElse(null); // Set to null for void
 
 		TypeLayoutCheckHelper.checkIfValidLayoutAndType(mt, argLayoutArray, realReturnLayout);
 		thunkAddr = getUpcallThunkAddr(target);
 	}
-
 
 	/**
 	 * Returns the address of the generated thunk at runtime.

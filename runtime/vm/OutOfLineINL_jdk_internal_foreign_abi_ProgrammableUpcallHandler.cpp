@@ -26,15 +26,13 @@
 #include "j9vmnls.h"
 #include "OutOfLineINL.hpp"
 #include "LayoutFFITypeHelpers.hpp"
-#include "AtomicSupport.hpp"
-
-#define J9VM_NATIVE_SIGNATURE_STRING_LENGTH 128
 
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
 /**
  * jdk.internal.foreign.abi.ProgrammableUpcallHandler: private native long allocateUpcallStub(UpcallMHMetaData mhMetaData, String[] cSignatureStrs);
+ *
  * @brief Request the JIT to generate a upcall thunk of the specified java method
  *
  * @param mhMetaData[in] a data object that consists of the method handle and the meta data for MH resolution
@@ -46,7 +44,7 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallSt
 {
 	VM_BytecodeAction rc = EXECUTE_BYTECODE;
 	J9JavaVM *vm = currentThread->javaVM;
-	J9UTF8 *nativeSig = NULL;
+	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
 	J9UpcallMetaData *upcallMetaData = NULL;
 	J9UpcallNativeSignature *nativeSig = NULL;
 	J9UpcallSigType *sigArray = NULL;
@@ -56,7 +54,7 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallSt
 	j9object_t cSigStrs = J9_JNI_UNWRAP_REFERENCE(currentThread->sp);
 	j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 1);
 	/* the last element of the array is the signature of return type */
-	U_32 cSigCount  = J9INDEXABLEOBJECT_SIZE(currentThread, cSigStrs);
+	U_32 sigCount  = J9INDEXABLEOBJECT_SIZE(currentThread, cSigStrs);
 
 	/* Note: the J9UpcallMetaData pointer will be stored in the generated thunk as data
 	 * in which case it is released only when the generated thunk memory is released
@@ -75,7 +73,7 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallSt
 		goto freeAllMemoryThenExit;
 	}
 
-	sigArray = (J9UpcallSigType *)j9mem_allocate_memory(sizeof(J9UpcallSigType) * cSigCount, OMRMEM_CATEGORY_VM);
+	sigArray = (J9UpcallSigType *)j9mem_allocate_memory(sizeof(J9UpcallSigType) * sigCount, OMRMEM_CATEGORY_VM);
 	if (NULL == sigArray) {
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		setNativeOutOfMemoryError(currentThread, 0, 0);
@@ -86,25 +84,28 @@ OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallSt
 		j9object_t sigStrObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, cSigStrs, sigIndex);
 		char sigBuffer[J9VM_NATIVE_SIGNATURE_STRING_LENGTH] = {0};
 		/* The simplified signature string in cSig for parameter/return type is converted at java level.
-		 * e.g. "4#I" represents a 4-byte integer
-		 *      "20#[5:I]" represents a 20-byte strut {int a[5]}
-		 *      "16#[I(4)J]" represents a 16-byte struct {int, padding(4byte), long}
+		 * e.g.
+		 * "4#I" represents a 4-byte integer
+		 * "20#[5:I]" represents a 20-byte struct for {int a[5]}
+		 * "16#[I(4)J]" represents a 16-byte struct for {int, padding(4 bytes), long}
+		 *
+		 * Note: the last element is the signature string for the return type.
 		 */
-		U_8 *cSig = (U_8 *)copyStringToUTF8WithMemAlloc(currentThread, sigStrObject,
+		char *cSig = copyStringToUTF8WithMemAlloc(currentThread, sigStrObject,
 				J9_STR_NULL_TERMINATE_RESULT, "", 0, sigBuffer, sizeof(sigBuffer), NULL);
 		LayoutFFITypeHelpers::encodeUpcallSignature(cSig, &sigArray[sigIndex]);
 		if (cSig != sigBuffer) {
 			j9mem_free_memory(cSig);
 		}
 	}
-	nativeSig->numArgs = sigCount;
+	nativeSig->numSigs = sigCount;
 	nativeSig->sigArray  = sigArray;
 
 	/* Set the J9UpcallMetaData struct to generate the thunk in the upcall */
 	upcallMetaData->vm = vm;
 	upcallMetaData->nativeFuncSignature = nativeSig;
 	upcallMetaData->mhMetaData = j9jni_createGlobalRef((JNIEnv*)currentThread, mhMetaData, false);
-	thunkAddr = createUpcallThunk(upcallMetaData);
+	thunkAddr = (intptr_t)vmFuncs->createUpcallThunk(upcallMetaData);
 
 done:
 	VM_OutOfLineINL_Helpers::returnDouble(currentThread, thunkAddr, 3);

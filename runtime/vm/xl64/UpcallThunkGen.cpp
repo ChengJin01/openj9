@@ -20,7 +20,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "vm_internal.h"
+#include "j9.h"
+#include "ut_j9vm.h"
 
 /**
  * @file: UpCallThunkGen.cpp
@@ -54,7 +55,6 @@ extern "C" {
 #define BLR()                 (0x4E800020)
 
 #define ROUND_UP_SLOT(si)     (((si) + 7) / 8)
-
 
 /**
  * @brief  generate straight sequence of instructions to copy back result
@@ -174,8 +174,10 @@ copyBackLoop(int *instrArray, int *currIdx, int resSize, int paramOffset)
  *   size; otherwise, it will be of [64 + round-up-16(parameterArea)].
  */
 void *
-createUpCallThunk(J9UpcallMetaData *metaData)
+createUpcallThunk(J9UpcallMetaData *metaData)
 {
+	J9JavaVM *vm = metaData->vm;
+	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
 	J9UpcallSigType *sigArray = metaData->nativeFuncSignature->sigArray;
 	int numSigs = metaData->nativeFuncSignature->numSigs;
 	int stackSlotCount=0, fprCovered=0, instructionCount, tempInt;
@@ -190,31 +192,31 @@ createUpCallThunk(J9UpcallMetaData *metaData)
 	tempInt = sigArray[numSigs - 1].sizeInByte;
         switch (sigArray[numSigs - 1].type) {
 		case J9_FFI_UPCALL_SIG_TYPE_VOID:
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcall0;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcall0;
 			break;
 
 		case J9_FFI_UPCALL_SIG_TYPE_CHAR:
 		case J9_FFI_UPCALL_SIG_TYPE_SHORT:
 		case J9_FFI_UPCALL_SIG_TYPE_INT32:
-		case J9_FFI_UPCALL_SIG_TYPE_POINTER:
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcall1;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcall1;
 			break;
 
+		case J9_FFI_UPCALL_SIG_TYPE_POINTER:
 		case J9_FFI_UPCALL_SIG_TYPE_INT64:
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcallJ;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcallJ;
 			break;
 
 		case J9_FFI_UPCALL_SIG_TYPE_FLOAT:
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcallF;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcallF;
 			break;
 
 		case J9_FFI_UPCALL_SIG_TYPE_DOUBLE:
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcallD;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcallD;
 			break;
 
 		case J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_ALL_SP:
 			Assert_VM_true(tempInt % sizeof(float) == 0);
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcallStruct;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcallStruct;
 			resultDistNeeded = true;
 			if (tempInt <= (8 * sizeof(float))) {
 				// Distribute result back into FPRs
@@ -238,7 +240,7 @@ createUpCallThunk(J9UpcallMetaData *metaData)
 
 		case J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_ALL_DP:
 			Assert_VM_true(tempInt % sizeof(double) == 0);
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcallStruct;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcallStruct;
 			resultDistNeeded = true;
 			if (tempInt <= (8 * sizeof(double))) {
 				// Distribute back into FPRs
@@ -264,7 +266,7 @@ createUpCallThunk(J9UpcallMetaData *metaData)
 		case J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_DP_MISC:
 		case J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MISC:
 			Assert_VM_true(tempInt <= 16);
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcallStruct;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcallStruct;
 			resultDistNeeded = true;
 			instructionCount += ROUND_UP_SLOT(tempInt);
 			break;
@@ -272,7 +274,7 @@ createUpCallThunk(J9UpcallMetaData *metaData)
 		// Definitely > 16-byte
 		case J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_OTHER:
 			Assert_VM_true(tempInt > 16);
-			metaData->upCallCommonDispatcher = metaData->vm->internalVMFunctions->icallVMprJavaUpcallStruct;
+			metaData->upCallCommonDispatcher = (void *)vmFuncs->icallVMprJavaUpcallStruct;
 			resultDistNeeded = true;
 			stackSlotCount += 1;
 			hiddenParameter = true;
@@ -492,7 +494,7 @@ createUpCallThunk(J9UpcallMetaData *metaData)
 	// another 8-byte to store metaData pointer itself
 	roundedCodeSize = ((instructionCount + 1) / 2) * 8;
 	metaData->thunkSize = roundedCodeSize + 8;
-	thunkMem = (int *)metaData->vm->internalVMFunctions->allocateUpcallThunkMemory(metaData->vm, metaData, metaData->thunkSize);
+	thunkMem = (int *)vmFuncs->allocateUpcallThunkMemory(vm, metaData, metaData->thunkSize);
 	metaData->thunkAddress = (void *)thunkMem;
 
         // Generate the instruction sequence according to the signature, looping over them again
@@ -801,7 +803,7 @@ createUpCallThunk(J9UpcallMetaData *metaData)
 	*(J9UpcallMetaData **)((char *)thunkMem + roundedCodeSize) = metaData;
 
         // Finish up before returning
-        metaData->vm->internalVMFunctions->doneUpcallThunkGeneration(metaData->vm, (void *)thunkMem, metaData->thunkSize);
+        vmFuncs->doneUpcallThunkGeneration(vm, (void *)thunkMem, metaData->thunkSize);
 
 	return (void *)thunkMem;
 }
@@ -887,6 +889,7 @@ getArgPointer(J9UpcallNativeSignature *nativeSig, void *argListPtr, int argIdx)
 		}
 	}
 
+	//printf("\n getArgPointer --- OK: argIdx = %d, argListPtr = %p, stackSlotCount = %d\n", argIdx, argListPtr, (int)stackSlotCount);
 	return (void *)((char *)argListPtr + (stackSlotCount * 8));
 }
 

@@ -30,9 +30,7 @@ import static java.lang.invoke.MethodType.methodType;
 
 import jdk.incubator.foreign.CLinker;
 import static jdk.incubator.foreign.CLinker.*;
-import static jdk.incubator.foreign.LibraryLookup.Symbol;
 import jdk.incubator.foreign.CLinker.VaList;
-import static jdk.incubator.foreign.CLinker.VaList.Builder;
 import jdk.incubator.foreign.FunctionDescriptor;
 
 import jdk.incubator.foreign.ValueLayout;
@@ -43,8 +41,6 @@ import jdk.incubator.foreign.MemoryLayout.PathElement;
 import jdk.incubator.foreign.MemoryAccess;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemorySegment;
-import jdk.incubator.foreign.LibraryLookup;
-import jdk.incubator.foreign.NativeScope;
 
 /**
  * The helper class that contains all upcall method handles with primitive types or struct

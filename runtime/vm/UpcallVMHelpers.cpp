@@ -39,75 +39,128 @@
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
-static U_8 getReturnTypeFromMetaData(J9UpcallMetaData *data);
-static void icallVMprJavaUpcallImpl(J9UpcallMetaData *data, J9VMThread currentThread, void *argsListPointer);
 
+extern void c_cInterpreter(J9VMThread *currentThread);
+extern bool buildCallInStackFrameHelper(J9VMThread *currentThread, J9VMEntryLocalStorage *newELS);
+extern void restoreCallInFrameHelper(J9VMThread *currentThread);
+
+static U_8 getReturnTypeFromMetaData(J9UpcallMetaData *data);
+static void icallVMprJavaUpcallImpl(J9UpcallMetaData *data, void *argsListPointer);
+
+/**
+ * @brief the function calls into the interpreter to the requested java method in the upcall by invoking
+ * icallVMprJavaUpcallImpl() and ignores the return value for the void return type.
+ *
+ * @param data the pointer to J9UpcallMetaData
+ * @param argsListPointer the pointer to the argument list
+ * @return void
+ */
 void
 icallVMprJavaUpcall0(J9UpcallMetaData *data, void *argsListPointer)
 {
-	icallVMprJavaUpcallImpl(data, currentThread, argsListPointer);
+	icallVMprJavaUpcallImpl(data, argsListPointer);
 }
 
+/**
+ * @brief the function calls into the interpreter to the requested java method in the upcall by invoking
+ * icallVMprJavaUpcallImpl() and returns an I_32 value for the byte/char/short/int return type.
+ *
+ * @param data the pointer to J9UpcallMetaData
+ * @param argsListPointer the pointer to the argument list
+ * @return an I_32 value
+ */
 I_32
 icallVMprJavaUpcall1(J9UpcallMetaData *data, void *argsListPointer)
 {
 	J9JavaVM *vm = data->vm;
-	J9VMThread currentThread = vm->internalVMFunctions->currenVMThread(vm);
+	J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
 	UDATA *returnStorage = &(currentThread->returnValue);
 	U_8 returnType = getReturnTypeFromMetaData(data);
-	icallVMprJavaUpcallImpl(data, currentThread, argsListPointer);
+	icallVMprJavaUpcallImpl(data, argsListPointer);
 	VM_VMHelpers::convertJNIReturnValue(returnType, returnStorage);
 	return (I_32)currentThread->returnValue;
 }
 
+/**
+ * @brief the function calls into the interpreter to the requested java method in the upcall by invoking
+ * icallVMprJavaUpcallImpl() and returns an I_64 value for the long/pointer return type.
+ *
+ * @param data the pointer to J9UpcallMetaData
+ * @param argsListPointer the pointer to the argument list
+ * @return an I_64 value
+ */
 I_64
 icallVMprJavaUpcallJ(J9UpcallMetaData *data, void *argsListPointer)
 {
 	J9JavaVM *vm = data->vm;
-	J9VMThread currentThread = vm->internalVMFunctions->currenVMThread(vm);
+	J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
 	UDATA *returnStorage = &(currentThread->returnValue);
 	U_8 returnType = getReturnTypeFromMetaData(data);
-	icallVMprJavaUpcallImpl(data, currentThread, argsListPointer);
+	icallVMprJavaUpcallImpl(data, argsListPointer);
 	VM_VMHelpers::convertJNIReturnValue(returnType, returnStorage);
 	return (I_64)currentThread->returnValue;
 }
 
+/**
+ * @brief the function calls into the interpreter to the requested java method in the upcall by invoking
+ * icallVMprJavaUpcallImpl() and returns a float value for the float return type.
+ *
+ * @param data the pointer to J9UpcallMetaData
+ * @param argsListPointer the pointer to the argument list
+ * @return a float
+ */
 float
 icallVMprJavaUpcallF(J9UpcallMetaData *data, void *argsListPointer)
 {
 	J9JavaVM *vm = data->vm;
-	J9VMThread currentThread = vm->internalVMFunctions->currenVMThread(vm);
+	J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
 	UDATA *returnStorage = &(currentThread->returnValue);
 	U_8 returnType = getReturnTypeFromMetaData(data);
-	icallVMprJavaUpcallImpl(data, currentThread, argsListPointer);
+	icallVMprJavaUpcallImpl(data, argsListPointer);
 	VM_VMHelpers::convertJNIReturnValue(returnType, returnStorage);
 	return (float)currentThread->returnValue;
 }
 
+/**
+ * @brief the function calls into the interpreter to the requested java method in the upcall by invoking
+ * icallVMprJavaUpcallImpl() and returns a double value for the double return type.
+ *
+ * @param data the pointer to J9UpcallMetaData
+ * @param argsListPointer the pointer to the argument list
+ * @return a double
+ */
 double
 icallVMprJavaUpcallD(J9UpcallMetaData *data, void *argsListPointer)
 {
 	J9JavaVM *vm = data->vm;
-	J9VMThread currentThread = vm->internalVMFunctions->currenVMThread(vm);
+	J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
 	UDATA *returnStorage = &(currentThread->returnValue);
 	U_8 returnType = getReturnTypeFromMetaData(data);
-	icallVMprJavaUpcallImpl(data, currentThread, argsListPointer);
+	icallVMprJavaUpcallImpl(data, argsListPointer);
 	VM_VMHelpers::convertJNIReturnValue(returnType, returnStorage);
 	return (double)currentThread->returnValue;
 }
 
+/**
+ * @brief the function calls into the interpreter to the requested java method in the upcall by invoking
+ * icallVMprJavaUpcallImpl() and returns a U_8 pointer for the struct return type.
+ *
+ * @param data the pointer to J9UpcallMetaData
+ * @param argsListPointer the pointer to the argument list
+ * @return a U_8 pointer
+ */
 U_8 *
 icallVMprJavaUpcallStruct(J9UpcallMetaData *data, void *argsListPointer)
 {
 	J9JavaVM *vm = data->vm;
-	J9VMThread currentThread = vm->internalVMFunctions->currenVMThread(vm);
+	J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
 	UDATA *returnStorage = &(currentThread->returnValue);
 	U_8 returnType = getReturnTypeFromMetaData(data);
-	icallVMprJavaUpcallImpl(data, currentThread, argsListPointer);
-	/* returnStorage is not the address of _currentThread->returnValue any more
+	icallVMprJavaUpcallImpl(data, argsListPointer);
+	/* returnStorage is not the address of currentThread->returnValue any more
 	 * given it stores the address of struct allocated previously.
 	 */
-	_currentThread->returnValue = (UDATA)returnStorage;
+	currentThread->returnValue = (UDATA)returnStorage;
 	return (U_8 *)currentThread->returnValue;
 }
 
@@ -115,78 +168,112 @@ static U_8
 getReturnTypeFromMetaData(J9UpcallMetaData *data)
 {
 	J9JavaVM *vm = data->vm;
-	J9InternalVMFunctions const *vmFuncs = vm->internalVMFunctions;
-	J9VMThread currentThread = vmFuncs->currenVMThread(vm);
-	jobject_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
-	j9object_t targetHandle = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
+	J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
+	j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+	j9object_t targetHandle = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
 	j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread, targetHandle);
 	j9object_t retType = J9VMJAVALANGINVOKEMETHODTYPE_RTYPE(currentThread, methodType);
 	J9Class *retClass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, retType);
 	J9UpcallNativeSignature *nativeSig = data->nativeFuncSignature;
-	J9UpcallSigType *retSigType = nativeSig->sigArray[nativeSig->numSigs - 1]; // The last element is for the return type
+	J9UpcallSigType *sigArray = nativeSig->sigArray;
+	U_8 retSigType = sigArray[nativeSig->numSigs - 1].type; // The last element is for the return type
 	U_8 returnType = 0;
 
-	if (retClass == vm->voidReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_VOID
-		returnType = J9NtcVoid;
-	} else if (retClass == vm->booleanReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_INT32 (4 bytes)
-		returnType = J9NtcBoolean;
-	} else if (retClass == vm->byteReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_CHAR (1 byte)
-		returnType = J9NtcByte;
-	} else if (retClass == vm->charReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_SHORT (2 bytes)
-		returnType = J9NtcChar;
-	} else if (retClass == vm->shortReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_SHORT (2 bytes)
-		returnType = J9NtcShort;
-	} else if (retClass == vm->intReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_INT32 (4 bytes)
-		returnType = J9NtcInt;
-	} else if (retClass == vm->longReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_INT64 (8 bytes)
-		returnType = J9NtcLong;
-	} else if (retClass == vm->floatReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_FLOAT (4 bytes)
-		returnType = J9NtcFloat;
-	} else if (retClass == vm->doubleReflectClass) { // With the signature type as J9_FFI_UPCALL_SIG_TYPE_DOUBLE (8 bytes)
-		returnType = J9NtcDouble;
-	} else if (J9_FFI_UPCALL_SIG_TYPE_POINTER == retSigType->type) {
-		returnType = J9NtcPointer;
-	} else if (J9_FFI_UPCALL_SIG_TYPE_STRUCT <= retSigType->type) { // Aggregate subtype >= J9_FFI_UPCALL_SIG_TYPE_STRUCT
+	if ((retSigType >= J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MIN)
+	&& (retSigType <= J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MAX)
+	) {
 		returnType = J9NtcStruct;
 	} else {
-		Assert_VM_unreachable();
+		switch (retSigType) {
+		case J9_FFI_UPCALL_SIG_TYPE_VOID:
+			returnType = J9NtcVoid;
+			break;
+		case J9_FFI_UPCALL_SIG_TYPE_CHAR:
+			returnType = J9NtcByte;
+			break;
+		case J9_FFI_UPCALL_SIG_TYPE_SHORT:
+			returnType = (retClass == vm->charReflectClass) ? J9NtcChar : J9NtcShort;
+			break;
+		case J9_FFI_UPCALL_SIG_TYPE_INT32:
+			returnType = (retClass == vm->booleanReflectClass) ? J9NtcBoolean : J9NtcInt;
+			break;
+		case J9_FFI_UPCALL_SIG_TYPE_INT64:
+			returnType = J9NtcLong;
+			break;
+		case J9_FFI_UPCALL_SIG_TYPE_FLOAT:
+			returnType = J9NtcFloat;
+			break;
+		case J9_FFI_UPCALL_SIG_TYPE_DOUBLE:
+			returnType = J9NtcDouble;
+			break;
+		case J9_FFI_UPCALL_SIG_TYPE_POINTER:
+			returnType = J9NtcPointer;
+			break;
+		default:
+			Assert_VM_unreachable();
+			break;
+		}
 	}
 
 	return returnType;
 }
 
 static void
-icallVMprJavaUpcallImpl(J9UpcallMetaData *data, J9VMThread currentThread, void *argsListPointer)
+icallVMprJavaUpcallImpl(J9UpcallMetaData *data, void *argsListPointer)
 {
 	J9JavaVM *vm = data->vm;
-	j9object_t mhMetaDataObj = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
-	j9object_t methodHandle = J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaDataObj);
-	j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread, methodHandle);
-	//UDATA paramSlots = VM_VMHelpers::methodTypeParameterSlotCount(methodType);
+	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
+	J9VMThread *currentThread = vmFuncs->currentVMThread(vm);
+	j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
 	J9VMEntryLocalStorage newELS;
 
-	PORT_ACCESS_FROM_JAVAVM(vm);
+	if (buildCallInStackFrameHelper(currentThread, &newELS)) {
+		UDATA *sp = currentThread->sp;
+		J9UpcallNativeSignature *nativeSig = data->nativeFuncSignature;
+		J9UpcallSigType *sigArray = nativeSig->sigArray;
+		UDATA paramCount = nativeSig->numSigs - 1; // The last element is for the return type
 
-	if (buildCallInStackFrame(currentThread, &newELS, true, false)) {
-		/*
-		for (UDATA i = 0; i < paramSlots; i++) {
-			currentThread->sp -= 1;
-			*currentThread->sp = (UDATA)*argsListPointer;
-			argsListPointer += 1;
+		for (UDATA argIndex = 0; argIndex < paramCount; argIndex++) {
+			U_8 argSigType = sigArray[argIndex].type;
+
+			if ((argSigType >= J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MIN)
+			&& (argSigType <= J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MAX)
+			) {
+				//this will be a subclass of MemorySegment
+				//j9object_t memorySegment = allocJavaRepresentationOfAggregate(paramSig, sizeOfType);
+
+				// assign memorySegment to data -- essentialy memorySegment will be assigned the value of argListPointer
+				//assignMemorySegmentToData(memorySegment, argListPointer, sizeOfType);
+
+				j9object_t memorySegment = NULL;
+				*(j9object_t*)sp = memorySegment; //place memorySegment on the stack
+				sp -= 1;
+			} else {
+				switch (argSigType) {
+				case J9_FFI_UPCALL_SIG_TYPE_CHAR:
+				case J9_FFI_UPCALL_SIG_TYPE_SHORT:
+				case J9_FFI_UPCALL_SIG_TYPE_INT32:
+				case J9_FFI_UPCALL_SIG_TYPE_FLOAT:
+					*(U_32*)sp = *(U_32*)vmFuncs->getArgPointer(nativeSig, argsListPointer, argIndex);
+					sp -= 1;
+					break;
+				case J9_FFI_UPCALL_SIG_TYPE_INT64:
+				case J9_FFI_UPCALL_SIG_TYPE_DOUBLE:
+				case J9_FFI_UPCALL_SIG_TYPE_POINTER:
+					*(U_64*)sp = *(U_64*)vmFuncs->getArgPointer(nativeSig, argsListPointer, argIndex);
+					sp -= 2;
+					break;
+				default:
+					Assert_VM_unreachable();
+					break;
+				}
+			}
 		}
-		*/
-
-		for (UDATA i = 0; i < paramSlots; i++) {
-
-		}
-
-
-
 
 		currentThread->returnValue = J9_BCLOOP_N2I_TRANSITION;
-		currentThread->returnValue2 = (UDATA)mhMetaDataObj;
+		currentThread->returnValue2 = (UDATA)mhMetaData;
 		c_cInterpreter(currentThread);
-		restoreCallInFrame(currentThread);
+		restoreCallInFrameHelper(currentThread);
 	}
 }
 

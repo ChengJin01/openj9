@@ -24,14 +24,13 @@ package jdk.internal.foreign.abi;
 
 import java.lang.invoke.MethodHandle;
 
-
 /**
  * The meta data consists of the callee MH and a cache of 2 elements for MH resolution,
  * which are used to generate a upcall handler to the requested java method.
  */
 class UpcallMHMetaData {
 	/* The upcall handler's class is treated as the caller class in MH resolution.
-	 * see sendResolveUpcallInvokeHandle() in callin.cpp for details
+	 * see sendResolveUpcallInvokeHandle() in callin.cpp for details.
 	 */
 	ProgrammableUpcallHandler handler;
 	private MethodHandle calleeMH;
@@ -54,8 +53,9 @@ class UpcallMHMetaData {
 		handler = upcallHander;
 		calleeMH = target;
 		invokeName = "invokeExact"; //$NON-NLS-1$
-		/* Cache the methodDexcriptor which will be used in MH resolution
-		 * see resolveUpcallInvokeHandle() in resolvesupport.cpp for details
+		/* Invoke toMethodDescriptorString() to cache the method descriptor which will
+		 * be used in MH resolution.
+		 * see resolveUpcallInvokeHandle() in resolvesupport.cpp for details.
 		 */
 		calleeMH.type().toMethodDescriptorString();
 	}

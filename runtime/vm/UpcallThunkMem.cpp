@@ -27,7 +27,13 @@
 #include "vm_internal.h"
 #include "j9consts.h"
 
+extern "C" {
+
 #if JAVA_SPEC_VERSION >= 16
+
+static void * subAllocateThunkFromHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize);
+static void * allocateThunkHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize);
+
 /**
  * @brief Flush the generated thunk to the memory after generating the thunk.
  *
@@ -89,6 +95,7 @@ subAllocateThunkFromHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize)
 				J9UpcallMetaDataList *metaDataNode = (J9UpcallMetaDataList *)j9mem_allocate_memory(sizeof(J9UpcallMetaDataList), OMRMEM_CATEGORY_VM);
 				if (NULL == metaDataNode) {
 					j9heap_free(heap, subAllocThunkPtr);
+					subAllocThunkPtr = NULL;
 					Trc_VM_subAllocateThunkFromHeap_alloc_metadata_failed(subAllocThunkPtr);
 					goto done;
 				}
@@ -102,6 +109,7 @@ subAllocateThunkFromHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize)
 		}
 	}
 
+done:
 	Trc_VM_subAllocateThunkFromHeap_Exit(subAllocThunkPtr);
 	return subAllocThunkPtr;
 }
@@ -114,6 +122,7 @@ subAllocateThunkFromHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize)
 static void *
 allocateThunkHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize)
 {
+	PORT_ACCESS_FROM_JAVAVM(vm);
 	J9UpcallThunkHeapWrapper *thunkHeapWrapper = NULL;
 	UDATA pageSize = j9vmem_supported_page_sizes()[0];
 	void *allocMemPtr = NULL;
@@ -121,7 +130,6 @@ allocateThunkHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize)
 	void *subAllocThunkPtr = NULL;
 	void *returnPtr = NULL;
 	J9PortVmemIdentifier vmemID;
-	PORT_ACCESS_FROM_JAVAVM(vm);
 
 	Trc_VM_allocateThunkHeap_Entry(thunkSize);
 
@@ -151,7 +159,7 @@ allocateThunkHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize)
 	if (NULL != subAllocThunkPtr) {
 		J9UpcallMetaDataList *metaDataNode = (J9UpcallMetaDataList *)j9mem_allocate_memory(sizeof(J9UpcallMetaDataList), OMRMEM_CATEGORY_VM);
 		if (NULL == metaDataNode) {
-			j9heap_free(heap, subAllocThunkPtr);
+			j9heap_free(thunkHeap, subAllocThunkPtr);
 			Trc_VM_allocateThunkHeap_alloc_metadata_failed(subAllocThunkPtr);
 			goto done;
 		}
@@ -168,7 +176,7 @@ allocateThunkHeap(J9JavaVM *vm, J9UpcallMetaData *data, UDATA thunkSize)
 
 		Trc_VM_allocateThunkHeap_suballoc_thunk_success(returnPtr, thunkSize, thunkHeap);
 	} else {
-		Trc_VM_allocateThunkHeap_suballoc_thunk_failed(thunkSize, heap);
+		Trc_VM_allocateThunkHeap_suballoc_thunk_failed(thunkSize, thunkHeap);
 	}
 	thunkHeapWrapper->vmemID = vmemID;
 	vm->thunkHeapWrapper = thunkHeapWrapper;
@@ -178,3 +186,6 @@ done:
 	return returnPtr;
 }
 #endif /* JAVA_SPEC_VERSION >= 16 */
+
+} /* extern "C" */
+

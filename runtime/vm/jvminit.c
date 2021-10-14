@@ -812,7 +812,7 @@ freeJavaVM(J9JavaVM * vm)
 		vm->cifNativeCalloutDataCache = NULL;
 	}
 
-	/* Clean up any resources created by allocateThunkHeap and during allocateUpcallThunkMemory */
+	/* Clean up any resources created by allocateThunkHeap and allocateUpcallThunkMemory */
 	if (NULL != vm->thunkHeapWrapper) {
 		J9HeapWrapper *thunkHeapWrapper = vm->thunkHeapWrapper;
 		J9PortVmemIdentifier vmemID = thunkHeapWrapper->vmemID;
@@ -3692,8 +3692,10 @@ processVMArgsFromFirstToLast(J9JavaVM * vm)
 
 #if defined(OMR_GC_COMPRESSED_POINTERS) && defined(OMR_GC_FULL_POINTERS)
 	{
-		IDATA compressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL);
-		IDATA nocompressed = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL);
+		IDATA compressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XCOMPRESSEDREFS, NULL),
+			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXUSECOMPRESSEDOOPS, NULL));
+		IDATA nocompressed = OMR_MAX(FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XNOCOMPRESSEDREFS, NULL),
+			FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_XXNOUSECOMPRESSEDOOPS, NULL));
 		/* Compressed refs by default */
 		if (compressed >= nocompressed) {
 			/* switching to nocompressedrefs based on -Xmx, similar logic as redirector.c:chooseJVM() */
