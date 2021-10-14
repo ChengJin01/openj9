@@ -31,19 +31,23 @@
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
-/* jdk.internal.foreign.abi.UpcallMHMetaData: private static synchronized native void resolveMetaDataFields(); */
+/* jdk.internal.foreign.abi.UpcallMHMetaData: private static synchronized native void resolveUpcallDataFields(); */
 VM_BytecodeAction
-OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveMetaDataFields(J9VMThread *currentThread, J9Method *method)
+OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveUpcallDataFields(J9VMThread *currentThread, J9Method *method)
 {
 	VM_BytecodeAction rc = EXECUTE_BYTECODE;
 	J9JavaVM *vm = currentThread->javaVM;
 	J9ConstantPool *jclConstantPool = (J9ConstantPool *)vm->jclConstantPool;
-	const int cpEntryNum = 4;
+	const int cpEntryNum = 8;
 	U_16 cpIndex[cpEntryNum] = {
-			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_HANDLER,
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIPROGRAMMABLEUPCALLHANDLER_METADATA,
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_UPCALLHANDER,
 			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH,
 			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKENAME,
-			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE,
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNMEMORYADDRESSIMPL_OFFSET,
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNMEMORYADDRESSIMPL_SEGMENT,
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_MIN
 			};
 
 	for (int i = 0; i < cpEntryNum; i++) {
@@ -61,6 +65,7 @@ OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveMetaDataFields(J9V
 	}
 
 done:
+	//printf("\n UpcallMHMetaData_resolveUpcallDataFields ---- OK -------");
 	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 0);
 	return rc;
 }

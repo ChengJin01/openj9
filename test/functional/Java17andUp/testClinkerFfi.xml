@@ -23,8 +23,8 @@
 -->
 
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
-<suite name="Java16andUp suite" parallel="none" verbose="2">
-	<test name="Jep389Tests_testClinkerFfi">
+<suite name="Java17andUp suite" parallel="none" verbose="2">
+	<test name="Jep389Tests_testClinkerFfi_DownCall">
 		<classes>
 			<class name="org.openj9.test.jep389.downcall.InvalidDownCallTests"/>
 			<class name="org.openj9.test.jep389.downcall.MultiCallTests"/>
@@ -35,6 +35,19 @@
 			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests1"/>
 			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests2"/>
 			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests3"/>
+			<class name="org.openj9.test.jep389.downcall.StructTests1"/>
+			<class name="org.openj9.test.jep389.downcall.StructTests2"/>
+		</classes>
+	</test>
+	<test name="Jep389Tests_testClinkerFfi_UpCall">
+		<classes>
+			<class name="org.openj9.test.jep389.upcall.UpcallMHWithPrimitiveTests"/>
+			<class name="org.openj9.test.jep389.upcall.UpcallMHWithStructTests"/>
+		</classes>
+	</test>
+	<test name="Jep389Tests_testClinkerFfi_VaList">
+		<classes>
+			<class name="org.openj9.test.jep389.valist.VaListTests"/>
 		</classes>
 	</test>
 </suite>
