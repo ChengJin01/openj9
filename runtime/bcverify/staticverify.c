@@ -1301,10 +1301,10 @@ checkStackMap (J9CfrClassFile* classfile, J9CfrMethod * method, J9CfrAttributeCo
 						delayedErrorCode = FALLBACK_VERIFY_ERROR;
 						exceptionDetails->stackmapFrameIndex = (I_32)j;
 						exceptionDetails->stackmapFrameBCI = (U_32)offset;
-#if JAVA_SPEC_VERSION >= 18
-						/* Report the VerifyError without delay so as to match the RI's behavior on Java18 */
+//#if JAVA_SPEC_VERSION >= 11
+						/* Report the VerifyError without delay so as to match the RI's behavior since Java11 */
 						goto _failedCheck;
-#endif /* JAVA_SPEC_VERSION >= 18 */
+//#endif /* JAVA_SPEC_VERSION >= 11 */
 					}
 				} else {
 					errorCode = FALLBACK_VERIFY_ERROR;
