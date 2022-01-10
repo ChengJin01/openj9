@@ -41,6 +41,9 @@
 #include <ctype.h>
 #include <limits.h>
 #include "util_api.h"
+#if JAVA_SPEC_VERSION >= 16
+#include "vm_internal.h"
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 #if !defined(stdout)
 #define stdout NULL
@@ -627,18 +630,15 @@ freeJavaVM(J9JavaVM * vm)
 #endif /* !defined(WIN32) */
 
 #if JAVA_SPEC_VERSION >= 16
-	if (NULL != vm->cifNativeCalloutDataCacheMutex) {
-		omrthread_monitor_destroy(vm->cifNativeCalloutDataCacheMutex);
-		vm->cifNativeCalloutDataCacheMutex = NULL;
-	}
 	if (NULL != vm->cifNativeCalloutDataCache) {
+		pool_state poolState;
+		void *cifNode = pool_startDo(vm->cifNativeCalloutDataCache, &poolState);
+		while (NULL != cifNode) {
+			freeAllStructFFITypes(currentThread, cifNode);
+			cifNode = pool_nextDo(&poolState);
+		}
 		pool_kill(vm->cifNativeCalloutDataCache);
 		vm->cifNativeCalloutDataCache = NULL;
-	}
-
-	if (NULL != vm->cifArgumentTypesCacheMutex) {
-		omrthread_monitor_destroy(vm->cifArgumentTypesCacheMutex);
-		vm->cifArgumentTypesCacheMutex = NULL;
 	}
 
 	if (NULL != vm->cifArgumentTypesCache) {
@@ -650,6 +650,33 @@ freeJavaVM(J9JavaVM * vm)
 		}
 		pool_kill(vm->cifArgumentTypesCache);
 		vm->cifArgumentTypesCache = NULL;
+	}
+
+	/* Clean up any resources created by allocateThunkHeap and allocateUpcallThunkMemory */
+	if (NULL != vm->thunkHeapWrapper) {
+		J9UpcallThunkHeapWrapper *thunkHeapWrapper = vm->thunkHeapWrapper;
+		J9PortVmemIdentifier vmemID = thunkHeapWrapper->vmemID;
+		J9UpcallMetaDataList *metaDataNode = thunkHeapWrapper->metaDataHead;
+		UDATA byteAmount = j9vmem_supported_page_sizes()[0];
+
+		j9vmem_free_memory(vmemID.address, byteAmount, &vmemID);
+		while (NULL != metaDataNode) {
+			J9UpcallMetaDataList *nextMetaDataNode = metaDataNode->next;
+			if (NULL != nextMetaDataNode->data) {
+				J9UpcallMetaData *data = nextMetaDataNode->data;
+				if (NULL != data->nativeFuncSignature) {
+					J9UpcallNativeSignature *nativeFuncSignature = data->nativeFuncSignature;
+					j9mem_free_memory(nativeFuncSignature->sigArray);
+					j9mem_free_memory(nativeFuncSignature);
+				}
+				vm->internalVMFunctions->j9jni_deleteGlobalRef((JNIEnv *)currentThread, data->mhMetaData, JNI_FALSE);
+				j9mem_free_memory(data);
+			}
+			j9mem_free_memory(metaDataNode);
+			metaDataNode = nextMetaDataNode;
+		}
+		j9mem_free_memory(thunkHeapWrapper);
+		vm->thunkHeapWrapper = NULL;
 	}
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
@@ -6635,11 +6662,8 @@ protectedInitializeJavaVM(J9PortLibrary* portLibrary, void * userData)
 	/* ffi_cif should be allocated on demand */
 	vm->cifNativeCalloutDataCache = NULL;
 	vm->cifArgumentTypesCache = NULL;
-	if ((0 != omrthread_monitor_init_with_name(&vm->cifNativeCalloutDataCacheMutex, 0, "CIF cache mutex"))
-	|| (0 != omrthread_monitor_init_with_name(&vm->cifArgumentTypesCacheMutex, 0, "CIF argument types mutex"))
-	) {
-		goto error;
-	}
+	/* The thunk block should be allocated on demand */
+	vm->thunkHeapWrapper = NULL;
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
 #if defined(J9X86) || defined(J9HAMMER)

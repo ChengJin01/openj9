@@ -143,7 +143,16 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 	<classref name="jdk/internal/loader/NativeLibraries" versions="15-"/>
 	<classref name="jdk/internal/loader/NativeLibraries$NativeLibraryImpl" versions="15-"/>
 
+	<!-- Class references needed to support Foreign Linker API. -->
 	<classref name="jdk/internal/foreign/abi/ProgrammableInvoker" flags="opt_openjdkFfi" versions="16-"/>
+	<classref name="jdk/internal/foreign/abi/ProgrammableUpcallHandler" flags="opt_openjdkFfi" versions="16-"/>
+	<classref name="jdk/internal/foreign/abi/UpcallMHMetaData" flags="opt_openjdkFfi" versions="16-"/>
+
+	<classref name="jdk/incubator/foreign/MemoryAddress" flags="opt_openjdkFfi" versions="16-"/>
+	<classref name="jdk/incubator/foreign/MemorySegment" flags="opt_openjdkFfi" versions="16-"/>
+	<classref name="jdk/internal/foreign/MemoryAddressImpl" flags="opt_openjdkFfi" versions="16-"/>
+	<classref name="jdk/internal/foreign/AbstractMemorySegmentImpl" flags="opt_openjdkFfi" versions="16-"/>
+	<classref name="jdk/internal/foreign/NativeMemorySegmentImpl" flags="opt_openjdkFfi" versions="16-"/>
 
 	<classref name="java/lang/invoke/MethodHandleNatives" flags="opt_openjdkMethodhandle" versions="18-"/>
 
@@ -190,9 +199,7 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 	<fieldref class="java/lang/StackTraceElement" name="fileName" signature="Ljava/lang/String;"/>
 	<fieldref class="java/lang/StackTraceElement" name="lineNumber" signature="I"/>
 	<fieldref class="java/lang/StackTraceElement" name="source" signature="Ljava/lang/Object;"/>
-	<fieldref class="java/lang/Thread" name="threadRef" signature="J" cast="struct J9VMThread *" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="eetop" signature="J" cast="struct J9VMThread *" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
+	<fieldref class="java/lang/Thread" name="threadRef" signature="J" cast="struct J9VMThread *"/>
 	<fieldref class="java/lang/Thread" name="stackSize" signature="J"/>
 	<fieldref class="java/lang/Thread" name="tid" signature="J"/>
 	<fieldref class="java/lang/Thread" name="deadInterrupt" signature="Z" versions="14-"/>
@@ -211,16 +218,13 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 	<fieldref class="java/lang/StackWalker$StackFrameImpl" name="frameModule" signature="Ljava/lang/Module;" versions="9-"/>
 
 	<fieldref class="java/lang/Thread" name="priority" signature="I"/>
-	<fieldref class="java/lang/Thread" name="isDaemon" signature="Z" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="daemon" signature="Z" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
+	<fieldref class="java/lang/Thread" name="isDaemon" signature="Z"/>
+	<fieldref class="java/lang/Thread" name="runnable" signature="Ljava/lang/Runnable;"/>
 	<fieldref class="java/lang/Thread" name="group" signature="Ljava/lang/ThreadGroup;"/>
 	<fieldref class="java/lang/Thread" name="stopCalled" signature="Z"/>
 	<fieldref class="java/lang/Thread" name="contextClassLoader" signature="Ljava/lang/ClassLoader;"/>
 	<fieldref class="java/lang/Thread" name="inheritedAccessControlContext" signature="Ljava/security/AccessControlContext;"/>
-	<fieldref class="java/lang/Thread" name="lock" signature="Ljava/lang/Object;" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="blockerLock" signature="Ljava/lang/Object;" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
+	<fieldref class="java/lang/Thread" name="lock" signature="Ljava/lang/Object;"/>
 	<fieldref class="java/lang/Thread" name="parkBlocker" signature="Ljava/lang/Object;"/>
 	<fieldref class="java/lang/Throwable" name="cause" signature="Ljava/lang/Throwable;"/>
 	<fieldref class="java/lang/Throwable" name="detailMessage" signature="Ljava/lang/String;"/>
@@ -273,23 +277,13 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 	<fieldref class="java/lang/ThreadGroup" name="name" signature="Ljava/lang/String;"/>
 	<fieldref class="java/lang/ThreadGroup" name="maxPriority" signature="I"/>
 	<fieldref class="java/lang/ThreadGroup" name="parent" signature="Ljava/lang/ThreadGroup;"/>
-	<fieldref class="java/lang/ThreadGroup" name="numThreads" signature="I" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="nthreads" signature="I" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
-	<fieldref class="java/lang/ThreadGroup" name="numGroups" signature="I" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="ngroups" signature="I" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
-	<fieldref class="java/lang/ThreadGroup" name="childrenThreads" signature="[Ljava/lang/Thread;" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="threads" signature="[Ljava/lang/Thread;" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
-	<fieldref class="java/lang/ThreadGroup" name="childrenGroups" signature="[Ljava/lang/ThreadGroup;" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="groups" signature="[Ljava/lang/ThreadGroup;" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
-	<fieldref class="java/lang/ThreadGroup" name="isDaemon" signature="Z" flags="!opt_ojdkThreadSupport">
-		<fieldalias name="daemon" signature="Z" flags="opt_ojdkThreadSupport"/>
-	</fieldref>
-	<fieldref class="java/lang/ThreadGroup" name="childrenGroupsLock" signature="Ljava/lang/Object;" flags="!opt_ojdkThreadSupport"/>
-	<fieldref class="java/lang/ThreadGroup" name="childrenThreadsLock" signature="Ljava/lang/Object;" flags="!opt_ojdkThreadSupport"/>
+	<fieldref class="java/lang/ThreadGroup" name="numThreads" signature="I"/>
+	<fieldref class="java/lang/ThreadGroup" name="numGroups" signature="I"/>
+	<fieldref class="java/lang/ThreadGroup" name="childrenThreads" signature="[Ljava/lang/Thread;"/>
+	<fieldref class="java/lang/ThreadGroup" name="childrenGroups" signature="[Ljava/lang/ThreadGroup;"/>
+	<fieldref class="java/lang/ThreadGroup" name="isDaemon" signature="Z"/>
+	<fieldref class="java/lang/ThreadGroup" name="childrenGroupsLock" signature="Ljava/lang/Object;"/>
+	<fieldref class="java/lang/ThreadGroup" name="childrenThreadsLock" signature="Ljava/lang/Object;"/>
 	<fieldref class="java/lang/ref/Reference" name="referent" signature="Ljava/lang/Object;"/>
 	<fieldref class="java/lang/ref/Reference" name="queue" signature="Ljava/lang/ref/ReferenceQueue;"/>
 	<fieldref class="java/lang/ref/Reference" name="state" signature="I"/>
@@ -380,8 +374,19 @@ SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-excepti
 
 	<fieldref class="jdk/internal/loader/NativeLibraries$NativeLibraryImpl" name="fromClass" signature="Ljava/lang/Class;" versions="15-"/>
 
+	<!-- Field references needed to support Foreign Linker API. -->
 	<fieldref class="jdk/internal/foreign/abi/ProgrammableInvoker" name="cifNativeThunkAddr" signature="J" flags="opt_openjdkFfi" versions="16-"/>
 	<fieldref class="jdk/internal/foreign/abi/ProgrammableInvoker" name="argTypesAddr" signature="J" flags="opt_openjdkFfi" versions="16-"/>
+
+	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="upcallHander" signature="Ljdk/internal/foreign/abi/ProgrammableUpcallHandler;" flags="opt_openjdkFfi" versions="16-"/>
+	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="calleeMH" signature="Ljava/lang/invoke/MethodHandle;" flags="opt_openjdkFfi" versions="16-"/>
+	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="invokeName" signature="Ljava/lang/String;" flags="opt_openjdkFfi" versions="16-"/>
+	<fieldref class="jdk/internal/foreign/abi/UpcallMHMetaData" name="invokeCache" signature="[Ljava/lang/Object;" flags="opt_openjdkFfi" versions="16-"/>
+
+	<fieldref class="jdk/internal/foreign/MemoryAddressImpl" name="segment" signature="Ljdk/internal/foreign/AbstractMemorySegmentImpl;" flags="opt_openjdkFfi" versions="16-17"/>
+	<fieldref class="jdk/internal/foreign/MemoryAddressImpl" name="offset" signature="J" flags="opt_openjdkFfi" versions="16-"/>
+
+	<fieldref class="jdk/internal/foreign/NativeMemorySegmentImpl" name="min" signature="J" flags="opt_openjdkFfi" versions="16-"/>
 
 <!--
 	NOTE: the resolution code in jclcinit.c only looks at the J9ROMClassRef->runtimeFlags to determine

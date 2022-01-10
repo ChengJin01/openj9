@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright (c) 2017, 2021 IBM Corp. and others
+# Copyright (c) 2017, 2022 IBM Corp. and others
 #
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -133,6 +133,7 @@ set(main_sources
 	jvminitcommon.c
 	jvmrisup.c
 	KeyHashTable.c
+	LayoutFFITypeHelpers.cpp
 	leconditionexceptionsup.c
 	linearswalk.c
 	lockwordconfig.c
@@ -149,6 +150,8 @@ set(main_sources
 	OutOfLineINL_java_lang_invoke_NativeMethodHandle.cpp
 	OutOfLineINL_jdk_internal_misc_Unsafe.cpp
 	OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker.cpp
+	OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler.cpp
+	OutOfLineINL_jdk_internal_foreign_abi_UpCallMHMetaData.cpp
 	ownedmonitors.c
 	profilingbc.c
 	rasdump.c
@@ -165,6 +168,8 @@ set(main_sources
 	threadhelp.cpp
 	threadpark.c
 	throwexception.c
+	UpcallThunkMem.cpp
+	UpcallVMHelpers.cpp
 	ValueTypeHelpers.cpp
 	visible.c
 	VMAccess.cpp
@@ -286,10 +291,16 @@ elseif(OMR_ARCH_POWER)
 		if(NOT (OMR_ENV_DATA64 AND OMR_ENV_LITTLE_ENDIAN))
 			message(SEND_ERROR "Only PPC64 LE is currently supported")
 		endif()
-		target_sources(j9vm PRIVATE xl64/unsafeHelper.s)
+		target_sources(j9vm PRIVATE
+			xl64/unsafeHelper.s
+			xl64/UpcallThunkGen.cpp
+		)
 	elseif(OMR_OS_AIX)
 		if(OMR_ENV_DATA64)
-			target_sources(j9vm PRIVATE ap64/unsafeHelper.s)
+			target_sources(j9vm PRIVATE
+				ap64/unsafeHelper.s
+				ap64/UpcallThunkGen.cpp
+			)
 		else()
 			target_sources(j9vm PRIVATE ap32/unsafeHelper.s)
 		endif()

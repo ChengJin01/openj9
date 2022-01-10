@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2021 IBM Corp. and others
+ * Copyright (c) 1991, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -408,4 +408,16 @@ J9InternalVMFunctions J9InternalFunctions = {
 	isCheckpointAllowed,
 #endif /* defined(J9VM_OPT_CRIU_SUPPORT) */
 	getClassNameString,
+#if JAVA_SPEC_VERSION >= 16
+	createUpcallThunk,
+	getArgPointer,
+	allocateUpcallThunkMemory,
+	doneUpcallThunkGeneration,
+	icallVMprJavaUpcall0,
+	icallVMprJavaUpcall1,
+	icallVMprJavaUpcallJ,
+	icallVMprJavaUpcallF,
+	icallVMprJavaUpcallD,
+	icallVMprJavaUpcallStruct,
+#endif /* JAVA_SPEC_VERSION >= 16 */
 };
