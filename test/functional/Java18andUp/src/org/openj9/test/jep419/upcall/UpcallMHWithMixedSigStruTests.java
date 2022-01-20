@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2021 IBM Corp. and others
+ * Copyright (c) 2021, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,26 +19,42 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-package org.openj9.test.jep419.downcall;
+package org.openj9.test.jep419.upcall;
 
 import org.testng.annotations.Test;
 import org.testng.Assert;
 import org.testng.AssertJUnit;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+
 import jdk.incubator.foreign.CLinker;
 import jdk.incubator.foreign.FunctionDescriptor;
+import jdk.incubator.foreign.GroupLayout;
+import jdk.incubator.foreign.MemoryAddress;
+import jdk.incubator.foreign.MemoryHandles;
+import jdk.incubator.foreign.MemoryLayout;
+import jdk.incubator.foreign.MemoryLayout.PathElement;
+import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.NativeSymbol;
+import jdk.incubator.foreign.ResourceScope;
+import jdk.incubator.foreign.SegmentAllocator;
+import jdk.incubator.foreign.SequenceLayout;
 import jdk.incubator.foreign.SymbolLookup;
+import jdk.incubator.foreign.ValueLayout;
 import static jdk.incubator.foreign.ValueLayout.*;
 
 /**
- * Test cases for JEP 419: Foreign Linker API (Second Incubator) for primitive types in downcall,
- * which verifies the downcalls with the same layout & argument and return types in multithreading.
+ * Test cases for JEP 419: Foreign Linker API (Second Incubator) for the mixed native signatures
+ * in argument/return struct in upcall.
+ *
+ * Note: the padding elements in the struct are only required by RI or VarHandle (accessing the
+ * data address) while they are totally ignored in OpenJ9 given the padding/alignment are
+ * computed by libffi automatically in native.
  */
 @Test(groups = { "level.sanity" })
-public class MultiThreadingTests1 implements Thread.UncaughtExceptionHandler {
-	private volatile Throwable initException;
+public class UpcallMHWithMixedSigStruTests {
+	private static boolean isAixOS = System.getProperty("os.name").toLowerCase().contains("aix");
 	private static CLinker clinker = CLinker.systemCLinker();
 
 	static {
@@ -46,51 +62,5 @@ public class MultiThreadingTests1 implements Thread.UncaughtExceptionHandler {
 	}
 	private static final SymbolLookup nativeLibLookup = SymbolLookup.loaderLookup();
 
-	@Test(enabled=false)
-	@Override
-	public void uncaughtException(Thread thr, Throwable t) {
-		initException =  t;
-	}
 
-	@Test
-	public void test_twoThreadsWithSameFuncDescriptor() throws Throwable {
-		Thread thr1 = new Thread(){
-			public void run() {
-				try {
-					FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT);
-					NativeSymbol functionSymbol = nativeLibLookup.lookup("add2Ints").get();
-					MethodHandle mh = clinker.downcallHandle(functionSymbol, fd);
-					int result = (int)mh.invokeExact(112, 123);
-					Assert.assertEquals(result, 235);
-				} catch (Throwable t) {
-					throw new RuntimeException(t);
-				}
-			}
-		};
-		thr1.setUncaughtExceptionHandler(this);
-		thr1.start();
-
-		Thread thr2 = new Thread(){
-			public void run() {
-				try {
-					FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, JAVA_INT, JAVA_INT);
-					NativeSymbol functionSymbol = nativeLibLookup.lookup("add2Ints").get();
-					MethodHandle mh = clinker.downcallHandle(functionSymbol, fd);
-					int result = (int)mh.invokeExact(235, 439);
-					Assert.assertEquals(result, 674);
-				} catch (Throwable t) {
-					throw new RuntimeException(t);
-				}
-			}
-		};
-		thr2.setUncaughtExceptionHandler(this);
-		thr2.start();
-
-		thr1.join();
-		thr2.join();
-
-		if (initException != null){
-			throw new RuntimeException(initException);
-		}
-	}
 }

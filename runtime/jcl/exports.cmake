@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright (c) 2019, 2022 IBM Corp. and others
+# Copyright (c) 2019, 2021 IBM Corp. and others
 #
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -611,6 +611,8 @@ endif()
 if(NOT JAVA_SPEC_VERSION LESS 16)
 	omr_add_exports(jclse
 		Java_java_lang_ref_Reference_refersTo
+		Java_jdk_internal_foreign_abi_UpcallStubs_registerNatives
+		Java_jdk_internal_foreign_abi_UpcallStubs_freeUpcallStub0
 		Java_jdk_internal_misc_ScopedMemoryAccess_registerNatives
 		Java_jdk_internal_misc_ScopedMemoryAccess_closeScope0
 		Java_jdk_internal_vm_vector_VectorSupport_registerNatives

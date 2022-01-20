@@ -26,7 +26,6 @@
 <suite name="Java17 test suite" parallel="none" verbose="2">
 	<test name="Jep389Tests_testClinkerFfi_DownCall">
 		<classes>
-			<class name="org.openj9.test.jep389.downcall.InvalidDownCallTests"/>
 			<class name="org.openj9.test.jep389.downcall.MultiCallTests"/>
 			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests1"/>
 			<class name="org.openj9.test.jep389.downcall.MultiThreadingTests2"/>
@@ -37,6 +36,14 @@
 			<class name="org.openj9.test.jep389.downcall.PrimitiveTypeTests3"/>
 			<class name="org.openj9.test.jep389.downcall.StructTests1"/>
 			<class name="org.openj9.test.jep389.downcall.StructTests2"/>
+		</classes>
+	</test>
+	<test name="Jep389Tests_testClinkerFfi_UpCall">
+		<classes>
+			<class name="org.openj9.test.jep389.upcall.UpcallMHWithPrimTests"/>
+			<class name="org.openj9.test.jep389.upcall.MultiUpcallMHTests"/>
+			<class name="org.openj9.test.jep389.upcall.UpcallMHWithStructTests"/>
+			<class name="org.openj9.test.jep389.upcall.UpcallMHWithMixedSigStruTests"/>
 		</classes>
 	</test>
 	<test name="Jep389Tests_testClinkerFfi_VaList">
