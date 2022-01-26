@@ -413,4 +413,16 @@ J9InternalVMFunctions J9InternalFunctions = {
 #endif /* defined(J9VM_OPT_CRIU_SUPPORT) */
 	getClassNameString,
 	getDefaultValueSlotAddress,
+#if JAVA_SPEC_VERSION >= 16
+	createUpcallThunk,
+	getArgPointer,
+	allocateUpcallThunkMemory,
+	doneUpcallThunkGeneration,
+	icallVMprJavaUpcall0,
+	icallVMprJavaUpcall1,
+	icallVMprJavaUpcallJ,
+	icallVMprJavaUpcallF,
+	icallVMprJavaUpcallD,
+	icallVMprJavaUpcallStruct,
+#endif /* JAVA_SPEC_VERSION >= 16 */
 };
