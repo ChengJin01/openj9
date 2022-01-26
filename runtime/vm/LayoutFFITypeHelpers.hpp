@@ -289,7 +289,7 @@ done:
 	 *
 	 * Note:
 	 * 1) All the descriptions in the layout string are removed with preprocessLayoutString()
-	 *    in ProgrammableInvoker/DowncallLinker in advance for easier parsing the layout string.
+	 *    in InternalDowncallHandler in advance for easier parsing the layout string.
 	 * 2) A struct pointer is treated as a generic pointer (C_POINTER in C corresponds to MemoryAddress in Java)
 	 *    which is the same as a primitive pointer given there is no difference in terms of the layout string.
 	 *
