@@ -151,7 +151,6 @@ set(main_sources
 	OutOfLineINL_jdk_internal_misc_Unsafe.cpp
 	OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler.cpp
 	OutOfLineINL_openj9_internal_foreign_abi_InternalUpcallHandler.cpp
-	OutOfLineINL_openj9_internal_foreign_abi_UpCallMHMetaData.cpp
 	ownedmonitors.c
 	profilingbc.c
 	rasdump.c
