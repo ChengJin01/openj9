@@ -149,7 +149,9 @@ monitorWaitImpl(J9VMThread *vmThread, j9object_t object, I_64 millis, I_32 nanos
 //		Trc_JCL_wait_Interrupted(vmThread);
 
 		setCurrentException(vmThread, J9VMCONSTANTPOOL_JAVALANGINTERRUPTEDEXCEPTION, NULL);
-
+#if JAVA_SPEC_VERSION >= 19
+		J9VMJAVALANGTHREAD_SET_DEADINTERRUPT(vmThread, vmThread->threadObject, JNI_FALSE);
+#endif /* JAVA_SPEC_VERSION >= 19 */
 #if defined(J9VM_OPT_SIDECAR) && ( defined (WIN32) || defined(WIN64))
 		/* since the interrupt status was consumed by interrupting the Wait or Sleep
 		 * reset the sidecar interrupt status
@@ -210,9 +212,11 @@ threadSleepImpl(J9VMThread* vmThread, I_64 millis, I_32 nanos)
 		return 0;
 	} else if (rc == J9THREAD_INTERRUPTED) {
 //		Trc_JCL_sleep_Interrupted(vmThread);
-			setCurrentException(vmThread, J9VMCONSTANTPOOL_JAVALANGINTERRUPTEDEXCEPTION, NULL);
+		setCurrentException(vmThread, J9VMCONSTANTPOOL_JAVALANGINTERRUPTEDEXCEPTION, NULL);
 
-
+#if JAVA_SPEC_VERSION >= 19
+		J9VMJAVALANGTHREAD_SET_DEADINTERRUPT(vmThread, vmThread->threadObject, JNI_FALSE);
+#endif /* JAVA_SPEC_VERSION >= 19 */
 #if defined(J9VM_OPT_SIDECAR) && ( defined (WIN32) || defined(WIN64))
 		/* since the interrupt status was consumed by interrupting the Wait or Sleep
 		 * reset the sidecar interrupt status

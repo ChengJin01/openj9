@@ -30,7 +30,7 @@
 
 extern "C" {
 
-#if JAVA_SPEC_VERSION >= 16
+#if (JAVA_SPEC_VERSION >= 16) && (JAVA_SPEC_VERSION <= 18)
 /* jdk.internal.foreign.abi.ProgrammableInvoker: private static synchronized native void resolveRequiredFields(); */
 VM_BytecodeAction
 OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields(J9VMThread *currentThread, J9Method *method)
@@ -206,6 +206,6 @@ freeAllMemoryThenExit:
 	goto done;
 }
 
-#endif /* JAVA_SPEC_VERSION >= 16 */
+#endif /* (JAVA_SPEC_VERSION >= 16) && (JAVA_SPEC_VERSION <= 18) */
 
 } /* extern "C" */

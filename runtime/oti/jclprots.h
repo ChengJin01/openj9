@@ -928,6 +928,9 @@ jobject JNICALL Java_sun_misc_Perf_createLong(JNIEnv *env, jobject perf, jstring
 jobject JNICALL Java_sun_misc_Perf_createByteArray(JNIEnv *env, jobject perf, jstring name, jint variability, jint units, jarray value, jint maxLength);
 jlong JNICALL Java_sun_misc_Perf_highResCounter(JNIEnv *env, jobject perf);
 jlong JNICALL Java_sun_misc_Perf_highResFrequency(JNIEnv *env, jobject perf);
+#if JAVA_SPEC_VERSION >= 19
+jobject JNICALL Java_jdk_internal_perf_Perf_attach0(JNIEnv *env, jobject perf, jint lvmid);
+#endif /* JAVA_SPEC_VERSION >= 19 */
 void JNICALL Java_jdk_internal_perf_Perf_registerNatives(JNIEnv *env, jclass clazz);
 
 /* Used by both OpenJ9 & OJDK MH impl */
@@ -1115,7 +1118,7 @@ jlong JNICALL Java_javax_rcm_CPUThrottlingRunnable_requestToken(JNIEnv *env, job
 jlong JNICALL Java_javax_rcm_CPUThrottlingRunnable_getTokenBucketLimit(JNIEnv *env, jclass clazz, jlong resourceHandle);
 jlong JNICALL Java_javax_rcm_CPUThrottlingRunnable_getTokenBucketInterval(JNIEnv *env, jclass clazz, jlong resourceHandle);
 /* thread.c */
-void JNICALL Java_java_lang_Thread_yield(JNIEnv *env, jclass threadClass);
+void JNICALL Java_java_lang_Thread_yield0(JNIEnv *env, jclass threadClass);
 
 /* java_lang_Class.c */
 jboolean JNICALL
@@ -1246,6 +1249,12 @@ Java_com_ibm_oti_vm_VM_getJ9ConstantPoolFromJ9Class(JNIEnv *env, jclass unused, 
 #if JAVA_SPEC_VERSION >= 16
 jboolean JNICALL
 Java_java_lang_ref_Reference_refersTo(JNIEnv *env, jobject reference, jobject target);
+
+void JNICALL
+Java_jdk_internal_foreign_abi_UpcallStubs_registerNatives(JNIEnv *env, jclass clazz);
+
+jboolean JNICALL
+Java_jdk_internal_foreign_abi_UpcallStubs_freeUpcallStub0(JNIEnv *env, jobject receiver, jlong address);
 
 void JNICALL
 Java_jdk_internal_misc_ScopedMemoryAccess_registerNatives(JNIEnv *env, jclass clazz);

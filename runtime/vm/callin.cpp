@@ -549,8 +549,16 @@ oom:
 				*--currentThread->sp = (UDATA)threadObject;
 #ifdef J9VM_IVE_RAW_BUILD /* J9VM_IVE_RAW_BUILD is not enabled by default */
 				/* Oracle constructor takes thread group, thread name */
+#if JAVA_SPEC_VERSION >= 19
+				j9object_t threadHolder = J9VMJAVALANGTHREAD_HOLDER(currentThread, threadObject);
+				if (NULL != threadHolder) {
+					J9VMJAVALANGTHREADFIELDHOLDER_SET_PRIORITY(currentThread, threadHolder, priority);
+					J9VMJAVALANGTHREADFIELDHOLDER_SET_DAEMON(currentThread, threadHolder, (I_32)daemon);
+				}
+#else /* JAVA_SPEC_VERSION >= 19 */
 				J9VMJAVALANGTHREAD_SET_PRIORITY(currentThread, threadObject, priority);
 				J9VMJAVALANGTHREAD_SET_ISDAEMON(currentThread, threadObject, (I_32)daemon);
+#endif /* JAVA_SPEC_VERSION >= 19 */
 				*--currentThread->sp = (UDATA)threadGroup;
 				*--currentThread->sp = (UDATA)threadName;
 #else /* J9VM_IVE_RAW_BUILD */
@@ -1361,5 +1369,49 @@ sidecarInvokeReflectConstructor(J9VMThread *currentThread, jobject constructorRe
 	sidecarInvokeReflectConstructorImpl(currentThread, constructorRef, recevierRef, argsRef);
 	VM_VMAccess::inlineExitVMToJNI(currentThread);
 }
+
+#if JAVA_SPEC_VERSION >= 16
+bool
+buildCallInStackFrameHelper(J9VMThread *currentThread, J9VMEntryLocalStorage *newELS, bool returnsObject)
+{
+	return buildCallInStackFrame(currentThread, newELS, returnsObject, false);
+}
+
+void
+restoreCallInFrameHelper(J9VMThread *currentThread)
+{
+	restoreCallInFrame(currentThread);
+}
+
+void JNICALL
+sendResolveUpcallInvokeHandle(J9VMThread *currentThread, J9UpcallMetaData *data)
+{
+	J9VMEntryLocalStorage newELS;
+	Trc_VM_sendResolveUpcallInvokeHandle_Entry(currentThread);
+
+	if (buildCallInStackFrame(currentThread, &newELS, true, false)) {
+		J9JavaVM *vm = data->vm;
+		j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+
+		/* Set all required arguments for MethodHandleResolver.upcallLinkCallerMethod() on the stack
+		 * to fetch the MemberName object plus appendix intended for the upcall method handle.
+		 */
+		if (NULL != mhMetaData) {
+#if JAVA_SPEC_VERSION >= 19
+			*(j9object_t*)--currentThread->sp = J9VM_J9CLASS_TO_HEAPCLASS(J9VMJDKINTERNALFOREIGNABIUPCALLLINKER(vm));
+#elif (JAVA_SPEC_VERSION >= 16) && (JAVA_SPEC_VERSION <= 18)
+			*(j9object_t*)--currentThread->sp = J9VM_J9CLASS_TO_HEAPCLASS(J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEUPCALLHANDLER(vm));
+#endif /* JAVA_SPEC_VERSION >= 19 */
+			*(j9object_t*)--currentThread->sp = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEETYPE(currentThread, mhMetaData);
+			currentThread->returnValue = J9_BCLOOP_RUN_METHOD;
+			currentThread->returnValue2 = (UDATA)J9VMJAVALANGINVOKEMETHODHANDLERESOLVER_UPCALLLINKCALLERMETHOD_METHOD(vm);
+			c_cInterpreter(currentThread);
+		}
+		restoreCallInFrame(currentThread);
+	}
+
+	Trc_VM_sendResolveUpcallInvokeHandle_Exit(currentThread);
+}
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 } /* extern "C" */

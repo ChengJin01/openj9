@@ -361,7 +361,7 @@ omr_add_exports(jclse
 	Java_java_lang_Thread_startImpl
 	Java_java_lang_Thread_stopImpl
 	Java_java_lang_Thread_suspendImpl
-	Java_java_lang_Thread_yield
+	Java_java_lang_Thread_yield0
 	Java_java_lang_invoke_MethodHandleResolver_getCPClassNameAt
 	Java_java_lang_invoke_MethodHandleResolver_getCPMethodHandleAt
 	Java_java_lang_invoke_MethodHandleResolver_getCPMethodTypeAt
@@ -616,6 +616,8 @@ endif()
 if(NOT JAVA_SPEC_VERSION LESS 16)
 	omr_add_exports(jclse
 		Java_java_lang_ref_Reference_refersTo
+		Java_jdk_internal_foreign_abi_UpcallStubs_registerNatives
+		Java_jdk_internal_foreign_abi_UpcallStubs_freeUpcallStub0
 		Java_jdk_internal_misc_ScopedMemoryAccess_registerNatives
 		Java_jdk_internal_misc_ScopedMemoryAccess_closeScope0
 		Java_jdk_internal_vm_vector_VectorSupport_registerNatives
@@ -663,5 +665,18 @@ if(J9VM_OPT_CRIU_SUPPORT)
 		Java_openj9_internal_criu_InternalCRIUSupport_getCheckpointRestoreNanoTimeDeltaImpl
 		Java_openj9_internal_criu_InternalCRIUSupport_isCheckpointAllowedImpl
 		Java_openj9_internal_criu_InternalCRIUSupport_isCRIUSupportEnabledImpl
+	)
+endif()
+
+# java 19+
+if(NOT JAVA_SPEC_VERSION LESS 19)
+	omr_add_exports(jclse
+		Java_java_lang_Thread_currentCarrierThread
+		Java_java_lang_Thread_dumpThreads
+		Java_java_lang_Thread_extentLocalCache
+		Java_java_lang_Thread_getNextThreadIdOffset
+		Java_java_lang_Thread_getThreads
+		Java_java_lang_Thread_setCurrentThread
+		Java_java_lang_Thread_setExtentLocalCache
 	)
 endif()

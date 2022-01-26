@@ -178,7 +178,7 @@ static inlMapping mappings[] = {
 	{ "Java_java_lang_ClassLoader_findLoadedClassImpl__Ljava_lang_String_2", J9_BCLOOP_SEND_TARGET_INL_CLASSLOADER_FIND_LOADED_CLASS_IMPL },
 	{ "Java_java_lang_VMAccess_findClassOrNull__Ljava_lang_String_2Ljava_lang_ClassLoader_2", J9_BCLOOP_SEND_TARGET_INL_VM_FIND_CLASS_OR_NULL },
 	{ "Java_java_lang_Class_forNameImpl__Ljava_lang_String_2ZLjava_lang_ClassLoader_2", J9_BCLOOP_SEND_TARGET_CLASS_FORNAMEIMPL },
-	{ "Java_java_lang_Thread_interrupted__", J9_BCLOOP_SEND_TARGET_INL_THREAD_INTERRUPTED },
+	{ "Java_java_lang_Thread_interruptedImpl__", J9_BCLOOP_SEND_TARGET_INL_THREAD_INTERRUPTED },
 	{ "Java_com_ibm_oti_vm_VM_getCPIndexImpl__Ljava_lang_Class_2", J9_BCLOOP_SEND_TARGET_INL_VM_GET_CP_INDEX_IMPL},
 	{ "Java_com_ibm_oti_vm_VM_getStackClassLoader__I", J9_BCLOOP_SEND_TARGET_INL_VM_GET_STACK_CLASS_LOADER },
 	/* Forward duplicated getStackClassLoader natives to the same target */
@@ -197,7 +197,7 @@ static inlMapping mappings[] = {
 	/* Forward duplicated getStackClass natives to the same target */
 	{ "Java_java_lang_invoke_MethodHandles_getStackClass__I", J9_BCLOOP_SEND_TARGET_INL_VM_GETSTACKCLASS },
 	{ "Java_java_lang_Class_getStackClass__I", J9_BCLOOP_SEND_TARGET_INL_VM_GETSTACKCLASS },
-	{ "Java_java_lang_Thread_sleep__JI", J9_BCLOOP_SEND_TARGET_INL_THREAD_SLEEP },
+	{ "Java_java_lang_Thread_sleepImpl__JI", J9_BCLOOP_SEND_TARGET_INL_THREAD_SLEEP },
 	{ "Java_java_lang_Object_wait__JI", J9_BCLOOP_SEND_TARGET_INL_OBJECT_WAIT },
 	{ "Java_java_lang_ClassLoader_loadLibraryWithPath___3BLjava_lang_ClassLoader_2_3B", J9_BCLOOP_SEND_TARGET_INL_CLASSLOADER_LOADLIBRARYWITHPATH },
 	{ "Java_java_lang_Thread_isInterruptedImpl__", J9_BCLOOP_SEND_TARGET_INL_THREAD_ISINTERRUPTEDIMPL },
@@ -293,9 +293,11 @@ static inlMapping mappings[] = {
 #else /* JAVA_SPEC_VERSION >= 11 */
 	{ "Java_sun_reflect_Reflection_getClassAccessFlags__Ljava_lang_Class_2", J9_BCLOOP_SEND_TARGET_INL_REFLECTION_GETCLASSACCESSFLAGS },
 #endif /* JAVA_SPEC_VERSION >= 11 */
-#if JAVA_SPEC_VERSION >= 16
+#if JAVA_SPEC_VERSION >= 19
+	{ "Java_jdk_internal_foreign_abi_DowncallLinker_invokeNative__JJJ_3J", J9_BCLOOP_SEND_TARGET_INL_DOWNCALLLINKER_INVOKENATIVE },
+#elif (JAVA_SPEC_VERSION >= 16) && (JAVA_SPEC_VERSION <= 18)
 	{ "Java_jdk_internal_foreign_abi_ProgrammableInvoker_invokeNative__JJJ_3J", J9_BCLOOP_SEND_TARGET_INL_PROGRAMMABLEINVOKER_INVOKENATIVE },
-#endif /* JAVA_SPEC_VERSION >= 16 */
+#endif /* JAVA_SPEC_VERSION >= 19 */
 };
 
 typedef struct J9OutOfLineINLMapping {
@@ -318,10 +320,15 @@ static J9OutOfLineINLMapping outOfLineINLmappings[] = {
 	{ "Java_java_lang_invoke_NativeMethodHandle_initJ9NativeCalloutDataRef___3Ljava_lang_String_2", OutOfLineINL_java_lang_invoke_NativeMethodHandle_initJ9NativeCalloutDataRef },
 	{ "Java_java_lang_invoke_NativeMethodHandle_freeJ9NativeCalloutDataRef__", OutOfLineINL_java_lang_invoke_NativeMethodHandle_freeJ9NativeCalloutDataRef },
 #endif /* defined(J9VM_OPT_PANAMA) */
-#if JAVA_SPEC_VERSION >= 16
+#if JAVA_SPEC_VERSION >= 19
+	{ "Java_jdk_internal_foreign_abi_DowncallLinker_initCifNativeThunkData___3Ljava_lang_String_2Ljava_lang_String_2Z", OutOfLineINL_jdk_internal_foreign_abi_DowncallLinker_initCifNativeThunkData },
+	{ "Java_jdk_internal_foreign_abi_UpcallLinker_allocateUpcallStub__Ljdk_internal_foreign_abi_UpcallMHMetaData_2_3Ljava_lang_String_2", OutOfLineINL_jdk_internal_foreign_abi_UpcallLinker_allocateUpcallStub },
+#elif (JAVA_SPEC_VERSION >= 16) && (JAVA_SPEC_VERSION <= 18)
 	{ "Java_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields__", OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields },
 	{ "Java_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData___3Ljava_lang_String_2Ljava_lang_String_2Z", OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData },
-#endif /* JAVA_SPEC_VERSION >= 16 */
+	{ "Java_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallStub__Ljdk_internal_foreign_abi_UpcallMHMetaData_2_3Ljava_lang_String_2", OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallStub },
+	{ "Java_jdk_internal_foreign_abi_UpcallMHMetaData_resolveUpcallDataFields__", OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveUpcallDataFields },
+#endif /* JAVA_SPEC_VERSION >= 19 */
 };
 
 static UDATA
