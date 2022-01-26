@@ -34,9 +34,8 @@ import jdk.incubator.foreign.NativeSymbol;
 import jdk.incubator.foreign.SymbolLookup;
 import static jdk.incubator.foreign.ValueLayout.*;
 
-
 /**
- * Test cases for JEP 419: Foreign Linker API (Second Incubator) DownCall for primitive types,
+ * Test cases for JEP 419: Foreign Linker API (Second Incubator) for primitive types in downcall,
  * which verifies the illegal cases including unsupported layouts, etc.
  * Note: the majority of illegal cases are removed given the corresponding method type
  * is deduced from the function descriptor which is verified in OpenJDK.
