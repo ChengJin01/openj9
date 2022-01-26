@@ -45,11 +45,13 @@ public class ProgrammableInvoker {
 	 */
 	/*[IF JAVA_SPEC_VERSION >= 17]*/
 	public static MethodHandle getBoundMethodHandle(MethodType functionMethodType, FunctionDescriptor funcDesc) {
-		return InternalDowncallHandler.getBoundMethodHandle(functionMethodType, funcDesc);
+		InternalDowncallHandler internalDowncallHandler = new InternalDowncallHandler(functionMethodType, funcDesc);
+		return internalDowncallHandler.getBoundMethodHandle();
 	}
 	/*[ELSE] JAVA_SPEC_VERSION >= 17 */
 	public static MethodHandle getBoundMethodHandle(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor funcDesc) {
-		return InternalDowncallHandler.getBoundMethodHandle(downcallAddr, functionMethodType, funcDesc);
+		InternalDowncallHandler internalDowncallHandler = new InternalDowncallHandler(downcallAddr, functionMethodType, funcDesc);
+		return internalDowncallHandler.getBoundMethodHandle();
 	}
 	/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 }
