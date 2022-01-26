@@ -43,6 +43,7 @@ public class DowncallLinker {
 	 * @return a method handle bound to the native method
 	 */
 	public static MethodHandle getBoundMethodHandle(MethodType functionMethodType, FunctionDescriptor funcDesc) {
-		return InternalDowncallHandler.getBoundMethodHandle(functionMethodType, funcDesc);
+		InternalDowncallHandler internalDowncallHandler = new InternalDowncallHandler(functionMethodType, funcDesc);
+		return internalDowncallHandler.getBoundMethodHandle();
 	}
 }

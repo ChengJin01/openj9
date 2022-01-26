@@ -4996,13 +4996,14 @@ done:
 	}
 
 #if JAVA_SPEC_VERSION >= 16
-	/* jdk.internal.foreign.abi.ProgrammableInvoker:
+	/* openj9.internal.foreign.abi.InternalDowncallHandler:
 	 * private native long invokeNative(long returnStructMemAddr, long functionAddr, long calloutThunk, long[] argValues);
 	 */
 	VMINLINE VM_BytecodeAction
-	inlProgrammableInvokerInvokeNative(REGISTER_ARGS_LIST)
+	inlInternalDowncallHandlerInvokeNative(REGISTER_ARGS_LIST)
 	{
 		VM_BytecodeAction rc = EXECUTE_BYTECODE;
+		UDATA *bp = NULL;
 #if !defined(J9VM_ENV_LITTLE_ENDIAN)
 		/* Move forward by 4 bytes to the starting address of the int numbers on the platforms
 		 * with big-endianness given UDATA (8 bytes) is used to hold all types of arguments.
@@ -5026,6 +5027,7 @@ done:
 		UDATA *returnStorage = &(_currentThread->returnValue);
 		U_64 *ffiArgs = _currentThread->ffiArgs;
 		U_64 sFfiArgs[16];
+		UDATA argSlots = 8;
 
 		j9object_t argValues = *(j9object_t *)_sp; // argValues
 		ffi_cif *cif = (ffi_cif *)(UDATA)*(I_64 *)(_sp + 1); // calloutThunk
@@ -5102,7 +5104,7 @@ done:
 			} else {
 				values[i] = &(ffiArgs[i]);
 #if !defined(J9VM_ENV_LITTLE_ENDIAN)
-				/* Note: A float number is converted to int by Float.floatToIntBits() in ProgrammableInvoker */
+				/* Note: A float number is converted to int by Float.floatToIntBits() in InternalDowncallHandler */
 				if ((J9NtcInt == argType) || (J9NtcFloat == argType)) {
 					values[i] = (void *)((U_64)values[i] + extraBytesOfInt);
 				} else if ((J9NtcShort == argType) || (J9NtcChar == argType)) {
@@ -5114,19 +5116,40 @@ done:
 			}
 		}
 
+		bp = buildSpecialStackFrame(REGISTER_ARGS, J9SF_FRAME_TYPE_JNI_NATIVE_METHOD, jitStackFrameFlags(REGISTER_ARGS, 0), true);
+		*--_sp = (UDATA)_sendMethod;
+		_arg0EA = bp + argSlots;
+
+#if JAVA_SPEC_VERSION >= 19
+		_currentThread->callOutCount += 1;
+#endif /* JAVA_SPEC_VERSION >= 19 */
 		updateVMStruct(REGISTER_ARGS);
 		VM_VMAccess::inlineExitVMToJNI(_currentThread);
+		VM_VMHelpers::beforeJNICall(_currentThread);
 #if FFI_NATIVE_RAW_API
 		ffi_ptrarray_to_raw(cif, values, values_raw);
 		ffi_raw_call(cif, FFI_FN(function), returnStorage, values_raw);
 #else /* FFI_NATIVE_RAW_API */
 		ffi_call(cif, FFI_FN(function), returnStorage, values);
 #endif /* FFI_NATIVE_RAW_API */
+		VM_VMHelpers::afterJNICall(_currentThread);
 		VM_VMAccess::inlineEnterVMFromJNI(_currentThread);
 		VMStructHasBeenUpdated(REGISTER_ARGS);
+#if JAVA_SPEC_VERSION >= 19
+		_currentThread->callOutCount -= 1;
+#endif /* JAVA_SPEC_VERSION >= 19 */
+		if (VM_VMHelpers::exceptionPending(_currentThread)) {
+			rc = GOTO_THROW_CURRENT_EXCEPTION;
+		}
+		{
+			bp = _arg0EA - argSlots;
+			J9SFJNINativeMethodFrame *nativeMethodFrame = recordJNIReturn(REGISTER_ARGS, bp);
+			_currentThread->jitStackFrameFlags = nativeMethodFrame->specialFrameFlags & J9_SSF_JIT_NATIVE_TRANSITION_FRAME;
+			restoreSpecialStackFrameLeavingArgs(REGISTER_ARGS, bp);
+		}
 
 		VM_VMHelpers::convertFFIReturnValue(_currentThread, returnType, returnTypeSize, returnStorage);
-		returnDoubleFromINL(REGISTER_ARGS, _currentThread->returnValue, 8);
+		returnDoubleFromINL(REGISTER_ARGS, _currentThread->returnValue, argSlots);
 
 done:
 		if (!isMinimal) {
@@ -5145,6 +5168,38 @@ ffi_OOM:
 		VMStructHasBeenUpdated(REGISTER_ARGS);
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		goto done;
+	}
+
+	/* Call into the interpreter from native2InterpJavaUpcallImpl() via the generated native thunk during the upcall
+	 * so as to invoke the upcall method handle after setting the arguments on the java stack
+	 */
+	VMINLINE VM_BytecodeAction
+	native2InterpreterTransition(REGISTER_ARGS_LIST)
+	{
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+		J9UpcallMetaData *data = (J9UpcallMetaData *)_currentThread->returnValue2;
+		j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+
+		/* Fetch target method and appendix from invokeCacheArray (2 element array)
+		 * Stack transitions from:
+		 *    arguments set in native2InterpJavaUpcallImpl() <- SP
+		 *    the target method handle
+		 * To:
+		 *    invokeCacheArray[1] "appendix" <- SP
+		 *    arguments set in native2InterpJavaUpcallImpl()
+		 *    the target method handle
+		 *
+		 * and sendMethod is ((J9Method *)((j.l.MemberName)invokeCacheArray[0]) + vmtargetOffset)
+		 */
+		j9object_t invokeCacheArray = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE(_currentThread, mhMetaData);
+		j9object_t memberName = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 0);
+		_sendMethod = (J9Method *)(UDATA)J9OBJECT_U64_LOAD(_currentThread, memberName, _vm->vmtargetOffset);
+		j9object_t appendix = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 1);
+		if (NULL != appendix) {
+			*(j9object_t*)--_sp = appendix;
+		}
+
+		return rc;
 	}
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
@@ -10024,7 +10079,7 @@ public:
 		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_MEMBERNAME_DEFAULT_CONFLICT),
 #endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 #if JAVA_SPEC_VERSION >= 16
-		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_INL_PROGRAMMABLEINVOKER_INVOKENATIVE),
+		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_INL_INTERNALDOWNCALLHANDLER_INVOKENATIVE),
 #endif /* JAVA_SPEC_VERSION >= 16 */
 #if JAVA_SPEC_VERSION >= 19
 		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_ENTER_CONTINUATION),
@@ -10225,6 +10280,10 @@ public:
 		_sendMethod = (J9Method *)actionData;
 		goto methodEnter;
 #endif /* DO_HOOKS */
+#if JAVA_SPEC_VERSION >= 16
+	case J9_BCLOOP_N2I_TRANSITION:
+		PERFORM_ACTION(native2InterpreterTransition(REGISTER_ARGS));
+#endif /* JAVA_SPEC_VERSION >= 16 */
 	default:
 #if defined(TRACE_TRANSITIONS)
 		j9tty_printf(PORTLIB, "<%p> enter: UNKNOWN %d\n", vmThread, vmThread->returnValue);
@@ -10655,8 +10714,8 @@ runMethod: {
 		PERFORM_ACTION(throwDefaultConflictForMemberName(REGISTER_ARGS));
 #endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 #if JAVA_SPEC_VERSION >= 16
-	JUMP_TARGET(J9_BCLOOP_SEND_TARGET_INL_PROGRAMMABLEINVOKER_INVOKENATIVE):
-		PERFORM_ACTION(inlProgrammableInvokerInvokeNative(REGISTER_ARGS));
+	JUMP_TARGET(J9_BCLOOP_SEND_TARGET_INL_INTERNALDOWNCALLHANDLER_INVOKENATIVE):
+		PERFORM_ACTION(inlInternalDowncallHandlerInvokeNative(REGISTER_ARGS));
 #endif /* JAVA_SPEC_VERSION >= 16 */
 #if JAVA_SPEC_VERSION >= 19
 	JUMP_TARGET(J9_BCLOOP_SEND_TARGET_ENTER_CONTINUATION):
