@@ -5018,6 +5018,46 @@ ffi_OOM:
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		goto done;
 	}
+
+	/* Call into the interpreter from the generated native thunk in upcall */
+	VMINLINE VM_BytecodeAction
+	native2InterpreterTransition(REGISTER_ARGS_LIST)
+	{
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+		J9UpcallMetaData *data = (J9UpcallMetaData *)_currentThread->returnValue2;
+retry:
+		j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+		j9object_t invokeCacheArray = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE(_currentThread, mhMetaData);
+
+		/* Resolve the passed-in method handle at first to get the MemberName and appendix given the handle
+		 * is simply an adapter rather than the resolved handle from OpenJDK MH perspective.
+		 */
+		if (J9_EXPECTED(NULL != invokeCacheArray)) {
+			j9object_t memberName = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 0);
+			_sendMethod = (J9Method *)(UDATA)J9OBJECT_U64_LOAD(_currentThread, memberName, _vm->vmtargetOffset);
+			j9object_t appendix = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 1);
+			if (NULL != appendix) {
+				*(j9object_t*)--_sp = appendix;
+			}
+		} else {
+			buildGenericSpecialStackFrame(REGISTER_ARGS, 0);
+			updateVMStruct(REGISTER_ARGS);
+			/* The resolution is performed by MethodHandleNatives.linkMethod() to obtain
+			 * a MemberName object plus appendix which will be stored in a Java Object array
+			 * defined in UpcallMHMetaData.
+			 * see MethodHandleResolver.linkCallerMethod() for details.
+			 */
+			resolveUpcallInvokeHandle(_currentThread, data);
+			VMStructHasBeenUpdated(REGISTER_ARGS);
+			restoreGenericSpecialStackFrame(REGISTER_ARGS);
+			if (VM_VMHelpers::exceptionPending(_currentThread)) {
+				rc = GOTO_THROW_CURRENT_EXCEPTION;
+			} else {
+				goto retry;
+			}
+		}
+		return rc;
+	}
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
 	/* Redirect to out of line INL methods */
@@ -9999,6 +10039,10 @@ public:
 		_sendMethod = (J9Method *)actionData;
 		goto methodEnter;
 #endif /* DO_HOOKS */
+#if JAVA_SPEC_VERSION >= 16
+	case J9_BCLOOP_N2I_TRANSITION:
+		PERFORM_ACTION(native2InterpreterTransition(REGISTER_ARGS));
+#endif /* JAVA_SPEC_VERSION >= 16 */
 	default:
 #if defined(TRACE_TRANSITIONS)
 		j9tty_printf(PORTLIB, "<%p> enter: UNKNOWN %d\n", vmThread, vmThread->returnValue);

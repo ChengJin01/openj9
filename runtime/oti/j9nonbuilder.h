@@ -314,6 +314,10 @@ struct OMR_VM;
 struct VMIZipFile;
 struct TR_AOTHeader;
 struct J9BranchTargetStack;
+#if JAVA_SPEC_VERSION >= 16
+struct J9UpcallMetaData;
+struct J9UpcallNativeSignature;
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 /* @ddr_namespace: map_to_type=J9CfrError */
 
@@ -4821,6 +4825,18 @@ typedef struct J9InternalVMFunctions {
 	BOOLEAN (*isCheckpointAllowed)(struct J9VMThread *currentThread);
 #endif /* defined(J9VM_OPT_CRIU_SUPPORT) */
 	j9object_t (*getClassNameString)(struct J9VMThread *currentThread, j9object_t classObject, jboolean internAndAssign);
+#if JAVA_SPEC_VERSION >= 16
+	void * ( *createUpcallThunk)(struct J9UpcallMetaData *data);
+	void * ( *getArgPointer)(struct J9UpcallNativeSignature *nativeSig, void *argListPtr, int argIdx);
+	void * ( *allocateUpcallThunkMemory)(struct J9JavaVM *vm, struct J9UpcallMetaData *data, UDATA thunkSize);
+	void ( *doneUpcallThunkGeneration)(struct J9JavaVM *vm, void *thunkAddress, UDATA thunkSize);
+	void (JNICALL *icallVMprJavaUpcall0)(struct J9UpcallMetaData *data, void *argsListPointer);
+	I_32 (JNICALL *icallVMprJavaUpcall1)(struct J9UpcallMetaData *data, void *argsListPointer);
+	I_64 (JNICALL *icallVMprJavaUpcallJ)(struct J9UpcallMetaData *data, void *argsListPointer);
+	float (JNICALL *icallVMprJavaUpcallF)(struct J9UpcallMetaData *data, void *argsListPointer);
+	double (JNICALL *icallVMprJavaUpcallD)(struct J9UpcallMetaData *data, void *argsListPointer);
+	U_8 * (JNICALL *icallVMprJavaUpcallStruct)(struct J9UpcallMetaData *data, void *argsListPointer);
+#endif /* JAVA_SPEC_VERSION >= 16 */
 } J9InternalVMFunctions;
 
 /* Jazz 99339: define a new structure to replace JavaVM so as to pass J9NativeLibrary to JVMTIEnv  */
@@ -5591,6 +5607,8 @@ typedef struct J9JavaVM {
 	omrthread_monitor_t cifNativeCalloutDataCacheMutex;
 	struct J9Pool *cifArgumentTypesCache;
 	omrthread_monitor_t cifArgumentTypesCacheMutex;
+	struct J9UpcallThunkHeapWrapper *thunkHeapWrapper;
+	omrthread_monitor_t thunkHeapWrapperMutex;
 #endif /* JAVA_SPEC_VERSION >= 16 */
 	struct J9HashTable* ensureHashedClasses;
 } J9JavaVM;
@@ -5639,6 +5657,108 @@ typedef struct J9JavaVM {
 #define J9JAVAVM_OBJECT_HEADER_SIZE(vm) (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) ? sizeof(J9ObjectCompressed) : sizeof(J9ObjectFull))
 #define J9JAVAVM_CONTIGUOUS_HEADER_SIZE(vm) (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) ? sizeof(J9IndexableObjectContiguousCompressed) : sizeof(J9IndexableObjectContiguousFull))
 #define J9JAVAVM_DISCONTIGUOUS_HEADER_SIZE(vm) (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) ? sizeof(J9IndexableObjectDiscontiguousCompressed) : sizeof(J9IndexableObjectDiscontiguousFull))
+
+#if JAVA_SPEC_VERSION >= 16
+/* The length of the buffer intended for the native signature string by default */
+#define J9VM_NATIVE_SIGNATURE_STRING_LENGTH 128
+
+#define J9_FFI_UPCALL_SIG_TYPE_MASK 0xF // The mask for the signature type identifier
+
+/* The signature types intended for upcall */
+#define J9_FFI_UPCALL_SIG_TYPE_VOID 0x1
+#define J9_FFI_UPCALL_SIG_TYPE_CHAR 0x2
+#define J9_FFI_UPCALL_SIG_TYPE_SHORT 0x3
+#define J9_FFI_UPCALL_SIG_TYPE_INT32 0x4
+#define J9_FFI_UPCALL_SIG_TYPE_INT64 0x5
+#define J9_FFI_UPCALL_SIG_TYPE_FLOAT 0x6
+#define J9_FFI_UPCALL_SIG_TYPE_DOUBLE 0x7
+#define J9_FFI_UPCALL_SIG_TYPE_POINTER 0x8
+#define J9_FFI_UPCALL_SIG_TYPE_VA_LIST 0x9 //unused as it is converted to C_POINTER in OpenJDK
+
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT 0xA // The generic struct type identifier used in the upcall targets
+
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_ALL_SP 0x1A // Intended for structs with all floats
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_ALL_DP 0x2A // Intended for structs with all doubles
+
+/* Intended for structs bigger than 16-byte but neither ALL_SP nor ALL_DP */
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_OTHER 0x3A
+
+/* The following AGGREGATE subtypes are intended for structs which are equal to or less than 16-byte in size */
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_SP_DP 0x4A // Intended for {float, padding, double}
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_SP_SP_DP 0x5A // Intended for {float, float, double}
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_DP_SP 0x6A // Intended for {double, float, padding}
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_DP_SP_SP 0x7A // Intended for {double, float, float}
+
+/* Intended for structs with the 1st MISC 8-byte and the 2nd float 8-byte. e.g. {int, float, float} or {float, int, float} */
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MISC_SP 0x8A
+/* Intended for structs with the 1st MISC 8-byte and the 2nd double 8-byte. e.g. {int, float, double} or {float, int, double} */
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MISC_DP 0x9A
+/* Intended for structs with the 1st float 8-byte and the 2nd MISC 8-byte. e.g. {float, float, float, int} */
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_SP_MISC 0xAA
+/* Intended for structs with the 1st double 8-byte and the 2nd MISC 8-byte. e.g. {double, float, int} */
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_DP_MISC 0xBA
+/* Intended for structs without pure float/double in 8 bytes. e.g. {short a[3], char b} */
+#define J9_FFI_UPCALL_SIG_TYPE_STRUCT_AGGREGATE_MISC 0XCA
+
+/* The Length of the composition type array which helps to determine the AGGREGATE subtype of struct. */
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_ARRAY_LENGTH 16
+
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_E 0x1 // Part of padding bytes
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_M 0x2 // Part of any integer byte
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_F 0x4 // Part of a single-precision floating point
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_F_E 0x5 // Mix of float and padding byte in 8 bytes
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_D 0x8 // Part of a double-precision floating point
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_D_E 0x9 // Invalid sign for the mix of double and padding byte in 8 bytes
+
+/* Intended to compute the composition type from every 4 bytes of the composition type array */
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_WORD_SIZE 4
+
+/* Intended to compute the composition type from every 8 bytes of the composition type array */
+#define J9_FFI_UPCALL_COMPOSITION_TYPE_DWORD_SIZE 8
+
+typedef struct J9UpcallSigType {
+	U_8 type;
+	U_32 sizeInByte:24;
+} J9UpcallSigType;
+
+typedef struct J9UpcallNativeSignature {
+	UDATA numSigs; /* The count of passed-in parameters plus the return type */
+	struct J9UpcallSigType *sigArray;
+} J9UpcallNativeSignature;
+
+typedef struct J9UpcallMetaData {
+	struct J9JavaVM *vm;
+	jobject mhMetaData; /* A global JNI reference to the upcall MH plus the metaData for MH resolution */
+	void *upCallCommonDispatcher; /* Which icallVMprJavaUpCall helper to be used in thunk */
+	void *thunkAddress; /* The address of the generated thunk to be generated by JIT */
+	UDATA thunkSize; /* The size of the generated thunk */
+	struct J9UpcallNativeSignature *nativeFuncSignature; /* The native function signature extracted from FunctionDescriptor */
+	UDATA functionPtr[3]; /* The address of the generated thunk on AIX or z/OS */
+} J9UpcallMetaData;
+
+typedef struct J9UpcallMetaDataList {
+	struct J9UpcallMetaData *data;
+	struct J9UpcallMetaDataList *next;
+} J9UpcallMetaDataList;
+
+typedef struct J9UpcallThunkHeapWrapper {
+	J9Heap *heap;
+	uintptr_t heapSize;
+	J9PortVmemIdentifier vmemID;
+	struct J9UpcallMetaDataList *metaDataHead;
+} J9UpcallThunkHeapWrapper;
+
+typedef union J9FloatPatternInfo {
+	I_32 intValue;
+	float floatValue;
+} J9FloatPatternInfo;
+
+typedef union J9DoublePatternInfo {
+	I_64 longIntValue;
+	double doubleValue;
+} J9DoublePatternInfo;
+
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 /* Data block for JIT instance field watch reporting */
 
