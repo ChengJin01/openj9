@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2004, 2021 IBM Corp. and others
+ * Copyright (c) 2004, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -84,6 +84,9 @@ public abstract class PrimaryItem {
 		String[] flags = attribute(e, "flags");
 		if (flags == null) {
 			flags = proto != null ? proto.flags : NO_FLAGS;
+		} else if ((proto != null) && (proto.flags != null)) {
+			// override the element's flags if the alias's flags exist.
+			flags = proto.flags;
 		}
 		return flags;
 	}
