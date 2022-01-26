@@ -1362,4 +1362,44 @@ sidecarInvokeReflectConstructor(J9VMThread *currentThread, jobject constructorRe
 	VM_VMAccess::inlineExitVMToJNI(currentThread);
 }
 
+#if JAVA_SPEC_VERSION >= 16
+bool
+buildCallInStackFrameHelper(J9VMThread *currentThread, J9VMEntryLocalStorage *newELS)
+{
+	return buildCallInStackFrame(currentThread, newELS, true, false);
+}
+
+void
+restoreCallInFrameHelper(J9VMThread *currentThread)
+{
+	restoreCallInFrame(currentThread);
+}
+
+void JNICALL
+sendResolveUpcallInvokeHandle(J9VMThread *currentThread, J9UpcallMetaData *data)
+{
+	J9VMEntryLocalStorage newELS;
+	Trc_VM_sendResolveUpcallInvokeHandle_Entry(currentThread);
+
+	if (buildCallInStackFrame(currentThread, &newELS, true, false)) {
+		J9JavaVM *vm = currentThread->javaVM;
+		j9object_t calleeHandle = J9_JNI_UNWRAP_REFERENCE(data->calleeMH);
+
+		/* Set all required arguments for MethodHandleResolver.upcallLinkCallerMethod() on the stack
+		 * to fetch the MemberName object plus appendix intended for the upcall method.
+		 */
+		if ((NULL != calleeHandle)&& (J9_JNI_UNWRAP_REFERENCE(data->calleeMH) == calleeHandle)) {
+			*(j9object_t*)--currentThread->sp = J9VM_J9CLASS_TO_HEAPCLASS(J9VMJDKINTERNALFOREIGNABIPROGRAMMABLEUPCALLHANDLER(vm));
+			*(j9object_t*)--currentThread->sp = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread, calleeHandle);
+			currentThread->returnValue = J9_BCLOOP_RUN_METHOD;
+			currentThread->returnValue2 = (UDATA)J9VMJAVALANGINVOKEMETHODHANDLERESOLVER_UPCALLLINKCALLERMETHOD_METHOD(vm);
+			c_cInterpreter(currentThread);
+		}
+		restoreCallInFrame(currentThread);
+	}
+
+	Trc_VM_sendResolveUpcallInvokeHandle_Exit(currentThread);
+}
+#endif /* JAVA_SPEC_VERSION >= 16 */
+
 } /* extern "C" */
