@@ -36,7 +36,7 @@
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
 		</command>
-		<platformRequirements>bits.64,^arch.x86,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
+		<platformRequirements>bits.64,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -66,7 +66,7 @@
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
 		</command>
-		<platformRequirements>bits.64,^arch.x86,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
+		<platformRequirements>bits.64,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -96,7 +96,7 @@
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
 		</command>
-		<platformRequirements>bits.64,^arch.x86,^arch.aarch64,^arch.ppc,^arch.390,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
+		<platformRequirements>bits.64,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
@@ -105,6 +105,7 @@
 		</groups>
 		<impls>
 			<impl>openj9</impl>
+			<impl>hotspot</impl>
 		</impls>
 		<versions>
 			<version>18</version>

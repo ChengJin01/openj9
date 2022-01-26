@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022, 2022 IBM Corp. and others
+ * Copyright (c) 2022, 2023 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,7 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-package org.openj9.test.jep419.valist;
+package org.openj9.test.jep434.valist;
 
 import org.testng.annotations.Test;
 import org.testng.Assert;
@@ -29,19 +29,18 @@ import static org.testng.Assert.fail;
 import java.lang.invoke.VarHandle;
 import java.util.NoSuchElementException;
 
-import jdk.incubator.foreign.GroupLayout;
-import jdk.incubator.foreign.MemoryAddress;
-import jdk.incubator.foreign.MemoryLayout;
-import jdk.incubator.foreign.MemoryLayout.PathElement;
-import jdk.incubator.foreign.MemorySegment;
-import jdk.incubator.foreign.ResourceScope;
-import jdk.incubator.foreign.SegmentAllocator;
-import jdk.incubator.foreign.VaList;
-import static jdk.incubator.foreign.ValueLayout.*;
-import static jdk.incubator.foreign.VaList.Builder;
+import java.lang.foreign.Arena;
+import java.lang.foreign.GroupLayout;
+import java.lang.foreign.MemoryLayout;
+import java.lang.foreign.MemoryLayout.PathElement;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SegmentAllocator;
+import java.lang.foreign.VaList;
+import static java.lang.foreign.ValueLayout.*;
+import static java.lang.foreign.VaList.Builder;
 
 /**
- * Test cases for JEP 419: Foreign Linker API (Second Incubator) for the vararg list in VaList API specific cases.
+ * Test cases for JEP 434: Foreign Linker API (Second Preview) for the vararg list in VaList API specific cases.
  */
 @Test(groups = { "level.sanity" })
 public class ApiTests {
@@ -54,7 +53,7 @@ public class ApiTests {
 
 	@Test
 	public void test_emptyVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList emptyVaList = VaList.empty();
 			/* As specified in the implemention of OpenJDK, a NULL address is set to
 			 * the empty va_list on Windows/x86_64, MacOS/Aarch64, Linux/ppc64le and
@@ -62,28 +61,19 @@ public class ApiTests {
 			 * address on other platforms.
 			 */
 			if (isWinX64 || isMacOsAarch64 || isSysVPPC64le || isAixOS) {
-				Assert.assertEquals(emptyVaList.address(), MemoryAddress.NULL);
+				Assert.assertEquals(emptyVaList.segment(), MemorySegment.NULL);
 			} else {
-				Assert.assertNotEquals(emptyVaList.address(), MemoryAddress.NULL);
+				Assert.assertNotEquals(emptyVaList.segment(), MemorySegment.NULL);
 			}
 		}
 	}
 
 	@Test
-	public void test_vaListScope() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_INT, 100), scope);
-			ResourceScope vaListScope = vaList.scope();
-			Assert.assertEquals(vaListScope, scope);
-		}
-	}
-
-	@Test
 	public void test_checkIntVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_INT, 700)
 					.addVarg(JAVA_INT, 800)
-					.addVarg(JAVA_INT, 900), scope);
+					.addVarg(JAVA_INT, 900), arena.scope());
 
 			Assert.assertEquals(vaList.nextVarg(JAVA_INT), 700); /* the 1st argument */
 			Assert.assertEquals(vaList.nextVarg(JAVA_INT), 800); /* the 2nd argument */
@@ -93,10 +83,10 @@ public class ApiTests {
 
 	@Test
 	public void test_checkLongVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_LONG, 700000L)
 					.addVarg(JAVA_LONG, 800000L)
-					.addVarg(JAVA_LONG, 900000L), scope);
+					.addVarg(JAVA_LONG, 900000L), arena.scope());
 
 			Assert.assertEquals(vaList.nextVarg(JAVA_LONG), 700000L); /* the 1st argument */
 			Assert.assertEquals(vaList.nextVarg(JAVA_LONG), 800000L); /* the 2nd argument */
@@ -106,10 +96,10 @@ public class ApiTests {
 
 	@Test
 	public void test_checkDoubleVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_DOUBLE, 111150.1001D)
 					.addVarg(JAVA_DOUBLE, 111160.2002D)
-					.addVarg(JAVA_DOUBLE, 111170.1001D), scope);
+					.addVarg(JAVA_DOUBLE, 111170.1001D), arena.scope());
 
 			Assert.assertEquals(vaList.nextVarg(JAVA_DOUBLE), 111150.1001D, 0.0001D); /* the 1st argument */
 			Assert.assertEquals(vaList.nextVarg(JAVA_DOUBLE), 111160.2002D, 0.0001D); /* the 2nd argument */
@@ -119,55 +109,55 @@ public class ApiTests {
 
 	@Test
 	public void test_checkIntPtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment intSegmt1 = allocator.allocate(JAVA_INT, 700);
 			MemorySegment intSegmt2 = allocator.allocate(JAVA_INT, 800);
 			MemorySegment intSegmt3 = allocator.allocate(JAVA_INT, 900);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1.address())
-					.addVarg(ADDRESS, intSegmt2.address())
-					.addVarg(ADDRESS, intSegmt3.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1)
+					.addVarg(ADDRESS, intSegmt2)
+					.addVarg(ADDRESS, intSegmt3), arena.scope());
 
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt1.address()); /* the 1st argument */
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt2.address()); /* the 2nd argument */
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt3.address()); /* the 3rd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt1); /* the 1st argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt2); /* the 2nd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt3); /* the 3rd argument */
 		}
 	}
 
 	@Test
 	public void test_checkLongPtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment longSegmt1 = allocator.allocate(JAVA_LONG, 700000L);
 			MemorySegment longSegmt2 = allocator.allocate(JAVA_LONG, 800000L);
 			MemorySegment longSegmt3 = allocator.allocate(JAVA_LONG, 900000L);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1.address())
-					.addVarg(ADDRESS, longSegmt2.address())
-					.addVarg(ADDRESS, longSegmt3.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1)
+					.addVarg(ADDRESS, longSegmt2)
+					.addVarg(ADDRESS, longSegmt3), arena.scope());
 
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt1.address()); /* the 1st argument */
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt2.address()); /* the 2nd argument */
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt3.address()); /* the 3rd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt1); /* the 1st argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt2); /* the 2nd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt3); /* the 3rd argument */
 		}
 	}
 
 	@Test
 	public void test_checkDoublePtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment doubleSegmt1 = allocator.allocate(JAVA_DOUBLE, 111150.1001D);
 			MemorySegment doubleSegmt2 = allocator.allocate(JAVA_DOUBLE, 111160.2002D);
 			MemorySegment doubleSegmt3 = allocator.allocate(JAVA_DOUBLE, 111170.1001D);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1.address())
-					.addVarg(ADDRESS, doubleSegmt2.address())
-					.addVarg(ADDRESS, doubleSegmt3.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1)
+					.addVarg(ADDRESS, doubleSegmt2)
+					.addVarg(ADDRESS, doubleSegmt3), arena.scope());
 
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt1.address()); /* the 1st argument */
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt2.address()); /* the 2nd argument */
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt3.address()); /* the 3rd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt1); /* the 1st argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt2); /* the 2nd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt3); /* the 3rd argument */
 		}
 	}
 
@@ -177,8 +167,8 @@ public class ApiTests {
 		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			intHandle1.set(structSegmt1, 1122333);
 			intHandle2.set(structSegmt1, 4455666);
@@ -187,7 +177,7 @@ public class ApiTests {
 			intHandle2.set(structSegmt2, 1133557);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 
 			MemorySegment argSegmt = vaList.nextVarg(structLayout, allocator);
 			Assert.assertEquals(intHandle1.get(argSegmt), 1122333); /* the 1st element of the 1st struct argument */
@@ -204,8 +194,8 @@ public class ApiTests {
 		VarHandle longHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle longHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			longHandle1.set(structSegmt1, 1122334455L);
 			longHandle2.set(structSegmt1, 6677889911L);
@@ -214,7 +204,7 @@ public class ApiTests {
 			longHandle2.set(structSegmt2, 7788991122L);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 
 			MemorySegment argSegmt = vaList.nextVarg(structLayout, allocator);
 			Assert.assertEquals(longHandle1.get(argSegmt), 1122334455L); /* the 1st element of the 1st struct argument */
@@ -231,15 +221,15 @@ public class ApiTests {
 		VarHandle longHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle longHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			longHandle1.set(structSegmt1, 1122334455L);
 			longHandle2.set(structSegmt1, 6677889911L);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1), arena.scope());
 
-			MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout, scope);
+			MemorySegment structSegmt2 = MemorySegment.allocateNative(structLayout, arena.scope());
 			MemorySegment argSegmt = vaList.nextVarg(structLayout, SegmentAllocator.prefixAllocator(structSegmt2));
 			Assert.assertEquals(longHandle1.get(argSegmt), 1122334455L); /* the 1st element of the 1st struct argument */
 			Assert.assertEquals(longHandle2.get(argSegmt), 6677889911L); /* the 2nd element of the 1st struct argument */
@@ -254,8 +244,8 @@ public class ApiTests {
 		VarHandle doubleHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle doubleHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			doubleHandle1.set(structSegmt1, 111150.1001D);
 			doubleHandle2.set(structSegmt1, 111160.2002D);
@@ -264,7 +254,7 @@ public class ApiTests {
 			doubleHandle2.set(structSegmt2, 111180.2002D);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 
 			MemorySegment argSegmt = vaList.nextVarg(structLayout, allocator);
 			Assert.assertEquals((double)doubleHandle1.get(argSegmt), 111150.1001D, 0.0001D); /* the 1st element of the 1st struct argument */
@@ -277,10 +267,10 @@ public class ApiTests {
 
 	@Test
 	public void test_copyIntVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_INT, 700)
 					.addVarg(JAVA_INT, 800)
-					.addVarg(JAVA_INT, 900), scope);
+					.addVarg(JAVA_INT, 900), arena.scope());
 			VaList resultVaList = vaList.copy();
 
 			Assert.assertEquals(resultVaList.nextVarg(JAVA_INT), 700); /* the 1st argument */
@@ -291,10 +281,10 @@ public class ApiTests {
 
 	@Test
 	public void test_copyLongVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_LONG, 700000L)
 					.addVarg(JAVA_LONG, 800000L)
-					.addVarg(JAVA_LONG, 900000L), scope);
+					.addVarg(JAVA_LONG, 900000L), arena.scope());
 			VaList resultVaList = vaList.copy();
 
 			Assert.assertEquals(resultVaList.nextVarg(JAVA_LONG), 700000L); /* the 1st argument */
@@ -305,10 +295,10 @@ public class ApiTests {
 
 	@Test
 	public void test_copyDoubleVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_DOUBLE, 111150.1001D)
 					.addVarg(JAVA_DOUBLE, 111160.2002D)
-					.addVarg(JAVA_DOUBLE, 111170.1001D), scope);
+					.addVarg(JAVA_DOUBLE, 111170.1001D), arena.scope());
 			VaList resultVaList = vaList.copy();
 
 			Assert.assertEquals(resultVaList.nextVarg(JAVA_DOUBLE), 111150.1001D, 0001D); /* the 1st argument */
@@ -319,58 +309,58 @@ public class ApiTests {
 
 	@Test
 	public void test_copyIntPtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment intSegmt1 = allocator.allocate(JAVA_INT, 700);
 			MemorySegment intSegmt2 = allocator.allocate(JAVA_INT, 800);
 			MemorySegment intSegmt3 = allocator.allocate(JAVA_INT, 900);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1.address())
-					.addVarg(ADDRESS, intSegmt2.address())
-					.addVarg(ADDRESS, intSegmt3.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1)
+					.addVarg(ADDRESS, intSegmt2)
+					.addVarg(ADDRESS, intSegmt3), arena.scope());
 			VaList resultVaList = vaList.copy();
 
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), intSegmt1.address()); /* the 1st argument */
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), intSegmt2.address()); /* the 2nd argument */
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), intSegmt3.address()); /* the 3rd argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), intSegmt1); /* the 1st argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), intSegmt2); /* the 2nd argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), intSegmt3); /* the 3rd argument */
 		}
 	}
 
 	@Test
 	public void test_copyLongPtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment longSegmt1 = allocator.allocate(JAVA_LONG, 700000L);
 			MemorySegment longSegmt2 = allocator.allocate(JAVA_LONG, 800000L);
 			MemorySegment longSegmt3 = allocator.allocate(JAVA_LONG, 900000L);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1.address())
-					.addVarg(ADDRESS, longSegmt2.address())
-					.addVarg(ADDRESS, longSegmt3.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1)
+					.addVarg(ADDRESS, longSegmt2)
+					.addVarg(ADDRESS, longSegmt3), arena.scope());
 			VaList resultVaList = vaList.copy();
 
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), longSegmt1.address()); /* the 1st argument */
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), longSegmt2.address()); /* the 2nd argument */
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), longSegmt3.address()); /* the 3rd argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), longSegmt1); /* the 1st argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), longSegmt2); /* the 2nd argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), longSegmt3); /* the 3rd argument */
 		}
 	}
 
 	@Test
 	public void test_copyDoublePtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment doubleSegmt1 = allocator.allocate(JAVA_DOUBLE, 111150.1001D);
 			MemorySegment doubleSegmt2 = allocator.allocate(JAVA_DOUBLE, 111160.2002D);
 			MemorySegment doubleSegmt3 = allocator.allocate(JAVA_DOUBLE, 111170.1001D);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1.address())
-					.addVarg(ADDRESS, doubleSegmt2.address())
-					.addVarg(ADDRESS, doubleSegmt3.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1)
+					.addVarg(ADDRESS, doubleSegmt2)
+					.addVarg(ADDRESS, doubleSegmt3), arena.scope());
 			VaList resultVaList = vaList.copy();
 
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), doubleSegmt1.address()); /* the 1st argument */
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), doubleSegmt2.address()); /* the 2nd argument */
-			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), doubleSegmt3.address()); /* the 3rd argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), doubleSegmt1); /* the 1st argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), doubleSegmt2); /* the 2nd argument */
+			Assert.assertEquals(resultVaList.nextVarg(ADDRESS), doubleSegmt3); /* the 3rd argument */
 		}
 	}
 
@@ -380,8 +370,8 @@ public class ApiTests {
 		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			intHandle1.set(structSegmt1, 1122333);
 			intHandle2.set(structSegmt1, 4455666);
@@ -390,7 +380,7 @@ public class ApiTests {
 			intHandle2.set(structSegmt2, 1133557);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 			VaList resultVaList = vaList.copy();
 
 			MemorySegment resultArgSegmt = resultVaList.nextVarg(structLayout, allocator);
@@ -408,8 +398,8 @@ public class ApiTests {
 		VarHandle longHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle longHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			longHandle1.set(structSegmt1, 1122334455L);
 			longHandle2.set(structSegmt1, 6677889911L);
@@ -418,7 +408,7 @@ public class ApiTests {
 			longHandle2.set(structSegmt2, 7788991122L);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 			VaList resultVaList = vaList.copy();
 
 			MemorySegment resultArgSegmt = resultVaList.nextVarg(structLayout, allocator);
@@ -436,8 +426,8 @@ public class ApiTests {
 		VarHandle doubleHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle doubleHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			doubleHandle1.set(structSegmt1, 111150.1001D);
 			doubleHandle2.set(structSegmt1, 111160.2002D);
@@ -446,7 +436,7 @@ public class ApiTests {
 			doubleHandle2.set(structSegmt2, 111180.2002D);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 			VaList resultVaList = vaList.copy();
 
 			MemorySegment resultArgSegmt = resultVaList.nextVarg(structLayout, allocator);
@@ -458,13 +448,30 @@ public class ApiTests {
 		}
 	}
 
-	@Test
-	public void test_createIntVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+	@Test(expectedExceptions = NoSuchElementException.class, expectedExceptionsMessageRegExp = "No such element.*")
+	public void test_NoMoreNextArg_IntVaList() throws Throwable {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_INT, 700)
 					.addVarg(JAVA_INT, 800)
-					.addVarg(JAVA_INT, 900), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+					.addVarg(JAVA_INT, 900), arena.scope());
+
+			vaList.nextVarg(JAVA_INT); /* the 1st argument */
+			vaList.nextVarg(JAVA_INT); /* the 2nd argument */
+			vaList.nextVarg(JAVA_INT); /* the 3rd argument */
+
+			/* An exception is thrown as there is no more argument in VaList */
+			vaList.nextVarg(JAVA_INT);
+			fail("Failed to throw out NoSuchElementException when nextVarg() exceeds the memory region of VaList");
+		}
+	}
+
+	@Test
+	public void test_createIntVaList() throws Throwable {
+		try (Arena arena = Arena.openConfined()) {
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_INT, 700)
+					.addVarg(JAVA_INT, 800)
+					.addVarg(JAVA_INT, 900), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
 			Assert.assertEquals(newVaList.nextVarg(JAVA_INT), 700); /* the 1st argument */
 			Assert.assertEquals(newVaList.nextVarg(JAVA_INT), 800); /* the 2nd argument */
@@ -474,11 +481,11 @@ public class ApiTests {
 
 	@Test
 	public void test_createLongVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_LONG, 700000L)
 					.addVarg(JAVA_LONG, 800000L)
-					.addVarg(JAVA_LONG, 900000L), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+					.addVarg(JAVA_LONG, 900000L), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
 			Assert.assertEquals(newVaList.nextVarg(JAVA_LONG), 700000L); /* the 1st argument */
 			Assert.assertEquals(newVaList.nextVarg(JAVA_LONG), 800000L); /* the 2nd argument */
@@ -488,11 +495,11 @@ public class ApiTests {
 
 	@Test
 	public void test_createDoubleVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_DOUBLE, 111150.1001D)
 					.addVarg(JAVA_DOUBLE, 111160.2002D)
-					.addVarg(JAVA_DOUBLE, 111170.1001D), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+					.addVarg(JAVA_DOUBLE, 111170.1001D), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
 			Assert.assertEquals(newVaList.nextVarg(JAVA_DOUBLE), 111150.1001D, 0.0001D); /* the 1st argument */
 			Assert.assertEquals(newVaList.nextVarg(JAVA_DOUBLE), 111160.2002D, 0.0001D); /* the 2nd argument */
@@ -502,67 +509,103 @@ public class ApiTests {
 
 	@Test
 	public void test_createIntPtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment intSegmt1 = allocator.allocate(JAVA_INT, 700);
 			MemorySegment intSegmt2 = allocator.allocate(JAVA_INT, 800);
 			MemorySegment intSegmt3 = allocator.allocate(JAVA_INT, 900);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1.address())
-					.addVarg(ADDRESS, intSegmt2.address())
-					.addVarg(ADDRESS, intSegmt3.address()), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1)
+					.addVarg(ADDRESS, intSegmt2)
+					.addVarg(ADDRESS, intSegmt3), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
-			MemoryAddress resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_INT, 0), 700); /* the 1st argument */
+			MemorySegment resultAddr = newVaList.nextVarg(ADDRESS);
+			MemorySegment resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_INT.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_INT, 0), 700); /* the 1st argument */
 			resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_INT, 0), 800); /* the 2nd argument */
+			resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_INT.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_INT, 0), 800); /* the 2nd argument */
 			resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_INT, 0), 900); /* the 3rd argument */
+			resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_INT.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_INT, 0), 900); /* the 3rd argument */
 		}
 	}
 
 	@Test
 	public void test_createLongPtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment longSegmt1 = allocator.allocate(JAVA_LONG, 700000L);
 			MemorySegment longSegmt2 = allocator.allocate(JAVA_LONG, 800000L);
 			MemorySegment longSegmt3 = allocator.allocate(JAVA_LONG, 900000L);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1.address())
-					.addVarg(ADDRESS, longSegmt2.address())
-					.addVarg(ADDRESS, longSegmt3.address()), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1)
+					.addVarg(ADDRESS, longSegmt2)
+					.addVarg(ADDRESS, longSegmt3), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
-			MemoryAddress resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_LONG, 0), 700000L); /* the 1st argument */
+			MemorySegment resultAddr = newVaList.nextVarg(ADDRESS);
+			MemorySegment resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_LONG.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_LONG, 0), 700000L); /* the 1st argument */
 			resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_LONG, 0), 800000L); /* the 2nd argument */
+			resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_LONG.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_LONG, 0), 800000L); /* the 2nd argument */
 			resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_LONG, 0), 900000L); /* the 3rd argument */
+			resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_LONG.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_LONG, 0), 900000L); /* the 3rd argument */
 		}
 	}
 
 	@Test
 	public void test_createDoublePtrVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment doubleSegmt1 = allocator.allocate(JAVA_DOUBLE, 111150.1001D);
 			MemorySegment doubleSegmt2 = allocator.allocate(JAVA_DOUBLE, 111160.2002D);
 			MemorySegment doubleSegmt3 = allocator.allocate(JAVA_DOUBLE, 111170.1001D);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1.address())
-					.addVarg(ADDRESS, doubleSegmt2.address())
-					.addVarg(ADDRESS, doubleSegmt3.address()), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1)
+					.addVarg(ADDRESS, doubleSegmt2)
+					.addVarg(ADDRESS, doubleSegmt3), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
-			MemoryAddress resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_DOUBLE, 0), 111150.1001D, 0.0001D); /* the 1st argument */
+			MemorySegment resultAddr = newVaList.nextVarg(ADDRESS);
+			MemorySegment resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_DOUBLE.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_DOUBLE, 0), 111150.1001D, 0.0001D); /* the 1st argument */
 			resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_DOUBLE, 0), 111160.2002D, 0.0001D); /* the 2nd argument */
+			resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_DOUBLE.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_DOUBLE, 0), 111160.2002D, 0.0001D); /* the 2nd argument */
 			resultAddr = newVaList.nextVarg(ADDRESS);
-			Assert.assertEquals(resultAddr.get(JAVA_DOUBLE, 0), 111170.1001D, 0.0001D); /* the 3rd argument */
+			resultSegmt = MemorySegment.ofAddress(resultAddr.address(), JAVA_DOUBLE.byteSize(), arena.scope());
+			Assert.assertEquals(resultSegmt.get(JAVA_DOUBLE, 0), 111170.1001D, 0.0001D); /* the 3rd argument */
+		}
+	}
+
+	@Test(expectedExceptions = NoSuchElementException.class, expectedExceptionsMessageRegExp = "No such element.*")
+	public void test_NoMoreNextArg_IntStructVaList() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
+
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
+			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt1, 1122333);
+			intHandle2.set(structSegmt1, 4455666);
+			MemorySegment structSegmt2 = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt2, 2244668);
+			intHandle2.set(structSegmt2, 1133557);
+
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
+					.addVarg(structLayout, structSegmt2), arena.scope());
+
+			vaList.nextVarg(structLayout, allocator); /* the 1st struct argument */
+			vaList.nextVarg(structLayout, allocator); /* the 2nd struct argument */
+
+			/* An exception is thrown as there is no more argument in VaList */
+			vaList.nextVarg(structLayout, allocator);
+			fail("Failed to throw out NoSuchElementException when nextVarg() exceeds the memory region of VaList");
 		}
 	}
 
@@ -572,8 +615,8 @@ public class ApiTests {
 		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			intHandle1.set(structSegmt1, 1122333);
 			intHandle2.set(structSegmt1, 4455666);
@@ -582,8 +625,8 @@ public class ApiTests {
 			intHandle2.set(structSegmt2, 1133557);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
 			MemorySegment newArgSegmt = newVaList.nextVarg(structLayout, allocator);
 			Assert.assertEquals(intHandle1.get(newArgSegmt), 1122333); /* the 1st element of the 1st struct argument */
@@ -600,8 +643,8 @@ public class ApiTests {
 		VarHandle longHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle longHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			longHandle1.set(structSegmt1, 1122334455L);
 			longHandle2.set(structSegmt1, 6677889911L);
@@ -610,8 +653,8 @@ public class ApiTests {
 			longHandle2.set(structSegmt2, 7788991122L);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
 			MemorySegment newArgSegmt = newVaList.nextVarg(structLayout, allocator);
 			Assert.assertEquals(longHandle1.get(newArgSegmt), 1122334455L); /* the 1st element of the 1st struct argument */
@@ -628,8 +671,8 @@ public class ApiTests {
 		VarHandle doubleHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle doubleHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			doubleHandle1.set(structSegmt1, 11150.1001D);
 			doubleHandle2.set(structSegmt1, 11160.2002D);
@@ -638,8 +681,8 @@ public class ApiTests {
 			doubleHandle2.set(structSegmt2, 11180.2002D);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
-			VaList newVaList = VaList.ofAddress(vaList.address(), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
+			VaList newVaList = VaList.ofAddress(vaList.segment().address(), arena.scope());
 
 			MemorySegment newArgSegmt = newVaList.nextVarg(structLayout, allocator);
 			Assert.assertEquals((double)doubleHandle1.get(newArgSegmt), 11150.1001D, 0.0001D); /* the 1st element of the 1st struct argument */
@@ -650,25 +693,42 @@ public class ApiTests {
 		}
 	}
 
-	@Test
-	public void test_skipIntArgOfVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+	@Test(expectedExceptions = NoSuchElementException.class, expectedExceptionsMessageRegExp = "No such element.*")
+	public void test_NoMoreSkippedArg_IntArgOfVaList() throws Throwable {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_INT, 700)
 					.addVarg(JAVA_INT, 800)
 					.addVarg(JAVA_INT, 900)
-					.addVarg(JAVA_INT, 1000), scope);
+					.addVarg(JAVA_INT, 1000), arena.scope());
+			vaList.skip(JAVA_INT, JAVA_INT, JAVA_INT, JAVA_INT); /* Skip over all arguments in VaList */
+
+			/* An exception is thrown as there is no more argument in VaList */
+			vaList.skip(JAVA_INT);
+			fail("Failed to throw out NoSuchElementException when skip() exceeds the memory region of VaList");
+		}
+	}
+
+	@Test
+	public void test_skipIntArgOfVaList() throws Throwable {
+		try (Arena arena = Arena.openConfined()) {
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_INT, 700)
+					.addVarg(JAVA_INT, 800)
+					.addVarg(JAVA_INT, 900)
+					.addVarg(JAVA_INT, 1000), arena.scope());
 			vaList.skip(JAVA_INT);
 			Assert.assertEquals(vaList.nextVarg(JAVA_INT), 800); /* the 2nd argument */
+			vaList.skip(JAVA_INT);
+			Assert.assertEquals(vaList.nextVarg(JAVA_INT), 1000); /* the 4th argument */
 		}
 	}
 
 	@Test
 	public void test_skipLongArgOfVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_LONG, 700000L)
 					.addVarg(JAVA_LONG, 800000L)
 					.addVarg(JAVA_LONG, 900000L)
-					.addVarg(JAVA_LONG, 1000000L), scope);
+					.addVarg(JAVA_LONG, 1000000L), arena.scope());
 			vaList.skip(JAVA_LONG, JAVA_LONG);
 			Assert.assertEquals(vaList.nextVarg(JAVA_LONG), 900000L); /* the 3rd argument */
 		}
@@ -676,11 +736,11 @@ public class ApiTests {
 
 	@Test
 	public void test_skipDoubleArgOfVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
+		try (Arena arena = Arena.openConfined()) {
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(JAVA_DOUBLE, 111150.1001D)
 					.addVarg(JAVA_DOUBLE, 111160.2002D)
 					.addVarg(JAVA_DOUBLE, 111170.1001D)
-					.addVarg(JAVA_DOUBLE, 111180.2002D), scope);
+					.addVarg(JAVA_DOUBLE, 111180.2002D), arena.scope());
 			vaList.skip(JAVA_DOUBLE, JAVA_DOUBLE, JAVA_DOUBLE);
 			Assert.assertEquals(vaList.nextVarg(JAVA_DOUBLE), 111180.2002D, 0.0001D); /* the 4th argument */
 		}
@@ -688,55 +748,80 @@ public class ApiTests {
 
 	@Test
 	public void test_skipIntPtrArgOfVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment intSegmt1 = allocator.allocate(JAVA_INT, 700);
 			MemorySegment intSegmt2 = allocator.allocate(JAVA_INT, 800);
 			MemorySegment intSegmt3 = allocator.allocate(JAVA_INT, 900);
 			MemorySegment intSegmt4 = allocator.allocate(JAVA_INT, 1000);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1.address())
-					.addVarg(ADDRESS, intSegmt2.address())
-					.addVarg(ADDRESS, intSegmt3.address())
-					.addVarg(ADDRESS, intSegmt4.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, intSegmt1)
+					.addVarg(ADDRESS, intSegmt2)
+					.addVarg(ADDRESS, intSegmt3)
+					.addVarg(ADDRESS, intSegmt4), arena.scope());
 			vaList.skip(ADDRESS);
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt2.address()); /* the 2nd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), intSegmt2); /* the 2nd argument */
 		}
 	}
 
 	@Test
 	public void test_skipLongPtrArgOfVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment longSegmt1 = allocator.allocate(JAVA_LONG, 700000L);
 			MemorySegment longSegmt2 = allocator.allocate(JAVA_LONG, 800000L);
 			MemorySegment longSegmt3 = allocator.allocate(JAVA_LONG, 900000L);
 			MemorySegment longSegmt4 = allocator.allocate(JAVA_LONG, 1000000L);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1.address())
-					.addVarg(ADDRESS, longSegmt2.address())
-					.addVarg(ADDRESS, longSegmt3.address())
-					.addVarg(ADDRESS, longSegmt4.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, longSegmt1)
+					.addVarg(ADDRESS, longSegmt2)
+					.addVarg(ADDRESS, longSegmt3)
+					.addVarg(ADDRESS, longSegmt4), arena.scope());
 			vaList.skip(ADDRESS, ADDRESS);
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt3.address()); /* the 3rd argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), longSegmt3); /* the 3rd argument */
 		}
 	}
 
 	@Test
 	public void test_skipDoublePtrArgOfVaList() throws Throwable {
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment doubleSegmt1 = allocator.allocate(JAVA_DOUBLE, 111150.1001D);
 			MemorySegment doubleSegmt2 = allocator.allocate(JAVA_DOUBLE, 111160.2002D);
 			MemorySegment doubleSegmt3 = allocator.allocate(JAVA_DOUBLE, 111170.1001D);
 			MemorySegment doubleSegmt4 = allocator.allocate(JAVA_DOUBLE, 111180.1002D);
 
-			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1.address())
-					.addVarg(ADDRESS, doubleSegmt2.address())
-					.addVarg(ADDRESS, doubleSegmt3.address())
-					.addVarg(ADDRESS, doubleSegmt4.address()), scope);
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(ADDRESS, doubleSegmt1)
+					.addVarg(ADDRESS, doubleSegmt2)
+					.addVarg(ADDRESS, doubleSegmt3)
+					.addVarg(ADDRESS, doubleSegmt4), arena.scope());
 			vaList.skip(ADDRESS, ADDRESS, ADDRESS);
-			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt4.address()); /* the 4th argument */
+			Assert.assertEquals(vaList.nextVarg(ADDRESS), doubleSegmt4); /* the 4th argument */
+		}
+	}
+
+	@Test(expectedExceptions = NoSuchElementException.class, expectedExceptionsMessageRegExp = "No such element.*")
+	public void test_NoMoreSkippedArg_IntStructOfVaList() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
+
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
+			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt1, 1122333);
+			intHandle2.set(structSegmt1, 4455666);
+			MemorySegment structSegmt2 = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt2, 2244668);
+			intHandle2.set(structSegmt2, 1133557);
+
+			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
+					.addVarg(structLayout, structSegmt2), arena.scope());
+			vaList.skip(structLayout, structLayout); /* Skip over all arguments in VaList */
+
+			/* An exception is thrown as there is no more argument in VaList */
+			vaList.skip(structLayout);
+			fail("Failed to throw out NoSuchElementException when skip() exceeds the memory region of VaList");
 		}
 	}
 
@@ -746,8 +831,8 @@ public class ApiTests {
 		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			intHandle1.set(structSegmt1, 1122333);
 			intHandle2.set(structSegmt1, 4455666);
@@ -756,7 +841,7 @@ public class ApiTests {
 			intHandle2.set(structSegmt2, 1133557);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 			vaList.skip(structLayout);
 
 			MemorySegment argSegmt = vaList.nextVarg(structLayout, allocator);
@@ -771,8 +856,8 @@ public class ApiTests {
 		VarHandle longHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle longHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			longHandle1.set(structSegmt1, 1122334455L);
 			longHandle2.set(structSegmt1, 6677889911L);
@@ -781,7 +866,7 @@ public class ApiTests {
 			longHandle2.set(structSegmt2, 7788991122L);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 			vaList.skip(structLayout);
 
 			MemorySegment argSegmt = vaList.nextVarg(structLayout, allocator);
@@ -796,8 +881,8 @@ public class ApiTests {
 		VarHandle doubleHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
 		VarHandle doubleHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
 
-		try (ResourceScope scope = ResourceScope.newConfinedScope()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(scope);
+		try (Arena arena = Arena.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
 			MemorySegment structSegmt1 = allocator.allocate(structLayout);
 			doubleHandle1.set(structSegmt1, 11150.1001D);
 			doubleHandle2.set(structSegmt1, 11160.2002D);
@@ -806,7 +891,7 @@ public class ApiTests {
 			doubleHandle2.set(structSegmt2, 11180.2002D);
 
 			VaList vaList = VaList.make(vaListBuilder -> vaListBuilder.addVarg(structLayout, structSegmt1)
-					.addVarg(structLayout, structSegmt2), scope);
+					.addVarg(structLayout, structSegmt2), arena.scope());
 			vaList.skip(structLayout);
 
 			MemorySegment argSegmt = vaList.nextVarg(structLayout, allocator);

@@ -52,6 +52,8 @@
 	<test name="Jep419Tests_testClinkerFfi_VaList">
 		<classes>
 			<class name="org.openj9.test.jep419.valist.ApiTests"/>
+			<class name="org.openj9.test.jep419.valist.DowncallTests"/>
+			<class name="org.openj9.test.jep419.valist.UpcallTests"/>
 		</classes>
 	</test>
 	<test name="CloseScope0Tests">

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!--
-  Copyright (c) 2021, 2023 IBM Corp. and others
+  Copyright (c) 2022, 2023 IBM Corp. and others
 
   This program and the accompanying materials are made available under
   the terms of the Eclipse Public License 2.0 which accompanies this
@@ -22,76 +22,50 @@
 -->
 <playlist xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../TestConfig/playlist.xsd">
 	<test>
-		<testCaseName>Jep389Tests_testClinkerFfi_DownCall</testCaseName>
+		<testCaseName>Jep425Tests_testVirtualThread</testCaseName>
 		<variations>
-			<variation>--enable-preview</variation>
+			<variation>--enable-preview -Xgcpolicy:optthruput</variation>
+			<variation>--enable-preview -Xgcpolicy:gencon</variation>
+			<variation>--enable-preview -Xgcpolicy:balanced</variation>
+			<variation>--enable-preview -Xgcpolicy:optavgpause</variation>
 		</variations>
 		<command>$(ADD_JVM_LIB_DIR_TO_LIBPATH) $(JAVA_COMMAND) $(JVM_OPTIONS) \
-			--add-modules jdk.incubator.foreign \
-			--enable-native-access=ALL-UNNAMED \
-			-Dforeign.restricted=permit \
-			-cp $(Q)$(LIB_DIR)$(D)asm.jar$(P)$(RESOURCES_DIR)$(P)$(TESTNG)$(P)$(TEST_RESROOT)$(D)GeneralTest.jar$(Q) \
-			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_170.xml$(Q) -testnames Jep389Tests_testClinkerFfi_DownCall \
+			--add-opens java.base/java.lang=ALL-UNNAMED \
+			-cp $(Q)$(RESOURCES_DIR)$(P)$(TESTNG)$(P)$(TEST_RESROOT)$(D)GeneralTest.jar$(Q) \
+			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_200.xml$(Q) \
+			-testnames Jep425Tests_testVirtualThread \
 			-groups $(TEST_GROUP) \
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
 		</command>
-		<platformRequirements>bits.64,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
+		<platformRequirements>bits.64,^os.zos,^os.sunos</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
 		<groups>
 			<group>functional</group>
 		</groups>
+		<types>
+			<type>native</type>
+		</types>
 		<impls>
 			<impl>openj9</impl>
 		</impls>
 		<versions>
-			<version>17</version>
+			<version>20+</version>
 		</versions>
 	</test>
 
 	<test>
-		<testCaseName>Jep389Tests_testClinkerFfi_UpCall</testCaseName>
+		<testCaseName>Jep434Tests_testLinkerFfi_DownCall</testCaseName>
 		<variations>
 			<variation>--enable-preview</variation>
 		</variations>
 		<command>$(ADD_JVM_LIB_DIR_TO_LIBPATH) $(JAVA_COMMAND) $(JVM_OPTIONS) \
-			--add-modules jdk.incubator.foreign \
 			--enable-native-access=ALL-UNNAMED \
 			-Dforeign.restricted=permit \
 			-cp $(Q)$(LIB_DIR)$(D)asm.jar$(P)$(RESOURCES_DIR)$(P)$(TESTNG)$(P)$(TEST_RESROOT)$(D)GeneralTest.jar$(Q) \
-			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_170.xml$(Q) -testnames Jep389Tests_testClinkerFfi_UpCall \
-			-groups $(TEST_GROUP) \
-			-excludegroups $(DEFAULT_EXCLUDE); \
-			$(TEST_STATUS)
-		</command>
-		<platformRequirements>bits.64,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
-		<levels>
-			<level>sanity</level>
-		</levels>
-		<groups>
-			<group>functional</group>
-		</groups>
-		<impls>
-			<impl>openj9</impl>
-		</impls>
-		<versions>
-			<version>17</version>
-		</versions>
-	</test>
-
-	<test>
-		<testCaseName>Jep389Tests_testClinkerFfi_VaList</testCaseName>
-		<variations>
-			<variation>--enable-preview</variation>
-		</variations>
-		<command>$(ADD_JVM_LIB_DIR_TO_LIBPATH) $(JAVA_COMMAND) $(JVM_OPTIONS) \
-			--add-modules jdk.incubator.foreign \
-			--enable-native-access=ALL-UNNAMED \
-			-Dforeign.restricted=permit \
-			-cp $(Q)$(LIB_DIR)$(D)asm.jar$(P)$(RESOURCES_DIR)$(P)$(TESTNG)$(P)$(TEST_RESROOT)$(D)GeneralTest.jar$(Q) \
-			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_170.xml$(Q) -testnames Jep389Tests_testClinkerFfi_VaList \
+			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_200.xml$(Q) -testnames Jep434Tests_testLinkerFfi_DownCall \
 			-groups $(TEST_GROUP) \
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
@@ -108,38 +82,67 @@
 			<impl>hotspot</impl>
 		</impls>
 		<versions>
-			<version>17</version>
+			<version>20+</version>
 		</versions>
 	</test>
 
 	<test>
-		<testCaseName>CloseScope0Tests</testCaseName>
-		<disables>
-			<disable>
-				<comment>https://github.com/eclipse-openj9/openj9/issues/14028#issuecomment-988225623</comment>
-				<impl>hotspot</impl>
-			</disable>
-		</disables>
+		<testCaseName>Jep434Tests_testLinkerFfi_UpCall</testCaseName>
+		<variations>
+			<variation>--enable-preview</variation>
+		</variations>
 		<command>$(ADD_JVM_LIB_DIR_TO_LIBPATH) $(JAVA_COMMAND) $(JVM_OPTIONS) \
-			--add-opens jdk.incubator.foreign/jdk.internal.foreign=ALL-UNNAMED \
-			--add-opens java.base/jdk.internal.misc=ALL-UNNAMED \
-			--add-opens java.base/java.lang=ALL-UNNAMED \
-			--add-modules jdk.incubator.foreign \
+			--enable-native-access=ALL-UNNAMED \
+			-Dforeign.restricted=permit \
 			-cp $(Q)$(LIB_DIR)$(D)asm.jar$(P)$(RESOURCES_DIR)$(P)$(TESTNG)$(P)$(TEST_RESROOT)$(D)GeneralTest.jar$(Q) \
-			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_170.xml$(Q) \
-			-testnames CloseScope0Tests \
+			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_200.xml$(Q) -testnames Jep434Tests_testLinkerFfi_UpCall \
 			-groups $(TEST_GROUP) \
 			-excludegroups $(DEFAULT_EXCLUDE); \
 			$(TEST_STATUS)
 		</command>
+		<platformRequirements>bits.64,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
 		<levels>
 			<level>sanity</level>
 		</levels>
 		<groups>
 			<group>functional</group>
 		</groups>
+		<impls>
+			<impl>openj9</impl>
+			<impl>hotspot</impl>
+		</impls>
 		<versions>
-			<version>17</version>
+			<version>20+</version>
+		</versions>
+	</test>
+
+	<test>
+		<testCaseName>Jep434Tests_testLinkerFfi_VaList</testCaseName>
+		<variations>
+			<variation>--enable-preview</variation>
+		</variations>
+		<command>$(ADD_JVM_LIB_DIR_TO_LIBPATH) $(JAVA_COMMAND) $(JVM_OPTIONS) \
+			--enable-native-access=ALL-UNNAMED \
+			-Dforeign.restricted=permit \
+			-cp $(Q)$(LIB_DIR)$(D)asm.jar$(P)$(RESOURCES_DIR)$(P)$(TESTNG)$(P)$(TEST_RESROOT)$(D)GeneralTest.jar$(Q) \
+			org.testng.TestNG -d $(REPORTDIR) $(Q)$(TEST_RESROOT)$(D)testng_200.xml$(Q) -testnames Jep434Tests_testLinkerFfi_VaList \
+			-groups $(TEST_GROUP) \
+			-excludegroups $(DEFAULT_EXCLUDE); \
+			$(TEST_STATUS)
+		</command>
+		<platformRequirements>bits.64,^arch.aarch64,^arch.arm,^arch.riscv,^os.zos,^os.sunos</platformRequirements>
+		<levels>
+			<level>sanity</level>
+		</levels>
+		<groups>
+			<group>functional</group>
+		</groups>
+		<impls>
+			<impl>openj9</impl>
+			<impl>hotspot</impl>
+		</impls>
+		<versions>
+			<version>20+</version>
 		</versions>
 	</test>
 </playlist>
