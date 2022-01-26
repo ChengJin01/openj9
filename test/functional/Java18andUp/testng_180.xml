@@ -38,9 +38,21 @@
 			<class name="org.openj9.test.jep419.downcall.StructTests2"/>
 		</classes>
 	</test>
+	<test name="Jep419Tests_testClinkerFfi_UpCall">
+		<classes>
+			<class name="org.openj9.test.jep419.upcall.MultiUpcallMHTests"/>
+			<class name="org.openj9.test.jep419.upcall.MultiUpcallThrdsMHTests1"/>
+			<class name="org.openj9.test.jep419.upcall.MultiUpcallThrdsMHTests2"/>
+			<class name="org.openj9.test.jep419.upcall.UpcallMHWithMixedSigStruTests"/>
+			<class name="org.openj9.test.jep419.upcall.UpcallMHWithPrimTests"/>
+			<class name="org.openj9.test.jep419.upcall.UpcallMHWithStructTests"/>
+		</classes>
+	</test>
 	<test name="Jep419Tests_testClinkerFfi_VaList">
 		<classes>
-			<class name="org.openj9.test.jep419.valist.VaListTests"/>
+			<class name="org.openj9.test.jep419.valist.ApiTests"/>
+			<class name="org.openj9.test.jep419.valist.DowncallTests"/>
+			<class name="org.openj9.test.jep419.valist.UpcallTests"/>
 		</classes>
 	</test>
 	<test name="CloseScope0Tests">
