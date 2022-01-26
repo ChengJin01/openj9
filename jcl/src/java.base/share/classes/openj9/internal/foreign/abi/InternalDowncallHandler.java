@@ -309,10 +309,18 @@ public class InternalDowncallHandler {
 		return returnStructSegmt;
 	}
 
+	/**
+	 * The internal constructor is responsible for mapping the preprocessed layouts
+	 * of return type & argument types to the underlying prep_cif in native.
+	 *
+	 * @param downcallAddr The downcall symbol
+	 * @param functionMethodType The MethodType of the specified native function
+	 * @param funcDesc The function descriptor of the specified native function
+	 */
 	/*[IF JAVA_SPEC_VERSION >= 17]*/
-	InternalDowncallHandler(MethodType functionMethodType, FunctionDescriptor functionDescriptor)
+	public InternalDowncallHandler(MethodType functionMethodType, FunctionDescriptor functionDescriptor)
 	/*[ELSE] JAVA_SPEC_VERSION >= 17 */
-	InternalDowncallHandler(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor functionDescriptor)
+	public InternalDowncallHandler(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor functionDescriptor)
 	/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 	{
 		realReturnLayout = functionDescriptor.returnLayout().orElse(null); // set to null for void
@@ -433,22 +441,9 @@ public class InternalDowncallHandler {
 	 * The method is ultimately invoked by Linker on the specific platforms to generate the requested
 	 * method handle to the underlying C function.
 	 *
-	 * @param downcallAddr The downcall symbol
-	 * @param functionMethodType The MethodType of the specified native function
-	 * @param funcDesc The function descriptor of the specified native function
 	 * @return a method handle bound to the native method
 	 */
-	/*[IF JAVA_SPEC_VERSION >= 17]*/
-	public static MethodHandle getBoundMethodHandle(MethodType functionMethodType, FunctionDescriptor funcDesc)
-	/*[ELSE] JAVA_SPEC_VERSION >= 17 */
-	public static MethodHandle getBoundMethodHandle(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor funcDesc)
-	/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
-	{
-		/*[IF JAVA_SPEC_VERSION >= 17]*/
-		InternalDowncallHandler nativeInvoker = new InternalDowncallHandler(functionMethodType, funcDesc);
-		/*[ELSE] JAVA_SPEC_VERSION >= 17 */
-		InternalDowncallHandler nativeInvoker = new InternalDowncallHandler(downcallAddr, functionMethodType, funcDesc);
-		/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
+	public MethodHandle getBoundMethodHandle() {
 		try {
 			/*[IF JAVA_SPEC_VERSION >= 17]*/
 			/*[IF JAVA_SPEC_VERSION == 18]*/
@@ -460,10 +455,10 @@ public class InternalDowncallHandler {
 			MethodType nativeMethodType = methodType(Object.class, long[].class);
 			/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 
-			MethodHandle boundHandle = lookup.bind(nativeInvoker, "runNativeMethod", nativeMethodType); //$NON-NLS-1$
+			MethodHandle boundHandle = lookup.bind(this, "runNativeMethod", nativeMethodType); //$NON-NLS-1$
 
 			/* Replace the original handle with the specified types of the C function */
-			boundHandle = nativeInvoker.permuteMH(boundHandle, functionMethodType);
+			boundHandle = permuteMH(boundHandle, funcMethodType);
 			return boundHandle;
 		} catch (ReflectiveOperationException e) {
 			throw new InternalError(e);
