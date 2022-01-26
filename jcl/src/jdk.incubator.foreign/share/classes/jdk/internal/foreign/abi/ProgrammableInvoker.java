@@ -22,9 +22,8 @@
  *******************************************************************************/
 package jdk.internal.foreign.abi;
 
-import java.util.Optional;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -290,8 +289,7 @@ public class ProgrammableInvoker {
 	ProgrammableInvoker(Addressable downcallAddr, MethodType functionMethodType, FunctionDescriptor functionDescriptor)
 	/*[ENDIF] JAVA_SPEC_VERSION >= 17 */
 	{
-		Optional<MemoryLayout> returnLayout = functionDescriptor.returnLayout();
-		realReturnLayout = returnLayout.orElse(null); // set to null for void
+		realReturnLayout = functionDescriptor.returnLayout().orElse(null); // set to null for void
 		List<MemoryLayout> argLayouts = functionDescriptor.argumentLayouts();
 		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayouts.size()]);
 

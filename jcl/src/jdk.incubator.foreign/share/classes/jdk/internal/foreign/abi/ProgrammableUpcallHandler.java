@@ -1,4 +1,4 @@
-/*[INCLUDE-IF (JAVA_SPEC_VERSION >= 16) & (JAVA_SPEC_VERSION <= 18) ]*/
+/*[INCLUDE-IF (JAVA_SPEC_VERSION >= 16) & (JAVA_SPEC_VERSION <= 18)]*/
 /*******************************************************************************
  * Copyright (c) 2021, 2022 IBM Corp. and others
  *
@@ -24,7 +24,6 @@ package jdk.internal.foreign.abi;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
@@ -71,7 +70,7 @@ public final class ProgrammableUpcallHandler implements UpcallHandler {
 		/* The layout check against the method type is still required for Java 16 & 17 in that
 		 * both the function descriptor and the method type are passed in as arguments by users.
 		 * Note: skip the validity check on function descriptor in Java 18 as it is done before
-		 * initializing ProgrammableInvoker in OpenJDK. Meanwhile, the method type is directly
+		 * initializing DowncallLinker in OpenJDK. Meanwhile, the method type is directly
 		 * deduced from the function descriptor itself, in which case there is no need to
 		 * check the layout against the method type.
 		 */

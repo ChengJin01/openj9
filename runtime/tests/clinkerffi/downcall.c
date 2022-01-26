@@ -73,24 +73,6 @@ add3Ints(int intArg1, int intArg2, int intArg3)
 }
 
 /**
- * Add integers from the va_list with the specified count
- *
- * @param intCount the count of the integers
- * @param intArgList the integer va_list
- * @return the sum of integers from the va_list
- */
-int
-addIntsFromVaList(int intCount, va_list intVaList)
-{
-	int intSum = 0;
-	while (intCount > 0) {
-		intSum += va_arg(intVaList, int);
-		intCount--;
-	}
-	return intSum;
-}
-
-/**
  * Add an integer and a character.
  *
  * @param intArg the integer to add
@@ -268,24 +250,6 @@ addLongAndLongFromPointer(LONG *longArg1, LONG longArg2)
 }
 
 /**
- * Add long integers from the va_list with the specified count
- *
- * @param longCount the count of the long integers
- * @param longArgList the long va_list
- * @return the sum of long integers from the va_list
- */
-LONG
-addLongsFromVaList(int longCount, va_list longVaList)
-{
-	LONG longSum = 0;
-	while (longCount > 0) {
-		longSum += va_arg(longVaList, LONG);
-		longCount--;
-	}
-	return longSum;
-}
-
-/**
  * Add two floats.
  *
  * @param floatArg1 the 1st float to add
@@ -338,24 +302,6 @@ double
 addDoubleAndDoubleFromPointer(double *doubleArg1, double doubleArg2)
 {
 	double doubleSum = *doubleArg1 + doubleArg2;
-	return doubleSum;
-}
-
-/**
- * Add doubles from the va_list with the specified count
- *
- * @param doubleCount the count of the double arguments
- * @param doubleArgList the double va_list
- * @return the sum of doubles from the va_list
- */
-double
-addDoublesFromVaList(int doubleCount, va_list doubleVaList)
-{
-	double doubleSum = 0;
-	while (doubleCount > 0) {
-		doubleSum += va_arg(doubleVaList, double);
-		doubleCount--;
-	}
 	return doubleSum;
 }
 
@@ -1255,7 +1201,7 @@ addIntAndIntsFromNestedStruct(int arg1, stru_NestedStruct_Int arg2)
  *
  * @param arg1 an integer
  * @param arg2 a struct with an integer and a nested struct
- * @return the sum of these ints
+ * @return the sum of these integers
  */
 int
 addIntAndIntsFromNestedStruct_reverseOrder(int arg1, stru_Int_NestedStruct arg2)
@@ -2040,4 +1986,182 @@ add3DoubleStructs_returnStruct(stru_Double_Double_Double arg1, stru_Double_Doubl
 	doubleStruct.elem2 = arg1.elem2 + arg2.elem2;
 	doubleStruct.elem3 = arg1.elem3 + arg2.elem3;
 	return doubleStruct;
+}
+
+/**
+ * Add integers from the va_list with the specified count
+ *
+ * @param argCount the count of the integers
+ * @param intArgList the integer va_list
+ * @return the sum of integers from the va_list
+ */
+int
+addIntsFromVaList(int argCount, va_list intVaList)
+{
+	int intSum = 0;
+	while (argCount > 0) {
+		intSum += va_arg(intVaList, int);
+		argCount--;
+	}
+	return intSum;
+}
+
+/**
+ * Add longs from the va_list with the specified count
+ *
+ * @param argCount the count of longs
+ * @param longArgList the long va_list
+ * @return the sum of longs from the va_list
+ */
+LONG
+addLongsFromVaList(int argCount, va_list longVaList)
+{
+	LONG longSum = 0;
+	while (argCount > 0) {
+		longSum += va_arg(longVaList, LONG);
+		argCount--;
+	}
+	return longSum;
+}
+
+/**
+ * Add doubles from the va_list with the specified count
+ *
+ * @param argCount the count of the doubles
+ * @param doubleArgList the double va_list
+ * @return the sum of doubles from the va_list
+ */
+double
+addDoublesFromVaList(int argCount, va_list doubleVaList)
+{
+	double doubleSum = 0;
+	while (argCount > 0) {
+		doubleSum += va_arg(doubleVaList, double);
+		argCount--;
+	}
+	return doubleSum;
+}
+
+/**
+ * Add arguments with different types from the va_list
+ *
+ * @param argVaList the va_list with mixed arguments
+ * @return the sum of arguments from the va_list
+ */
+double
+addMixedArgsFromVaList(va_list argVaList)
+{
+	double argSum = va_arg(argVaList, int) + va_arg(argVaList, long) + va_arg(argVaList, double);
+	return argSum;
+}
+
+/**
+ * Add integers (accessed by pointers) from the va_list
+ *
+ * @param argCount the count of integer pointers in the va_list
+ * @param ptrVaList the passed-in va_list containing the integer pointers
+ * @return the sum of integers
+ */
+int
+addIntsByPtrFromVaList(int argCount, va_list ptrVaList)
+{
+	int intSum = 0;
+	while (argCount > 0) {
+		intSum += *va_arg(ptrVaList, int *);
+		argCount--;
+	}
+	return intSum;
+}
+
+/**
+ * Add longs (accessed by pointers) from the va_list
+ *
+ * @param argCount the count of long pointers in the va_list
+ * @param ptrVaList the passed-in va_list containing the long pointers
+ * @return the sum of longs
+ */
+LONG
+addLongsByPtrFromVaList(int argCount, va_list ptrVaList)
+{
+	LONG longSum = 0;
+	while (argCount > 0) {
+		longSum += *va_arg(ptrVaList, LONG *);
+		argCount--;
+	}
+	return longSum;
+}
+
+/**
+ * Add doubles (accessed by pointers) from the va_list
+ *
+ * @param argCount the count of double pointers in the va_list
+ * @param ptrVaList the passed-in va_list containing the double pointers
+ * @return the sum of doubles
+ */
+double
+addDoublesByPtrFromVaList(int argCount, va_list ptrVaList)
+{
+	double doubleSum = 0;
+	while (argCount > 0) {
+		doubleSum += *va_arg(ptrVaList, double *);
+		argCount--;
+	}
+	return doubleSum;
+}
+
+/**
+ * Add integers of structs from the va_list
+ *
+ * @param argCount the count of structs in the va_list
+ * @param struVaList the passed-in va_list containing structs
+ * @return the sum of integers
+ */
+int
+addIntsByStructFromVaList(int argCount, va_list struVaList)
+{
+	int intSum = 0;
+	while (argCount > 0) {
+		stru_Int_Int struArg = va_arg(struVaList, stru_Int_Int);
+		intSum += struArg.elem1 + struArg.elem2;
+		argCount--;
+	}
+	return intSum;
+}
+
+/**
+ * Add longs of structs from the va_list
+ *
+ * @param argCount the count of structs in the va_list
+ * @param struVaList the passed-in va_list containing structs
+ * @return the sum of longs
+ */
+LONG
+addLongsByStructFromVaList(int argCount, va_list struVaList)
+{
+	LONG longSum = 0;
+	while (argCount > 0) {
+		stru_Long_Long struArg = va_arg(struVaList, stru_Long_Long);
+		longSum += struArg.elem1 + struArg.elem2;
+		argCount--;
+	}
+	return longSum;
+}
+
+/**
+ * Add doubles of structs from the va_list
+ *
+ * @param argCount the count of structs in the va_list
+ * @param struVaList the passed-in va_list containing structs
+ * @return the sum of doubles
+ */
+double
+addDoublesByStructFromVaList(int argCount, va_list struVaList)
+{
+	double doubleSum = 0;
+	while (argCount > 0) {
+		stru_Double_Double struArg = va_arg(struVaList, stru_Double_Double);
+		doubleSum += struArg.elem1 + struArg.elem2;
+		argCount--;
+	}
+	return doubleSum;
 }
