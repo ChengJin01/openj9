@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 IBM Corp. and others
+ * Copyright (c) 2016, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -46,6 +46,8 @@ J9OutOfLineINLMethod OutOfLineINL_java_lang_invoke_NativeMethodHandle_freeJ9Nati
 #if JAVA_SPEC_VERSION >= 16
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields;
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData;
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallStub;
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveUpcallDataFields;
 #endif /* JAVA_SPEC_VERSION >= 16 */
 }
 
@@ -135,6 +137,41 @@ public:
  		currentThread->jitStackFrameFlags = nativeMethodFrame->specialFrameFlags & J9_SSF_JIT_NATIVE_TRANSITION_FRAME;
  		restoreSpecialStackFrameLeavingArgs(currentThread, ((UDATA*)(nativeMethodFrame + 1)) - 1);
  	}
+
+#if JAVA_SPEC_VERSION >= 16
+ 	static VMINLINE void
+	updateVMStruct(J9VMThread *currentThread, J9VMThreadInfo *thread)
+	{
+		thread->arg0EA = currentThread->arg0EA;
+		thread->sp = currentThread->sp;
+		thread->pc = currentThread->pc;
+		thread->literals = currentThread->literals;
+	}
+
+ 	static VMINLINE void
+	VMStructHasBeenUpdated(J9VMThread *currentThread, J9VMThreadInfo *thread)
+	{
+ 		currentThread->arg0EA = thread->arg0EA;
+ 		currentThread->sp = thread->sp;
+ 		currentThread->pc = thread->pc;
+ 		currentThread->literals = thread->literals;
+	}
+
+ 	static VMINLINE void
+	buildGenericSpecialStackFrame(J9VMThread *currentThread, UDATA flags)
+	{
+ 		currentThread->arg0EA = buildSpecialStackFrame(currentThread, J9SF_FRAME_TYPE_GENERIC_SPECIAL, flags, false);
+	}
+
+ 	static VMINLINE void
+	restoreGenericSpecialStackFrame(J9VMThread *currentThread)
+	{
+ 		currentThread->sp = currentThread->arg0EA + 1;
+ 		currentThread->literals = (J9Method*)(currentThread->sp[-3]);
+ 		currentThread->pc = (U_8*)(currentThread->sp[-2]);
+ 		currentThread->arg0EA = (UDATA*)(currentThread->sp[-1] & ~(UDATA)J9SF_A0_INVISIBLE_TAG);
+	}
+#endif /* JAVA_SPEC_VERSION >= 16 */
 };
 
 #include "objectreferencesmacros_define.inc"
