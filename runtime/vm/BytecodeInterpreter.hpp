@@ -5068,6 +5068,10 @@ done:
 #endif /* FFI_NATIVE_RAW_API */
 		}
 
+		/* Any exception in upcall should be thrown if occurs */
+		if (VM_VMHelpers::exceptionPending(_currentThread)) {
+			rc = GOTO_THROW_CURRENT_EXCEPTION;
+		}
 		return rc;
 
 ffi_OOM:
@@ -5076,6 +5080,43 @@ ffi_OOM:
 		VMStructHasBeenUpdated(REGISTER_ARGS);
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		goto done;
+	}
+
+	/* Call into the interpreter from icallVMprJavaUpcallImpl() via the generated native thunk during the upcall
+	 * so as to invoke the upcall method handle after setting the arguments on the java stack
+	 */
+	VMINLINE VM_BytecodeAction
+	native2InterpreterTransition(REGISTER_ARGS_LIST)
+	{
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+		J9UpcallMetaData *data = (J9UpcallMetaData *)_currentThread->returnValue2;
+		j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+
+		/* Fetch target method and appendix from invokeCacheArray (2 element array)
+		 * Stack transitions from:
+		 *    arguments set in icallVMprJavaUpcallImpl() <- SP
+		 *    the target method handle
+		 * To:
+		 *    invokeCacheArray[1] "appendix" <- SP
+		 *    arguments set in icallVMprJavaUpcallImpl()
+		 *    the target method handle
+		 *
+		 * and sendMethod is ((J9Method *)((j.l.MemberName)invokeCacheArray[0]) + vmtargetOffset)
+		 */
+		j9object_t invokeCacheArray = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE(_currentThread, mhMetaData);
+		j9object_t memberName = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 0);
+		_sendMethod = (J9Method *)(UDATA)J9OBJECT_U64_LOAD(_currentThread, memberName, _vm->vmtargetOffset);
+		j9object_t appendix = (j9object_t)J9JAVAARRAYOFOBJECT_LOAD(_currentThread, invokeCacheArray, 1);
+		if (NULL != appendix) {
+			*(j9object_t*)--_sp = appendix;
+		}
+
+		/* Clean the JIT specific flags to avoid jumping over to an invalid JIT return address
+		 * upon return as the callin doesn't come from JIT but the generated thunk.
+		 */
+		_currentThread->jitStackFrameFlags = 0;
+
+		return rc;
 	}
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
@@ -10060,6 +10101,10 @@ public:
 		_sendMethod = (J9Method *)actionData;
 		goto methodEnter;
 #endif /* DO_HOOKS */
+#if JAVA_SPEC_VERSION >= 16
+	case J9_BCLOOP_N2I_TRANSITION:
+		PERFORM_ACTION(native2InterpreterTransition(REGISTER_ARGS));
+#endif /* JAVA_SPEC_VERSION >= 16 */
 	default:
 #if defined(TRACE_TRANSITIONS)
 		j9tty_printf(PORTLIB, "<%p> enter: UNKNOWN %d\n", vmThread, vmThread->returnValue);
