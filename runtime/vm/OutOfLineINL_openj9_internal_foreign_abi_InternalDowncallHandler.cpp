@@ -27,10 +27,30 @@
 #include "OutOfLineINL.hpp"
 #include "LayoutFFITypeHelpers.hpp"
 #include "AtomicSupport.hpp"
+#include <stdint.h>
 
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
+
+typedef int64_t LONG;
+
+typedef struct stru_Long_2_Floats {
+	LONG elem1;
+	float elem2;
+	float elem3;
+} stru_Long_2_Floats;
+
+int
+addLongAndLong2FloatsFromStruct(LONG arg1, stru_Long_2_Floats arg2)
+{
+	printf("\n internal: addLongAndLong2FloatsFromStruct: arg1 = %lld", arg1);
+	printf("\n internal: addLongAndLong2FloatsFromStruct: arg2.elem1 = %lld", arg2.elem1);
+	printf("\n internal: addLongAndLong2FloatsFromStruct: arg2.elem2 = %f", arg2.elem2);
+	printf("\n internal: addLongAndLong2FloatsFromStruct: arg2.elem3 = %f\n", arg2.elem3);
+	return 1;
+}
+
 /* openj9.internal.foreign.abi.InternalDowncallHandler: private static synchronized native void resolveRequiredFields(); */
 VM_BytecodeAction
 OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_resolveRequiredFields(J9VMThread *currentThread, J9Method *method)
@@ -61,17 +81,63 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_resolveRequired
 	VM_OutOfLineINL_Helpers::restoreInternalNativeStackFrame(currentThread);
 
 done:
+
+{
+	  UDATA returnValue = 0;
+	  UDATA *returnStorageTest = &returnValue;
+	  ffi_cif cif_temp;
+	  UDATA structElemNum = 3;
+	  UDATA argNum = 2;
+	  ffi_type **cls_struct_fields1 = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * (structElemNum + 1), OMRMEM_CATEGORY_VM);
+	  ffi_type **dbl_arg_types = (ffi_type **)j9mem_allocate_memory(sizeof(ffi_type *) * (argNum + 1), OMRMEM_CATEGORY_VM);
+	  void **args_db = (void **)j9mem_allocate_memory(sizeof(void *) * (argNum + 1), OMRMEM_CATEGORY_VM);
+	  ffi_type cls_struct_type1;
+	  ffi_type *retType = &ffi_type_sint32;
+	  long arg1;
+	  stru_Long_2_Floats arg2;
+
+	  cls_struct_fields1[0] = &ffi_type_sint64;
+	  cls_struct_fields1[1] = &ffi_type_float;
+	  cls_struct_fields1[2] = &ffi_type_float;
+	  cls_struct_fields1[3] = NULL;
+
+	  cls_struct_type1.size = 0;
+	  cls_struct_type1.alignment = 0;
+	  cls_struct_type1.type = FFI_TYPE_STRUCT;
+	  cls_struct_type1.elements = cls_struct_fields1;
+
+	  dbl_arg_types[0] = &ffi_type_sint64;
+	  dbl_arg_types[1] = &cls_struct_type1;
+	  dbl_arg_types[2] = NULL;
+
+	 ffi_prep_cif(&cif_temp, FFI_DEFAULT_ABI, 2, retType, dbl_arg_types);
+	 arg1 = 555555555555L;
+	 arg2.elem1 = 777777777777L;
+	 arg2.elem2 = 11.25F;
+	 arg2.elem3 = 22.75F;
+	 args_db[0] = &arg1;
+	 args_db[1] = &arg2;
+	 args_db[2] = NULL;
+
+	 printf("\nOutOfLineINL: calling ffi_call: ... ");
+	ffi_call(&cif_temp, FFI_FN(addLongAndLong2FloatsFromStruct), returnStorageTest, args_db);
+	printf("\nffi_call1: returnStorageTest = %d, returnValue = %d\n", (int)(*returnStorageTest), (int)returnValue);
+	j9mem_free_memory(cls_struct_fields1);
+	j9mem_free_memory(dbl_arg_types);
+	j9mem_free_memory(args_db);
+}
 	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 0);
 	return rc;
 }
 
 /**
- * openj9.internal.foreign.abi.InternalDowncallHandler: private native void initCifNativeThunkData(String[] argLayouts, String retLayout, boolean newArgTypes);
+ * openj9.internal.foreign.abi.InternalDowncallHandler: private native void initCifNativeThunkData(String[] argLayouts, String retLayout, boolean newArgTypes, int varArgIndex);
  *
  * @brief Prepare the prep_cif for the native function specified by the arguments/return layouts
  * @param argLayouts[in] A c string array describing the argument layouts
  * @param retLayout[in] A c string describing the return layouts
  * @param newArgTypes[in] a flag determining whether to create a new ffi_type array for arguments
+ * @param varArgIndex[in] the variadic argument index if exists in the argument list
  * @return void
  */
 VM_BytecodeAction
@@ -80,15 +146,17 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_initCifNativeTh
 	VM_BytecodeAction rc = EXECUTE_BYTECODE;
 	J9JavaVM *vm = currentThread->javaVM;
 	LayoutFFITypeHelpers ffiTypeHelpers(currentThread);
+	ffi_status status = FFI_OK;
 	ffi_cif *cif = NULL;
 	ffi_type *returnType = NULL;
 	ffi_type **argTypes = NULL;
 	J9CifArgumentTypes *cifArgTypesNode = NULL;
 
-	bool newArgTypes = (bool)(*(U_32*)currentThread->sp);
-	j9object_t retLayoutStrObject = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 1);
-	j9object_t argLayoutStrsObject = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 2);
-	j9object_t nativeInvoker = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 3);
+	I_32 varArgIndex = *(I_32*)currentThread->sp;
+	bool newArgTypes = (bool)*(U_32*)(currentThread->sp + 1);
+	j9object_t retLayoutStrObject = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 2);
+	j9object_t argLayoutStrsObject = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 3);
+	j9object_t nativeInvoker = J9_JNI_UNWRAP_REFERENCE(currentThread->sp + 4);
 	U_32 argTypesCount = J9INDEXABLEOBJECT_SIZE(currentThread, argLayoutStrsObject);
 	UDATA returnLayoutSize = 0;
 
@@ -157,7 +225,15 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_initCifNativeTh
 		goto freeAllMemoryThenExit;
 	}
 
-	if (FFI_OK != ffi_prep_cif(cif, FFI_DEFAULT_ABI, argTypesCount, returnType, &(argTypes[0]))) {
+	/* The variadic argument index is -1 by default if it doesn't exist in the argument list.
+	 * Note: it is literally equal to the count of the fixed arguments before variadic arguments.
+	 */
+	if (varArgIndex < 0) {
+		status = ffi_prep_cif(cif, FFI_DEFAULT_ABI, argTypesCount, returnType, &(argTypes[0]));
+	} else {
+		status = ffi_prep_cif_var(cif, FFI_DEFAULT_ABI, varArgIndex, argTypesCount, returnType, &(argTypes[0]));
+	}
+	if (FFI_OK != status) {
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
 		goto freeAllMemoryThenExit;
@@ -191,7 +267,7 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_initCifNativeTh
 	J9VMOPENJ9INTERNALFOREIGNABIINTERNALDOWNCALLHANDLER_SET_CIFNATIVETHUNKADDR(currentThread, nativeInvoker, (intptr_t)cif);
 
 done:
-	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 4);
+	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 5);
 	return rc;
 
 freeAllMemoryThenExit:
