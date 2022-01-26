@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 IBM Corp. and others
+ * Copyright (c) 2016, 2022 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -43,10 +43,17 @@ J9OutOfLineINLMethod OutOfLineINL_java_lang_invoke_NativeMethodHandle_initJ9Nati
 J9OutOfLineINLMethod OutOfLineINL_java_lang_invoke_NativeMethodHandle_freeJ9NativeCalloutDataRef;
 #endif /* defined(J9VM_OPT_PANAMA) */
 
-#if JAVA_SPEC_VERSION >= 16
+#if JAVA_SPEC_VERSION >= 19
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_DowncallLinker_resolveRequiredFields;
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_DowncallLinker_initCifNativeThunkData;
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_UpcallLinker_allocateUpcallStub;
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveUpcallDataFields;
+#elif (JAVA_SPEC_VERSION >= 16) && (JAVA_SPEC_VERSION <= 18)
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_resolveRequiredFields;
 J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableInvoker_initCifNativeThunkData;
-#endif /* JAVA_SPEC_VERSION >= 16 */
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_ProgrammableUpcallHandler_allocateUpcallStub;
+J9OutOfLineINLMethod OutOfLineINL_jdk_internal_foreign_abi_UpcallMHMetaData_resolveUpcallDataFields;
+#endif /* JAVA_SPEC_VERSION >= 19 */
 }
 
 class VM_OutOfLineINL_Helpers {
