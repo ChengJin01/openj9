@@ -41,6 +41,10 @@
 #include "j9modifiers_api.h"
 #include "j9cp.h"
 #include "ute.h"
+#if JAVA_SPEC_VERSION >= 16
+//#include "ut_j9vm.h"
+#include "AtomicSupport.hpp"
+#endif /* JAVA_SPEC_VERSION >= 16 */
 #include "ObjectAllocationAPI.hpp"
 
 typedef enum {
@@ -1576,14 +1580,17 @@ exit:
 
 #if JAVA_SPEC_VERSION >= 16
 	/**
-	 * @brief Converts the type of the return value to the return type intended for JEP389/419 FFI downcall/upcall
+	 * @brief Converts the type of the return value to the return type intended for JEP389/419 FFI downcall
+	 *
 	 * @param currentThread[in] The pointer to the current J9VMThread
 	 * @param returnType[in] The type of the return value
 	 * @param returnStorage[in] The pointer to the return value
+	 * @param isDownCall[in] A flag indicating whether the current invocation is returned from the downcall
 	 */
 	static VMINLINE void
 	convertFFIReturnValue(J9VMThread* currentThread, U_8 returnType, UDATA returnTypeSize, UDATA* returnStorage)
 	{
+		printf("\nconvertFFIReturnValue_0: *returnStorage = 0x%lx, returnTypeSize = %ld", *returnStorage, returnTypeSize);
 		switch (returnType) {
 		case J9NtcVoid:
 			currentThread->returnValue = (UDATA)0;
@@ -1630,6 +1637,232 @@ exit:
 		case J9NtcPointer:
 			break;
 		}
+		printf("\nconvertFFIReturnValue_1: returnValue = 0x%lx\n", currentThread->returnValue);
+	}
+
+	/**
+	 * @brief Set the arguments of the upcall method handle on the stack of the interpreter
+	 *
+	 * @param interpStackPtr The pointer to the stack pointer in the interpreter
+	 * @param data The pointer to J9UpcallMetaData
+	 * @return true on success, false on failure
+	 */
+	static VMINLINE bool
+	setUpcallMHArguments(UDATA **interpStackPtr, J9UpcallMetaData *data)
+	{
+		J9JavaVM *vm = data->vm;
+		const J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
+		J9VMThread *currentThread = vmFuncs->currentVMThread(vm);
+		J9UpcallNativeSignature *nativeSig = data->nativeFuncSignature;
+		J9UpcallSigType *sigArray = nativeSig->sigArray;
+		UDATA lastParamIdx = nativeSig->numSigs - 1; /* The last element is for the return type */
+		void *argsListPointer = data->argsListPtr;
+		UDATA *stackPtr = *interpStackPtr;
+		UDATA *spForCalleeMH = NULL; /* The location of target method handle reserved on the java stack */
+		j9object_t mhMetaData = NULL;
+		bool result = true;
+
+		/* The argument list of the upcall method handle on the stack includes the target method handle,
+		 * the method arguments and the appendix which is set via MethodHandleResolver.linkCallerMethod().
+		 *
+		 * Note: the location of the target method handle on the stack is temporarily reserved so as to
+		 * skip the GC related operations on pointer/struct (e.g. J9AllocateObject).
+		 */
+		stackPtr -= 1;
+		spForCalleeMH = stackPtr;
+
+		for (UDATA argIndex = 0; argIndex < lastParamIdx; argIndex++) {
+			U_8 argSigType = sigArray[argIndex].type & J9_FFI_UPCALL_SIG_TYPE_MASK;
+
+			switch (argSigType) {
+			case J9_FFI_UPCALL_SIG_TYPE_INT64: /* Fall through */
+			case J9_FFI_UPCALL_SIG_TYPE_DOUBLE:
+				stackPtr -= 2;
+				*(I_64*)stackPtr = *(I_64*)vmFuncs->getArgPointer(nativeSig, argsListPointer, argIndex);
+				break;
+			case J9_FFI_UPCALL_SIG_TYPE_POINTER:
+			{
+				I_64 offset = *(I_64*)vmFuncs->getArgPointer(nativeSig, argsListPointer, argIndex);
+				j9object_t memAddrObject = createMemAddressObject(data, offset);
+				if (J9_UNEXPECTED(NULL == memAddrObject)) {
+					result = false;
+					goto done;
+				}
+				*(j9object_t*)--stackPtr = memAddrObject;
+				break;
+			}
+			case J9_FFI_UPCALL_SIG_TYPE_STRUCT:
+			{
+				I_64 offset = (I_64)(intptr_t)vmFuncs->getArgPointer(nativeSig, argsListPointer, argIndex);
+				j9object_t memSegmtObject = createMemSegmentObject(data, offset, sigArray[argIndex].sizeInByte);
+				if (J9_UNEXPECTED(NULL == memSegmtObject)) {
+					result = false;
+					goto done;
+				}
+				*(j9object_t*)--stackPtr = memSegmtObject;
+				break;
+			}
+			default:
+			{
+				/* Convert the argument value to 64 bits prior to the 32-bit conversion to get the actual value
+				 * in the case of boolean/byte/char/short/int regardless of the endianness on platforms.
+				 */
+				I_64 argValue = *(I_64*)vmFuncs->getArgPointer(nativeSig, argsListPointer, argIndex);
+#if !defined(J9VM_ENV_LITTLE_ENDIAN)
+				/* Right shift the 64-bit float argument by 4 bytes(32 bits) given the actual value
+				 * is placed on the higher 4 bytes on the Big-Endian(BE) platforms.
+				 */
+				printf("\nicallVMprJavaUpcallImpl_0: argValue = 0x%lx",argValue);
+				if (J9_FFI_UPCALL_SIG_TYPE_FLOAT == argSigType) {
+					argValue = argValue >> J9_FFI_UPCALL_SIG_TYPE_32_BIT;
+				}
+#endif /* J9VM_ENV_LITTLE_ENDIAN */
+				*(I_32*)--stackPtr = (I_32)argValue;
+				printf("\nicallVMprJavaUpcallImpl_1: *(I_32*)stackPtr = 0x%x\n", *(I_32*)stackPtr);
+				break;
+			}
+			}
+		}
+		/* Set the target method handle as argument on the java stack */
+		mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+		*(j9object_t*)spForCalleeMH = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
+		*interpStackPtr = stackPtr;
+done:
+		return result;
+	}
+
+	/**
+	 * @brief Generate an object of the MemoryAddress's subclass on the heap
+	 * with the specified native address to the value.
+	 *
+	 * @param data The pointer to J9UpcallMetaData
+	 * @param offset The native address to the value
+	 * @return a MemoryAddress object
+	 */
+	static VMINLINE j9object_t
+	createMemAddressObject(J9UpcallMetaData *data, I_64 offset)
+	{
+		J9JavaVM *vm = data->vm;
+		J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
+		MM_ObjectAllocationAPI objectAllocate(currentThread);
+		j9object_t memAddrObject = NULL;
+		J9Class *memAddrClass = J9VMJDKINTERNALFOREIGNMEMORYADDRESSIMPL(vm);
+		//Assert_VM_true(FFI_UPCALL_J9CLASS_EYECATCHER == memAddrClass->eyecatcher);
+
+		/* To wrap up an object of the MemoryAddress's subclass as an argument on the java stack,
+		 * this object is directly allocated on the heap with the passed-in native address(offset)
+		 * set to this object.
+		 */
+		memAddrObject = objectAllocate.inlineAllocateObject(currentThread, memAddrClass, true, false);
+		if (NULL == memAddrObject) {
+			memAddrObject = vm->memoryManagerFunctions->J9AllocateObject(currentThread, memAddrClass, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+			if (J9_UNEXPECTED(NULL == memAddrObject)) {
+				setHeapOutOfMemoryError(currentThread);
+				goto done;
+			}
+		}
+		//Assert_VM_true(memAddrClass == J9OBJECT_CLAZZ(currentThread, memAddrObject));
+
+		VM_AtomicSupport::writeBarrier();
+#if JAVA_SPEC_VERSION <= 17
+		J9VMJDKINTERNALFOREIGNMEMORYADDRESSIMPL_SET_SEGMENT(currentThread, memAddrObject, NULL);
+#endif /* JAVA_SPEC_VERSION <= 17 */
+		J9VMJDKINTERNALFOREIGNMEMORYADDRESSIMPL_SET_OFFSET(currentThread, memAddrObject, offset);
+
+done:
+		return memAddrObject;
+	}
+
+	/**
+	 * @brief Generate an object of the MemorySegment's subclass on the heap with the specified
+	 * native address to the requested struct.
+	 *
+	 * @param data The pointer to J9UpcallMetaData
+	 * @param offset The native address to the requested struct
+	 * @param sigTypeSize The byte size of the requested struct
+	 * @return a MemorySegment object
+	 */
+	static VMINLINE j9object_t
+	createMemSegmentObject(J9UpcallMetaData *data, I_64 offset, U_32 sigTypeSize)
+	{
+		J9JavaVM *vm = data->vm;
+		J9VMThread *currentThread = vm->internalVMFunctions->currentVMThread(vm);
+		MM_ObjectAllocationAPI objectAllocate(currentThread);
+		j9object_t scopeObject = NULL;
+		j9object_t memSegmtObject = NULL;
+		J9Class *memSegmtClass = J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL(vm);
+		//Assert_VM_true(FFI_UPCALL_J9CLASS_EYECATCHER == memSegmtClass->eyecatcher);
+
+		/* To wrap up an object of the MemorySegment's subclass as an argument on the java stack,
+		 * this object is directly allocated on the heap with the passed-in native address(offset)
+		 * set to this object.
+		 */
+		memSegmtObject = objectAllocate.inlineAllocateObject(currentThread, memSegmtClass, true, false);
+		if (NULL == memSegmtObject) {
+			memSegmtObject = vm->memoryManagerFunctions->J9AllocateObject(currentThread, memSegmtClass, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+			if (J9_UNEXPECTED(NULL == memSegmtObject)) {
+				setHeapOutOfMemoryError(currentThread);
+				goto done;
+			}
+		}
+		//Assert_VM_true(memSegmtClass == J9OBJECT_CLAZZ(currentThread, memSegmtObject));
+		scopeObject = createResourceScopeObject(currentThread, data, memSegmtObject);
+
+		VM_AtomicSupport::writeBarrier();
+		J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_MIN(currentThread, memSegmtObject, offset);
+		VM_AtomicSupport::writeBarrier();
+		J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_LENGTH(currentThread, memSegmtObject, sigTypeSize);
+		VM_AtomicSupport::writeBarrier();
+		J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_SCOPE(currentThread, memSegmtObject, scopeObject);
+		printf("\ncreateMemSegmentObject: offset = 0x%lx, sigTypeSize = %u, scopeObject = %p\n", offset, sigTypeSize, scopeObject);
+
+done:
+		return memSegmtObject;
+	}
+
+	/**
+	 * @brief Generate an object of the ResourceScope's subclass on the heap with the current thread
+	 * as the owner thread for the ResourceScope object.
+	 *
+	 * @param currentThread the pointer to the current J9VMThread
+	 * @param data A pointer to J9UpcallMetaData
+	 * @param memSegmtObject A MemorySegment object which the requested ResourceScope object is associated with
+	 * @param sigTypeSize The byte size of the struct
+	 * @return a ResourceScope object
+	 */
+	static VMINLINE j9object_t
+	createResourceScopeObject(J9VMThread* currentThread, J9UpcallMetaData *data, j9object_t memSegmtObject)
+	{
+		J9JavaVM *vm = data->vm;
+		j9object_t mhMetaData = NULL;
+		j9object_t ownerThreadObject = NULL;
+		MM_ObjectAllocationAPI objectAllocate(currentThread);
+		j9object_t scopeObject = NULL;
+		J9Class *scopeClass = J9VMJDKINTERNALFOREIGNCONFINEDSCOPE(vm);
+		//Assert_VM_true(FFI_UPCALL_J9CLASS_EYECATCHER == scopeClass->eyecatcher);
+
+		/* The object of the ResourceScope's subclass is set as part of arguments to a MemorySegment object
+		 * created in native, which is validated in OpenJDK before returning the native memory address from
+		 * MemorySegment.address() in java.
+		 */
+		scopeObject = objectAllocate.inlineAllocateObject(currentThread, scopeClass, true, false);
+		if (NULL == scopeObject) {
+			pushObjectInSpecialFrame(currentThread, memSegmtObject);
+			scopeObject = vm->memoryManagerFunctions->J9AllocateObject(currentThread, scopeClass, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+			memSegmtObject = popObjectInSpecialFrame(currentThread);
+			if (J9_UNEXPECTED(NULL == scopeObject)) {
+				setHeapOutOfMemoryError(currentThread);
+				goto done;
+			}
+		}
+		//Assert_VM_true(scopeClass == J9OBJECT_CLAZZ(currentThread, scopeObject));
+
+		mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+		ownerThreadObject = J9VMJDKINTERNALFOREIGNABIUPCALLMHMETADATA_SCOPEOWNERTHREAD(currentThread, mhMetaData);
+		VM_AtomicSupport::writeBarrier();
+		J9VMJDKINTERNALFOREIGNCONFINEDSCOPE_SET_OWNER(currentThread, scopeObject, ownerThreadObject);
+done:
+		return scopeObject;
 	}
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
