@@ -45,16 +45,6 @@ final class UpcallMHMetaData {
 	 */
 	private Object[] invokeCache;
 
-	private static synchronized native void resolveUpcallDataFields();
-
-	static {
-		/* Resolve the fields (offset in the JCL constant pool of VM) specific to the metadata plus the fields
-		 * of MemoryAddressImpl and NativeMemorySegmentImpl given the generated macros from vmconstantpool.xml
-		 * depend on their offsets to access the corresponding fields in the process of the upcall.
-		 */
-		resolveUpcallDataFields();
-	}
-
 	UpcallMHMetaData(MethodHandle targetHandle) {
 		calleeMH = targetHandle;
 		calleeType = targetHandle.type();

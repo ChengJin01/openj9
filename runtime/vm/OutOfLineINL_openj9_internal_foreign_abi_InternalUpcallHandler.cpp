@@ -31,6 +31,63 @@
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
+/* Resolve the fields (offset in the JCL constant pool of VM) specific to the metadata plus the fields
+ * of MemoryAddressImpl and NativeMemorySegmentImpl given the generated macros from vmconstantpool.xml
+ * depend on their offsets to access the corresponding fields in the process of the upcall.
+ */
+VM_BytecodeAction
+resolveUpcallDataFields(J9VMThread *currentThread, J9Method *method)
+{
+	VM_BytecodeAction rc = EXECUTE_BYTECODE;
+	J9JavaVM *vm = currentThread->javaVM;
+	J9ConstantPool *jclConstantPool = (J9ConstantPool *)vm->jclConstantPool;
+#if JAVA_SPEC_VERSION >= 18
+	const int cpEntryNum = 8;
+#else /* JAVA_SPEC_VERSION >= 18 */
+	const int cpEntryNum = 9;
+#endif /* JAVA_SPEC_VERSION >= 18 */
+	U_16 cpIndex[cpEntryNum] = {
+			J9VMCONSTANTPOOL_OPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH,
+			J9VMCONSTANTPOOL_OPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEETYPE,
+			J9VMCONSTANTPOOL_OPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_INVOKECACHE,
+#if JAVA_SPEC_VERSION >= 19
+			J9VMCONSTANTPOOL_OPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_SESSION,
+#else /* JAVA_SPEC_VERSION >= 19 */
+			J9VMCONSTANTPOOL_OPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_SCOPE,
+#endif /* JAVA_SPEC_VERSION >= 19 */
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNMEMORYADDRESSIMPL_OFFSET,
+#if JAVA_SPEC_VERSION <= 17
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNMEMORYADDRESSIMPL_SEGMENT, // Removed from MemoryAddressImpl since Java18
+#endif /* JAVA_SPEC_VERSION <= 17 */
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_MIN,
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_LENGTH,
+#if JAVA_SPEC_VERSION >= 19
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SESSION
+#else /* JAVA_SPEC_VERSION >= 19 */
+			J9VMCONSTANTPOOL_JDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SCOPE
+#endif /* JAVA_SPEC_VERSION >= 19 */
+			};
+
+	for (int i = 0; i < cpEntryNum; i++) {
+		J9RAMFieldRef *cpFieldRef = ((J9RAMFieldRef*)jclConstantPool) + cpIndex[i];
+		UDATA const flags = cpFieldRef->flags;
+		UDATA const valueOffset = cpFieldRef->valueOffset;
+
+		if (!VM_VMHelpers::instanceFieldRefIsResolved(flags, valueOffset)) {
+			VM_OutOfLineINL_Helpers::buildInternalNativeStackFrame(currentThread, method);
+			resolveInstanceFieldRef(currentThread, NULL, jclConstantPool, cpIndex[i], J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_JCL_CONSTANT_POOL, NULL);
+			VM_OutOfLineINL_Helpers::restoreInternalNativeStackFrame(currentThread);
+			if (VM_VMHelpers::exceptionPending(currentThread)) {
+				rc = GOTO_THROW_CURRENT_EXCEPTION;
+				goto done;
+			}
+		}
+	}
+
+done:
+	return rc;
+}
+
 /**
  * openj9.internal.foreign.abi.InternalUpcallHandler: private native long allocateUpcallStub(UpcallMHMetaData mhMetaData, String[] cSignatureStrs);
  *
@@ -56,6 +113,12 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalUpcallHandler_allocateUpcallStu
 	j9object_t cSigStrs = (j9object_t)currentThread->sp[0];
 	/* the last element of the array is the signature of return type */
 	U_32 sigCount  = J9INDEXABLEOBJECT_SIZE(currentThread, cSigStrs);
+
+	/* resolveInstanceFieldRef() is called only once for each field to be accessed in native */
+	rc = resolveUpcallDataFields(currentThread, method);
+	if (GOTO_THROW_CURRENT_EXCEPTION == rc) {
+		goto done;
+	}
 
 	/* Note: the J9UpcallMetaData pointer will be stored in the generated thunk as data
 	 * in which case it is released only when the generated thunk memory is released

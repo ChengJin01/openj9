@@ -111,7 +111,6 @@ public class InternalDowncallHandler {
 	private static final MethodHandle longObjToMemAddrRetFilter;
 	private MethodHandle longObjToMemSegmtRetFilter;
 
-	private static synchronized native void resolveRequiredFields();
 	private native void initCifNativeThunkData(String[] argLayouts, String retLayout, boolean newArgTypes);
 	private native long invokeNative(long returnStructMemAddr, long functionAddress, long calloutThunk, long[] argValues);
 
@@ -147,13 +146,6 @@ public class InternalDowncallHandler {
 		} catch (IllegalAccessException | NoSuchMethodException e) {
 			throw new InternalError(e);
 		}
-
-		/* Resolve the required fields (specifically their offset in the jcl constant pool of VM)
-		 * which can be shared in multiple calls or across threads given the generated macros
-		 * in the vmconstantpool.xml depend on their offsets to access the corresponding fields.
-		 * Note: the value of these fields varies with different instances.
-		 */
-		resolveRequiredFields();
 	}
 
 	/* Intended for booleanToLongArgFilter that converts boolean to long */

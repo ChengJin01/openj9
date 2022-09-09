@@ -31,9 +31,13 @@
 extern "C" {
 
 #if JAVA_SPEC_VERSION >= 16
-/* openj9.internal.foreign.abi.InternalDowncallHandler: private static synchronized native void resolveRequiredFields(); */
+/* Resolve the required fields (specifically their offset in the jcl constant pool of VM)
+ * which can be shared in multiple calls or across threads given the generated macros
+ * in the vmconstantpool.xml depend on their offsets to access the corresponding fields.
+ * Note: the value of these fields varies with different instances.
+ */
 VM_BytecodeAction
-OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_resolveRequiredFields(J9VMThread *currentThread, J9Method *method)
+resolveRequiredFields(J9VMThread *currentThread, J9Method *method)
 {
 	VM_BytecodeAction rc = EXECUTE_BYTECODE;
 	J9JavaVM *vm = currentThread->javaVM;
@@ -44,29 +48,28 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_resolveRequired
 				J9VMCONSTANTPOOL_OPENJ9INTERNALFOREIGNABIINTERNALDOWNCALLHANDLER_ARGTYPESADDR
 			};
 
-	VM_OutOfLineINL_Helpers::buildInternalNativeStackFrame(currentThread, method);
 	for (int i = 0; i < cpEntryNum; i++) {
 		J9RAMFieldRef *cpFieldRef = ((J9RAMFieldRef*)jclConstantPool) + cpIndex[i];
 		UDATA const flags = cpFieldRef->flags;
 		UDATA const valueOffset = cpFieldRef->valueOffset;
 
 		if (!VM_VMHelpers::instanceFieldRefIsResolved(flags, valueOffset)) {
+			VM_OutOfLineINL_Helpers::buildInternalNativeStackFrame(currentThread, method);
 			resolveInstanceFieldRef(currentThread, NULL, jclConstantPool, cpIndex[i], J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_JCL_CONSTANT_POOL, NULL);
+			VM_OutOfLineINL_Helpers::restoreInternalNativeStackFrame(currentThread);
 			if (VM_VMHelpers::exceptionPending(currentThread)) {
 				rc = GOTO_THROW_CURRENT_EXCEPTION;
 				goto done;
 			}
 		}
 	}
-	VM_OutOfLineINL_Helpers::restoreInternalNativeStackFrame(currentThread);
 
 done:
-	VM_OutOfLineINL_Helpers::returnVoid(currentThread, 0);
 	return rc;
 }
 
 /**
- * openj9.internal.foreign.abi.InternalDowncallHandler: private native void initCifNativeThunkData(String[] argLayouts, String retLayout, boolean newArgTypes);
+ * openj9.internal.foreign.abi.InternalDowncallHandler: private native void initCifNativeThunkData(String[] argLayouts, String retLayout, boolean newArgTypes, int varArgIndex);
  *
  * @brief Prepare the prep_cif for the native function specified by the arguments/return layouts
  * @param argLayouts[in] A c string array describing the argument layouts
@@ -94,9 +97,15 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_initCifNativeTh
 
 	PORT_ACCESS_FROM_JAVAVM(vm);
 
+	/* resolveInstanceFieldRef() is called only once for each field to be accessed in native */
+	rc = resolveRequiredFields(currentThread, method);
+	if (GOTO_THROW_CURRENT_EXCEPTION == rc) {
+		goto done;
+	}
+
 	/* Set up the ffi_type of the return layout in the case of primitive or struct */
 	returnLayoutSize = ffiTypeHelpers.getLayoutFFIType(&returnType, retLayoutStrObject);
-	if (returnLayoutSize == UDATA_MAX) {
+	if (UDATA_MAX == returnLayoutSize) {
 		rc = GOTO_THROW_CURRENT_EXCEPTION;
 		setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
 		goto done;
@@ -124,7 +133,7 @@ OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_initCifNativeTh
 			j9object_t argLayoutStrObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, argLayoutStrsObject, argIndex);
 			/* Set up the ffi_type of the argument layout in the case of primitive or struct */
 			UDATA argLayoutSize = ffiTypeHelpers.getLayoutFFIType(&argTypes[argIndex], argLayoutStrObject);
-			if (argLayoutSize == UDATA_MAX) {
+			if (UDATA_MAX == argLayoutSize) {
 				rc = GOTO_THROW_CURRENT_EXCEPTION;
 				setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
 				goto freeAllMemoryThenExit;
