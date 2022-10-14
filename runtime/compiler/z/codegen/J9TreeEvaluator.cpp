@@ -7328,14 +7328,9 @@ reservationLockEnter(TR::Node *node, int32_t lwOffset, TR::Register *objectClass
       generateRIInstruction  (cg, addImmOp, node, monitorReg, (uintptr_t) LOCK_INC_DEC_VALUE);
       generateRXInstruction(cg, storeOp, node, monitorReg, generateS390MemoryReference(objReg, lwOffset, cg));
       }
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
    generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), 1);
-#else    /* TR_TARGET_64BIT */
-   TR_ASSERT_FATAL(false, "Virtual Thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
+#endif
 
    if (outlinedSlowPath) // Means we have OOL
       {
@@ -7395,16 +7390,12 @@ reservationLockEnter(TR::Node *node, int32_t lwOffset, TR::Register *objectClass
       cg->generateDebugCounter("LockEnt/LR/CASSuccessful", 1, TR::DebugCounter::Undetermined);
 
       // Lock is acquired successfully
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
       TR::LabelSymbol *incrementOwnedMonitorCountLabel = generateLabelSymbol(cg);
       generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, incrementOwnedMonitorCountLabel);
-#else    /* TR_TARGET_64BIT */
-      TR_ASSERT_FATAL(false, "Virtual thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#else    /* JAVA_SPEC_VERSION >= 19 */
+#else
       generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, helperReturnOOLLabel);
-#endif   /* JAVA_SPEC_VERSION >= 19 */
+#endif
 
       generateS390LabelInstruction(cg,TR::InstOpCode::label,node,reserved_checkLabel);
       // Mask the counter
@@ -7424,16 +7415,10 @@ reservationLockEnter(TR::Node *node, int32_t lwOffset, TR::Register *objectClass
          generateRIInstruction  (cg, addImmOp, node, monitorReg, (uintptr_t) LOCK_INC_DEC_VALUE);
          generateRXInstruction(cg, storeOp, node, monitorReg, generateS390MemoryReference(objReg, lwOffset, cg));
          }
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
       generateS390LabelInstruction(cg, TR::InstOpCode::label, node, incrementOwnedMonitorCountLabel);
       generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), 1);
-#else    /* TR_TARGET_64BIT */
-      TR_ASSERT_FATAL(false, "Virtual thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
-
+#endif
       generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, helperReturnOOLLabel);
       // call to jithelper
       generateS390LabelInstruction(cg, TR::InstOpCode::label, node, callLabel);
@@ -7587,13 +7572,9 @@ reservationLockExit(TR::Node *node, int32_t lwOffset, TR::Register *objectClassR
       generateRXInstruction(cg, use64b? TR::InstOpCode::STG : TR::InstOpCode::ST,
          node, tempReg, generateS390MemoryReference(objReg, lwOffset, cg));
       }
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
       generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), -1);
-#else    /* TR_TARGET_64BIT */
-      TR_ASSERT_FATAL(false, "Virtual thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
+#endif
 
    if (outlinedSlowPath) // Means we have OOL
       {
@@ -7658,13 +7639,9 @@ reservationLockExit(TR::Node *node, int32_t lwOffset, TR::Register *objectClassR
 
       if (!isPrimitive)
          {
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
          generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), -1);
-#else    /* TR_TARGET_64BIT */
-         TR_ASSERT_FATAL(false, "Virtual thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
+#endif
          generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, helperReturnOOLLabel);
          }
       // call to jithelper
@@ -8736,19 +8713,13 @@ J9::Z::TreeEvaluator::VMmonentEvaluator(TR::Node * node, TR::CodeGenerator * cg)
          else
             generateRSInstruction(cg, TR::InstOpCode::getCmpAndSwapOpCode(), node, monitorReg, metaReg,
                                   generateS390MemoryReference(baseReg, lwOffset, cg));
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
          generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BNE, node, helperCallLabel);
          generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), 1);
          generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, helperReturnOOLLabel);
-#else    /* TR_TARGET_64BIT */
-         TR_ASSERT_FATAL(false, "Virtual Thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#else    /* JAVA_SPEC_VERSION >= 19 */
+#else
          generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BE, node, helperReturnOOLLabel);
-#endif   /* JAVA_SPEC_VERSION >= 19 */
-
+#endif
          generateS390LabelInstruction(cg, TR::InstOpCode::label, node, helperCallLabel );
          TR::RegisterDependencyConditions *deps = NULL;
          dummyResultReg = helperLink->buildDirectDispatch(node, &deps);
@@ -8837,15 +8808,9 @@ J9::Z::TreeEvaluator::VMmonentEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    // Jump to OOL branch in case that the CAS is unsuccessful (Lockword had contained a non-zero value before CAS)
    // Both TR::InstOpCode::MASK6 and TR::InstOpCode::MASK4 are ok here. TR::InstOpCode::MASK4 is directly testing failure condition.
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BL, node, callLabel);
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
    generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), 1);
-#else    /* TR_TARGET_64BIT */
-   TR_ASSERT_FATAL(false, "Virtual Thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
-
+#endif
    cg->generateDebugCounter(TR::DebugCounter::debugCounterName(comp, "%s/CSSuccessfull", debugCounterNamePrefix), 1, TR::DebugCounter::Undetermined);
    TR_S390OutOfLineCodeSection *outlinedHelperCall = NULL;
    TR::Instruction *cursor;
@@ -8915,15 +8880,9 @@ J9::Z::TreeEvaluator::VMmonentEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       if (normalLockWithReservationPreserving)
          generateRIInstruction(cg, addImmOp, node, monitorReg, OBJECT_HEADER_LOCK_FIRST_RECURSION_BIT);
       generateRXInstruction(cg, storeOp, node, monitorReg, tempMR1);
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
       generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), 1);
-#else    /* TR_TARGET_64BIT */
-      TR_ASSERT_FATAL(false, "Virtual Thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
-
+#endif
       generateS390BranchInstruction(cg,TR::InstOpCode::BRC,TR::InstOpCode::COND_BRC,node,returnLabel);
 
       tempMR->stopUsingMemRefRegister(cg);
@@ -9181,15 +9140,9 @@ J9::Z::TreeEvaluator::VMmonexitEvaluator(TR::Node * node, TR::CodeGenerator * cg
             gcPoint = generateSILInstruction(cg, TR::InstOpCode::MVHI, node, generateS390MemoryReference(baseReg, lwOffset, cg), 0);
          else
             gcPoint = generateSILInstruction(cg, TR::InstOpCode::getMoveHalfWordImmOpCode(), node, generateS390MemoryReference(baseReg, lwOffset, cg), 0);
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
          generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), -1);
-#else    /* TR_TARGET_64BIT */
-         TR_ASSERT_FATAL(false, "Virtual Thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
-
+#endif
          generateS390BranchInstruction(cg,TR::InstOpCode::BRC,TR::InstOpCode::COND_BRC,node,helperReturnOOLLabel);
 
          generateS390LabelInstruction(cg, TR::InstOpCode::label , node, helperCallLabel );
@@ -9260,15 +9213,9 @@ J9::Z::TreeEvaluator::VMmonexitEvaluator(TR::Node * node, TR::CodeGenerator * cg
    // If VMThread matches, we can safely perform the monitor exit by zero'ing
    // out the lockWord on the object
    generateSILInstruction(cg, moveImmOp, node, generateS390MemoryReference(baseReg, lwOffset, cg), 0);
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
    generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), -1);
-#else    /* TR_TARGET_64BIT */
-   TR_ASSERT_FATAL(false, "Virtual Thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
-
+#endif
    TR_S390OutOfLineCodeSection *outlinedHelperCall = NULL;
 
    outlinedHelperCall = new (cg->trHeapMemory()) TR_S390OutOfLineCodeSection(callLabel,cFlowRegionEnd,cg);
@@ -9336,15 +9283,9 @@ J9::Z::TreeEvaluator::VMmonexitEvaluator(TR::Node * node, TR::CodeGenerator * cg
          generateRIInstruction(cg, addImmOp, node, monitorReg, -OBJECT_HEADER_LOCK_FIRST_RECURSION_BIT);
          generateRXInstruction(cg, storeOp, node, monitorReg, tempMR1);
          }
-
-#if (JAVA_SPEC_VERSION >= 19)
-#if defined(TR_TARGET_64BIT)
+#if defined(TR_TARGET_64BIT) && (JAVA_SPEC_VERSION >= 19)
       generateSIInstruction(cg, TR::InstOpCode::AGSI, node, generateS390MemoryReference(cg->getMethodMetaDataRealRegister(), fej9->thisThreadGetOwnedMonitorCountOffset(), cg), -1);
-#else    /* TR_TARGET_64BIT */
-      TR_ASSERT_FATAL(false, "Virtual Thread is not supported on 31-Bit platform\n");
-#endif   /* TR_TARGET_64BIT */
-#endif   /* JAVA_SPEC_VERSION >= 19 */
-
+#endif
       generateS390BranchInstruction(cg,TR::InstOpCode::BRC,TR::InstOpCode::COND_BRC,node,returnLabel);
       tempMR->stopUsingMemRefRegister(cg);
       tempMR1->stopUsingMemRefRegister(cg);
