@@ -65,11 +65,9 @@ Java_jdk_internal_foreign_abi_UpcallStubs_freeUpcallStub0(JNIEnv *env, jobject r
 
 	PORT_ACCESS_FROM_JAVAVM(vm);
 
-	omrthread_monitor_enter(vm->thunkHeapWrapperMutex);
+	omrthread_monitor_enter(vm->thunkHeapListMutex);
 	if (NULL != thunkAddr) {
-		J9UpcallThunkHeapWrapper *thunkHeapWrapper = vm->thunkHeapWrapper;
-		J9HashTable *metaDataHashTable = thunkHeapWrapper->metaDataHashTable;
-		J9Heap *thunkHeap = thunkHeapWrapper->heap;
+		J9HashTable *metaDataHashTable = vm->thunkHeapHead->metaDataHashTable;
 
 		if (NULL != metaDataHashTable) {
 			J9UpcallMetaDataEntry metaDataEntry = {0};
@@ -78,6 +76,7 @@ Java_jdk_internal_foreign_abi_UpcallStubs_freeUpcallStub0(JNIEnv *env, jobject r
 			J9UpcallMetaDataEntry * result = (J9UpcallMetaDataEntry *)hashTableFind(metaDataHashTable, &metaDataEntry);
 			if (NULL != result) {
 				J9UpcallMetaData *metaData = result->upcallMetaData;
+				J9Heap *thunkHeap = metaData->thunkHeapWrapper->heap;
 				J9UpcallNativeSignature *nativeFuncSig = metaData->nativeFuncSignature;
 				if (NULL != nativeFuncSig) {
 					j9mem_free_memory(nativeFuncSig->sigArray);
@@ -102,7 +101,7 @@ Java_jdk_internal_foreign_abi_UpcallStubs_freeUpcallStub0(JNIEnv *env, jobject r
 			}
 		}
 	}
-	omrthread_monitor_exit(vm->thunkHeapWrapperMutex);
+	omrthread_monitor_exit(vm->thunkHeapListMutex);
 
 	return true;
 }
