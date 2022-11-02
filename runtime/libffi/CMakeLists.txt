@@ -37,6 +37,7 @@ j9vm_add_library(ffi STATIC
 	prep_cif.c
 	raw_api.c
 	types.c
+	tramp.c
 )
 
 # We need this because ffi_common.h is in 'include' in the top directory.
