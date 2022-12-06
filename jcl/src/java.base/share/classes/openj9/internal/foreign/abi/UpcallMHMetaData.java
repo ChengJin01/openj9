@@ -76,13 +76,13 @@ final class UpcallMHMetaData {
 		calleeMH = targetHandle;
 		calleeType = targetHandle.type();
 		/* Only hold the confined session/scope (owned by the current thread)
-		 * will be used to construct a MemorySegment object for argument in
-		 * the native dispatcher in upcall.
+		 * or the shared session/scope will be used to construct a MemorySegment
+		 * object for argument in the native dispatcher in upcall.
 		 */
 		/*[IF JAVA_SPEC_VERSION >= 19]*/
-		this.session = ((session != null) && (session.ownerThread() != null)) ? session : null;
+		this.session = ((session != null) && (session.ownerThread() != null)) ? session : MemorySession.openShared();
 		/*[ELSE] JAVA_SPEC_VERSION >= 19 */
-		this.scope = ((scope != null) && (scope.ownerThread() != null)) ? scope : null;;
+		this.scope = ((scope != null) && (scope.ownerThread() != null)) ? scope : ResourceScope.newSharedScope();
 		/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
 	}
 }

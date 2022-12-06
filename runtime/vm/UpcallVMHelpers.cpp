@@ -42,8 +42,7 @@ static U_64 JNICALL native2InterpJavaUpcallImpl(J9UpcallMetaData *data, void *ar
 static J9VMThread * getCurrentThread(J9UpcallMetaData *data, bool *isCurThrdAllocated);
 static void convertUpcallReturnValue(J9UpcallMetaData *data, U_8 returnType, U_64 *returnStorage);
 static j9object_t createMemAddressObject(J9UpcallMetaData *data, I_64 offset);
-static j9object_t createMemSegmentObject(J9UpcallMetaData *data, I_64 offset, U_32 sigTypeSize, j9object_t sessionOrScopeObject);
-static j9object_t getSessionOrScopeObject(J9UpcallMetaData *data);
+static j9object_t createMemSegmentObject(J9UpcallMetaData *data, I_64 offset, U_32 sigTypeSize);
 static I_64 getNativeAddrFromMemAddressObject(J9UpcallMetaData *data, j9object_t memAddrObject);
 static I_64 getNativeAddrFromMemSegmentObject(J9UpcallMetaData *data, j9object_t memAddrObject);
 
@@ -225,7 +224,6 @@ native2InterpJavaUpcallImpl(J9UpcallMetaData *data, void *argsListPointer)
 	bool throwOOM = false;
 	J9Method* thrLiterals = NULL;
 	U_64 returnStorage = 0;
-	j9object_t sessionOrScopeObject = NULL;
 
 	/* Determine whether to use the current thread or create a new one
 	 * when there is no java thread attached to the native thread
@@ -326,7 +324,7 @@ native2InterpJavaUpcallImpl(J9UpcallMetaData *data, void *argsListPointer)
 			case J9_FFI_UPCALL_SIG_TYPE_STRUCT:
 			{
 				I_64 offset = (I_64)(intptr_t)getArgPointer(nativeSig, argsListPointer, argIndex);
-				j9object_t memSegmtObject = createMemSegmentObject(data, offset, sigArray[argIndex].sizeInByte, sessionOrScopeObject);
+				j9object_t memSegmtObject = createMemSegmentObject(data, offset, sigArray[argIndex].sizeInByte);
 				if (NULL == memSegmtObject) {
 					/* The OOM exception set in createMemSegmentObject() will be thrown in the interpreter
 					 * after returning from the native function in downcall.
@@ -541,28 +539,18 @@ done:
  * @param data a pointer to J9UpcallMetaData
  * @param offset the native address to the requested struct
  * @param sigTypeSize the byte size of the requested struct
- * @param sessionOrScopeObject the session/scope object intended for MemorySegment related arguments
  * @return a MemorySegment object
  */
 static j9object_t
-createMemSegmentObject(J9UpcallMetaData *data, I_64 offset, U_32 sigTypeSize, j9object_t sessionOrScopeObject)
+createMemSegmentObject(J9UpcallMetaData *data, I_64 offset, U_32 sigTypeSize)
 {
 	J9JavaVM *vm = data->vm;
 	J9VMThread *downCallThread = data->downCallThread;
 	J9VMThread *currentThread = currentVMThread(vm);
 	MM_ObjectAllocationAPI objectAllocate(currentThread);
 	j9object_t memSegmtObject = NULL;
+	j9object_t mhMetaData = NULL;
 	J9Class *memSegmtClass = J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL(vm);
-
-	if (NULL == sessionOrScopeObject) {
-		sessionOrScopeObject = getSessionOrScopeObject(data);
-		if (NULL == sessionOrScopeObject) {
-			/* The OOM exception will be thrown when returning back to the interpreter
-			 * after returning from the native function in downcall.
-			 */
-			goto done;
-		}
-	}
 
 	/* To wrap up an object of the MemorySegment's subclass as an argument on the java stack,
 	 * this object is directly allocated on the heap with the passed-in native address(offset)
@@ -570,9 +558,7 @@ createMemSegmentObject(J9UpcallMetaData *data, I_64 offset, U_32 sigTypeSize, j9
 	 */
 	memSegmtObject = objectAllocate.inlineAllocateObject(currentThread, memSegmtClass, true, false);
 	if (NULL == memSegmtObject) {
-		PUSH_OBJECT_IN_SPECIAL_FRAME(currentThread, sessionOrScopeObject);
 		memSegmtObject = vm->memoryManagerFunctions->J9AllocateObject(currentThread, memSegmtClass, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
-		sessionOrScopeObject = POP_OBJECT_IN_SPECIAL_FRAME(currentThread);
 		if (NULL == memSegmtObject) {
 			/* Directly set the OOM error to the downcall thread to bring it up back to the interpreter
 			 * in downcall when the upcall thread is the same as the downcall thread; otherwise, the OOM
@@ -583,72 +569,20 @@ createMemSegmentObject(J9UpcallMetaData *data, I_64 offset, U_32 sigTypeSize, j9
 			goto done;
 		}
 	}
+	mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
 
 	J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_MIN(currentThread, memSegmtObject, offset);
 	J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_LENGTH(currentThread, memSegmtObject, sigTypeSize);
 #if JAVA_SPEC_VERSION >= 19
-	J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_SESSION(currentThread, memSegmtObject, sessionOrScopeObject);
+	J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_SESSION(currentThread, memSegmtObject,
+					J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_SESSION(currentThread, mhMetaData));
 #else /* JAVA_SPEC_VERSION >= 19 */
-	J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_SCOPE(currentThread, memSegmtObject, sessionOrScopeObject);
+	J9VMJDKINTERNALFOREIGNNATIVEMEMORYSEGMENTIMPL_SET_SCOPE(currentThread, memSegmtObject,
+					J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_SCOPE(currentThread, mhMetaData));
 #endif /* JAVA_SPEC_VERSION >= 19 */
 
 done:
 	return memSegmtObject;
-}
-
-/**
- * @brief Get the surrounding session/scope owned by the current thread;
- * otherwise, create a shared session/scope object if the surrounding
- * session/scope is null or the current thread is created locally.
- *
- * @param data a pointer to J9UpcallMetaData
- * @return a MemorySession(JDK19+)/ResourceScope(JDK17/18) object
- */
-static j9object_t
-getSessionOrScopeObject(J9UpcallMetaData *data)
-{
-	J9JavaVM *vm = data->vm;
-	J9VMThread *downCallThread = data->downCallThread;
-	J9VMThread *currentThread = currentVMThread(vm);
-	j9object_t mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
-	j9object_t sessionOrScopeObject = NULL;
-
-	/* Get the confined session/scope of the current thread in java if the thread is not created locally in native. */
-	if (J9_ARE_NO_BITS_SET(currentThread->privateFlags, J9_PRIVATE_FLAGS_FFI_UPCALL_THREAD)) {
-#if JAVA_SPEC_VERSION >= 19
-		sessionOrScopeObject = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_SESSION(currentThread, mhMetaData);
-#else /* JAVA_SPEC_VERSION >= 19 */
-		sessionOrScopeObject = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_SCOPE(currentThread, mhMetaData);
-#endif /* JAVA_SPEC_VERSION >= 19 */
-	}
-
-	/* The object of the MemorySession's(JDK19+)/ResourceScope's(JDK17/18) subclass is set as a field value
-	 * of the MemorySegment object created in native, which is validated in OpenJDK before returning the
-	 * native memory address from MemorySegment.address() in java.
-	 */
-	if (NULL == sessionOrScopeObject) {
-#if JAVA_SPEC_VERSION >= 19
-		J9Class *sessionOrScopeClass = J9VMJDKINTERNALFOREIGNSHAREDSESSION(vm);
-#else /* JAVA_SPEC_VERSION >= 19 */
-		J9Class *sessionOrScopeClass = J9VMJDKINTERNALFOREIGNSHAREDSCOPE(vm);
-#endif /* JAVA_SPEC_VERSION >= 19 */
-		MM_ObjectAllocationAPI objectAllocate(currentThread);
-
-		sessionOrScopeObject = objectAllocate.inlineAllocateObject(currentThread, sessionOrScopeClass, true, false);
-		if (NULL == sessionOrScopeObject) {
-			sessionOrScopeObject = vm->memoryManagerFunctions->J9AllocateObject(currentThread, sessionOrScopeClass, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
-			if (NULL == sessionOrScopeObject) {
-				/* Directly set the OOM error to the downcall thread to bring it up back to the interpreter
-				 * in downcall when the upcall thread is the same as the downcall thread; otherwise, the OOM
-				 * error should be still set to the downcall thread given the locally created native thread
-				 * in upcall will be cleaned up before the dispatcher exists and returns to the interpreter.
-				 */
-				setHeapOutOfMemoryError(downCallThread);
-			}
-		}
-	}
-
-	return sessionOrScopeObject;
 }
 
 /**
