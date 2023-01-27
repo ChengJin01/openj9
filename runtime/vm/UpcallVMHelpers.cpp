@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 IBM Corp. and others
+ * Copyright (c) 2021, 2023 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -156,6 +156,12 @@ getReturnTypeFromMetaData(J9UpcallMetaData *data)
 {
 	J9JavaVM *vm = data->vm;
 	J9VMThread *currentThread = currentVMThread(vm);
+#if defined(LINUXPPC64) && defined(__LITTLE_ENDIAN__)
+	/* Add a read/write barrier to ensue all read/write operations are completed
+	 * before accessing the java field via the macro on Linux/PPC64LE.
+	 */
+	VM_AtomicSupport::readWriteBarrier();
+#endif /* defined(LINUXPPC64) && defined(__LITTLE_ENDIAN__) */
 	j9object_t methodType = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEETYPE(currentThread,
 			J9_JNI_UNWRAP_REFERENCE(data->mhMetaData));
 	J9Class *retClass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread,
