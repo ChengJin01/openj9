@@ -1,4 +1,4 @@
-/*[INCLUDE-IF JAVA_SPEC_VERSION == 19]*/
+/*[INCLUDE-IF JAVA_SPEC_VERSION >= 19]*/
 /*******************************************************************************
  * Copyright (c) 2022, 2023 IBM Corp. and others
  *
@@ -25,11 +25,17 @@ package openj9.internal.foreign.abi;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 
-/*[IF JAVA_SPEC_VERSION >= 19]*/
+/*[IF JAVA_SPEC_VERSION >= 20]*/
+import java.lang.foreign.Arena;
+import java.lang.foreign.SegmentScope;
+import jdk.internal.foreign.MemorySessionImpl;
+/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+/*[IF JAVA_SPEC_VERSION == 19]*/
 import java.lang.foreign.MemorySession;
-/*[ELSE] JAVA_SPEC_VERSION >= 19 */
+/*[ELSE] JAVA_SPEC_VERSION == 19 */
 import jdk.incubator.foreign.ResourceScope;
-/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+/*[ENDIF] JAVA_SPEC_VERSION == 19 */
+/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 
 /**
  * The meta data consists of the callee MH and a cache of 2 elements for MH resolution,
@@ -56,11 +62,15 @@ final class UpcallMHMetaData {
 	 */
 	private Object[] nativeArgArray;
 
-	/*[IF JAVA_SPEC_VERSION >= 19]*/
+	/*[IF JAVA_SPEC_VERSION >= 20]*/
+	private SegmentScope scope;
+	/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+	/*[IF JAVA_SPEC_VERSION == 19]*/
 	private MemorySession session;
-	/*[ELSE] JAVA_SPEC_VERSION >= 19 */
+	/*[ELSE] JAVA_SPEC_VERSION == 19 */
 	private ResourceScope scope;
-	/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+	/*[ENDIF] JAVA_SPEC_VERSION == 19 */
+	/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 
 	private static synchronized native void resolveUpcallDataFields();
 
@@ -72,11 +82,15 @@ final class UpcallMHMetaData {
 		resolveUpcallDataFields();
 	}
 
-	/*[IF JAVA_SPEC_VERSION >= 19]*/
+	/*[IF JAVA_SPEC_VERSION >= 20]*/
+	UpcallMHMetaData(MethodHandle targetHandle, int nativeArgCount, SegmentScope scope)
+	/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+	/*[IF JAVA_SPEC_VERSION == 19]*/
 	UpcallMHMetaData(MethodHandle targetHandle, int nativeArgCount, MemorySession session)
-	/*[ELSE] JAVA_SPEC_VERSION >= 19 */
+	/*[ELSE] JAVA_SPEC_VERSION == 19 */
 	UpcallMHMetaData(MethodHandle targetHandle, int nativeArgCount, ResourceScope scope)
-	/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+	/*[ENDIF] JAVA_SPEC_VERSION == 19 */
+	/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 	{
 		calleeMH = targetHandle;
 		calleeType = targetHandle.type();
@@ -85,10 +99,14 @@ final class UpcallMHMetaData {
 		 * or the shared session/scope will be used to construct a MemorySegment
 		 * object for argument in the native dispatcher in upcall.
 		 */
-		/*[IF JAVA_SPEC_VERSION >= 19]*/
+		/*[IF JAVA_SPEC_VERSION >= 20]*/
+		this.scope = ((scope != null) && (((MemorySessionImpl)scope).ownerThread() != null)) ? scope : Arena.openShared().scope();
+		/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+		/*[IF JAVA_SPEC_VERSION == 19]*/
 		this.session = ((session != null) && (session.ownerThread() != null)) ? session : MemorySession.openShared();
-		/*[ELSE] JAVA_SPEC_VERSION >= 19 */
+		/*[ELSE] JAVA_SPEC_VERSION == 19 */
 		this.scope = ((scope != null) && (scope.ownerThread() != null)) ? scope : ResourceScope.newSharedScope();
-		/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+		/*[ENDIF] JAVA_SPEC_VERSION == 19 */
+		/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 	}
 }
