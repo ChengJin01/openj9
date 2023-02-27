@@ -5019,6 +5019,33 @@ done:
 	}
 
 #if JAVA_SPEC_VERSION >= 16
+	/* Save the contents of registers in the call-out for longjmp in
+	 * the dispatcher to restore back to this call site whenever an
+	 * exception is captured in upcall.
+	 *
+	 * See the invocation of longjmp in native2InterpJavaUpcallImpl()
+	 * at UpcallVMHelpers.cpp for details.
+	 *
+	 * Note: this is a wrapper for setjmp() as a function calling
+	 * setjmp() can never be inlined as captured in compilation.
+	 */
+	static void
+#if FFI_NATIVE_RAW_API
+	ffiCallWithSetJmpForUpcall(J9VMThread *currentThread, ffi_cif *cif, void *function, UDATA *returnStorage, void **values, ffi_raw *values_raw)
+#else /* FFI_NATIVE_RAW_API */
+	ffiCallWithSetJmpForUpcall(J9VMThread *currentThread, ffi_cif *cif, void *function, UDATA *returnStorage, void **values)
+#endif /* FFI_NATIVE_RAW_API */
+	{
+		if (!setjmp(*(currentThread->jmpBufferEnv))) {
+#if FFI_NATIVE_RAW_API
+			ffi_ptrarray_to_raw(cif, values, values_raw);
+			ffi_raw_call(cif, FFI_FN(function), returnStorage, values_raw);
+#else /* FFI_NATIVE_RAW_API */
+			ffi_call(cif, FFI_FN(function), returnStorage, values);
+#endif /* FFI_NATIVE_RAW_API */
+		}
+	}
+
 	/* openj9.internal.foreign.abi.InternalDowncallHandler:
 	 * private native long invokeNative(long returnStructMemAddr, long functionAddr, long calloutThunk, long[] argValues);
 	 */
@@ -5051,6 +5078,7 @@ done:
 		U_64 *ffiArgs = _currentThread->ffiArgs;
 		U_64 sFfiArgs[16];
 		UDATA argSlots = 8;
+		jmp_buf jmpBufferEnv = {0};
 
 		j9object_t argValues = *(j9object_t *)_sp; // argValues
 		ffi_cif *cif = (ffi_cif *)(UDATA)*(I_64 *)(_sp + 1); // calloutThunk
@@ -5149,12 +5177,19 @@ done:
 		updateVMStruct(REGISTER_ARGS);
 		VM_VMAccess::inlineExitVMToJNI(_currentThread);
 		VM_VMHelpers::beforeJNICall(_currentThread);
+
+		/* We only need to restore back to the latest call-out from the dispatcher
+		 * to throw the exception in the case of recursive calls, in which case
+		 * the jump buffer (storing the contents of registers) should be allocated
+		 * every time in downcall.
+		 */
+		_currentThread->jmpBufferEnv = &jmpBufferEnv;
 #if FFI_NATIVE_RAW_API
-		ffi_ptrarray_to_raw(cif, values, values_raw);
-		ffi_raw_call(cif, FFI_FN(function), returnStorage, values_raw);
+		ffiCallWithSetJmpForUpcall(_currentThread, cif, function, returnStorage, values, values_raw);
 #else /* FFI_NATIVE_RAW_API */
-		ffi_call(cif, FFI_FN(function), returnStorage, values);
+		ffiCallWithSetJmpForUpcall(_currentThread, cif, function, returnStorage, values);
 #endif /* FFI_NATIVE_RAW_API */
+
 		VM_VMHelpers::afterJNICall(_currentThread);
 		VM_VMAccess::inlineEnterVMFromJNI(_currentThread);
 		VMStructHasBeenUpdated(REGISTER_ARGS);
