@@ -34,6 +34,9 @@
 #include "j9consts.h"
 #include "jvmti.h"
 #include "j9javaaccessflags.h"
+#if JAVA_SPEC_VERSION >= 16
+#include <setjmp.h>
+#endif /* JAVA_SPEC_VERSION >= 16 */
 
 #define J9VM_MAX_HIDDEN_FIELDS_PER_CLASS 8
 
@@ -5285,6 +5288,7 @@ typedef struct J9VMThread {
 #if JAVA_SPEC_VERSION >= 16
 	U_64 *ffiArgs;
 	UDATA ffiArgCount;
+	jmp_buf *jmpBufferEnv;
 #endif /* JAVA_SPEC_VERSION >= 16 */
 #if JAVA_SPEC_VERSION >= 19
 	J9VMContinuation *currentContinuation;
