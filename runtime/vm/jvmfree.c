@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2022 IBM Corp. and others
+ * Copyright (c) 1991, 2023 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -292,6 +292,8 @@ deallocateVMThread(J9VMThread * vmThread, UDATA decrementZombieCount, UDATA send
 #if JAVA_SPEC_VERSION >= 16
 	j9mem_free_memory(vmThread->ffiArgs);
 	vmThread->ffiArgs = NULL;
+	j9mem_free_memory(vmThread->jmpBufferEnv);
+	vmThread->jmpBufferEnv = NULL;
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
 	/* Detach the thread from OMR */
