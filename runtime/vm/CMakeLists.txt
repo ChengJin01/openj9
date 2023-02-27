@@ -168,6 +168,7 @@ set(main_sources
 	threadhelp.cpp
 	threadpark.c
 	throwexception.c
+	upcallexceptionhandler.c
 	UpcallThunkMem.cpp
 	UpcallVMHelpers.cpp
 	ValueTypeHelpers.cpp
