@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corp. and others
+ * Copyright IBM Corp. and others 2023
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,24 +20,28 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifndef COMPILATIONCONTROLLER_INCL
-#define COMPILATIONCONTROLLER_INCL
+#ifndef J9_COMPILATIONSTRATEGY_INCL
+#define J9_COMPILATIONSTRATEGY_INCL
 
+/*
+ * The following #define and typedef must appear before any #includes in this file
+ */
+#ifndef J9_COMPILATIONSTRATEGY_CONNECTOR
+#define J9_COMPILATIONSTRATEGY_CONNECTOR
+   namespace J9 { class CompilationStrategy; }
+   namespace J9 { typedef J9::CompilationStrategy CompilationStrategyConnector; }
+#endif
+
+#include "control/OMRCompilationStrategy.hpp"
 #include "compile/CompilationTypes.hpp"
-#include "control/OptimizationPlan.hpp"
 #include "runtime/CodeCacheManager.hpp"
-#include "env/VMJ9.h"
 
-class TR_OptimizationPlan;
-class TR_PersistentJittedBodyInfo;
+namespace TR { class CompilationStrategy; }
+namespace TR { class CompilationInfo; }
+namespace TR { class Options; }
+class TR_J9VMBase;
 class TR_PersistentMethodInfo;
-struct TR_MethodToBeCompiled;
-
-int32_t printTruncatedSignature(char *sigBuf, int32_t bufLen, J9Method *j9method);
-
-extern "C" {
-int32_t returnIprofilerState();
-}
+class TR_PersistentJittedBodyInfo;
 
 //--------------------------- TR_MethodEvent ----------------------------
 class TR_MethodEvent
@@ -66,15 +70,14 @@ class TR_MethodEvent
    TR_Hotness   _nextOptLevel; // Used for HWP-based recompilation
    };
 
-
-//-------------------------TR::DefaultCompilationStrategy ----------------------
-namespace TR
+namespace J9
 {
-class DefaultCompilationStrategy : public TR::CompilationStrategy
+//-------------------------TR::CompilationStrategy ----------------------
+class CompilationStrategy: public OMR::CompilationStrategyConnector
    {
    public:
-   TR_PERSISTENT_ALLOC(TR_Memory::PersistentInfo);
-   DefaultCompilationStrategy();
+   CompilationStrategy();
+
    TR_OptimizationPlan *processEvent(TR_MethodEvent *event, bool *newPlanCreated);
    TR_OptimizationPlan *processInterpreterSample(TR_MethodEvent *event);
    TR_OptimizationPlan *processJittedSample(TR_MethodEvent *event);
@@ -233,28 +236,7 @@ class DefaultCompilationStrategy : public TR::CompilationStrategy
    // statistics regarding the events it receives
    unsigned _statEventType[TR_MethodEvent::NumEvents];
    };
-} // namespace TR
 
-//----------------------- TR::ThresholdCompilationStrategy ---------------------
-namespace TR
-{
+}; // namespace j9
 
-class ThresholdCompilationStrategy : public TR::CompilationStrategy
-   {
-   public:
-   TR_PERSISTENT_ALLOC(TR_Memory::PersistentInfo); // Do I need this ?
-   ThresholdCompilationStrategy();
-   TR_OptimizationPlan *processEvent(TR_MethodEvent *event, bool *newPlanCreated);
-   TR_OptimizationPlan *processJittedSample(TR_MethodEvent *event);
-   TR_Hotness getInitialOptLevel();
-   int32_t getSamplesNeeded(TR_Hotness optLevel) { TR_ASSERT(_samplesNeededToMoveTo[optLevel] >= 0, "must be valid entry"); return _samplesNeededToMoveTo[optLevel]; }
-   bool getPerformInstrumentation(TR_Hotness optLevel) { return _performInstrumentation[optLevel]; }
-   TR_Hotness getNextOptLevel(TR_Hotness curOptLevel) { TR_ASSERT(_nextLevel[curOptLevel] != unknownHotness, "must be valid opt level"); return _nextLevel[curOptLevel]; }
-
-   private:
-   TR_Hotness _nextLevel[numHotnessLevels+1];
-   int32_t _samplesNeededToMoveTo[numHotnessLevels+1];
-   bool    _performInstrumentation[numHotnessLevels+1];
-   };
-} // namespace TR
-#endif // ifndef COMPILATIONCONTROLLER_INCL
+#endif

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corp. and others
+ * Copyright IBM Corp. and others 2023
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,8 +20,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "control/CompilationController.hpp"
-
+#include "control/CompilationStrategy.hpp"
 #include "codegen/PrivateLinkage.hpp"
 #include "compile/Compilation.hpp"
 #include "compile/CompilationTypes.hpp"
@@ -29,6 +28,7 @@
 #include "control/OptimizationPlan.hpp"
 #include "control/Recompilation.hpp"
 #include "control/RecompilationInfo.hpp"
+#include "control/CompilationController.hpp"
 #include "env/IO.hpp"
 #include "env/TRMemory.hpp"
 #include "env/VerboseLog.hpp"
@@ -39,95 +39,18 @@
 #include "env/ut_j9jit.h"
 #include "env/CompilerEnv.hpp"
 
-// NOTE: TR::CompilationController is actually defined in control/OptimizationPlan.hpp
+extern "C" {
+int32_t returnIprofilerState();
+}
 
-TR::CompilationStrategy *TR::CompilationController::_compilationStrategy = NULL;
-TR::CompilationInfo *    TR::CompilationController::_compInfo = 0;
-int32_t                  TR::CompilationController::_verbose = 0;
-bool                     TR::CompilationController::_useController = false;
-bool                     TR::CompilationController::_tlsCompObjCreated = false;
-
-
-//------------------------------------ init -----------------------------------
-// Initializes the compilationController.
-// Return false if it fails
-//-----------------------------------------------------------------------------
-bool TR::CompilationController::init(TR::CompilationInfo *compInfo)
-   {
-   _useController = false; // Default to failure
-   _compilationStrategy = 0; // Default to failure
-   TR::Options *options = TR::Options::getCmdLineOptions();
-   char *strategyName = options->getCompilationStrategyName();
-
-   if (strategyName && strcmp(strategyName, "none"))
-      {
-      _compInfo = compInfo;
-      if (strcmp(strategyName, "default") == 0)
-         _compilationStrategy = new (PERSISTENT_NEW) TR::DefaultCompilationStrategy();
-      else if (strcmp(strategyName, "threshold") == 0)
-         _compilationStrategy = new (PERSISTENT_NEW) TR::ThresholdCompilationStrategy();
-      else // if no match, use default
-      {
-         _compilationStrategy = new (PERSISTENT_NEW) TR::DefaultCompilationStrategy();
-      }
-
-      if (_compilationStrategy)
-         {
-         TR_OptimizationPlan::_optimizationPlanMonitor = TR::Monitor::create("OptimizationPlanMonitor");
-         _useController = (TR_OptimizationPlan::_optimizationPlanMonitor != 0);
-         if (_useController)
-            {
-            static char *verboseController = feGetEnv("TR_VerboseController");
-            if (verboseController)
-               setVerbose(atoi(verboseController));
-            if (verbose() >= LEVEL1)
-               fprintf(stderr, "Using %s comp strategy\n", strategyName);
-            }
-         }
-      }
-   //TR_ASSERT(_useController, "Must use compilation controller");
-//#ifdef COMP_YIELD_ANALYSIS
-   if (options->getOption(TR_EnableCompYieldStats))
-      TR::Compilation::allocateCompYieldStatsMatrix();
-   tlsAlloc(OMR::compilation);
-   _tlsCompObjCreated = true;
-   return _useController;
-   }
-
-
-//-------------------------------- shutdown ---------------------------------
-// Called at shutdown time after compilation thread has been stopped
-// --------------------------------------------------------------------------
-void TR::CompilationController::shutdown()
-   {
-   if (_tlsCompObjCreated)
-      tlsFree(OMR::compilation);
-   if (!_useController)
-      return;
-   // would like to free all entries in the pool of compilation plans
-   int32_t remainingPlans = TR_OptimizationPlan::freeEntirePool();
-      // print some stats
-   if (verbose() >= LEVEL1)
-      {
-      fprintf(stderr, "Remaining optimizations plans in the system: %d\n", remainingPlans);
-      }
-   _compilationStrategy->shutdown();
-   }
-
-
-//======================== DefaultCompilationStrategy ==========================
-
-
-
-TR::DefaultCompilationStrategy::DefaultCompilationStrategy()
+J9::CompilationStrategy::CompilationStrategy()
    {
    // initialize the statistics
    for (int32_t i=0; i < TR_MethodEvent::NumEvents; i++)
       _statEventType[i] = 0;
    }
 
-
-void TR::DefaultCompilationStrategy::shutdown()
+void J9::CompilationStrategy::shutdown()
    {
    // printing stats
    if (TR::CompilationController::verbose() >= TR::CompilationController::LEVEL1)
@@ -139,7 +62,7 @@ void TR::DefaultCompilationStrategy::shutdown()
    }
 
 
-TR_Hotness TR::DefaultCompilationStrategy::getInitialOptLevel(J9Method *j9method)
+TR_Hotness J9::CompilationStrategy::getInitialOptLevel(J9Method *j9method)
    {
    J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(j9method);
    return TR::Options::getInitialHotnessLevel(J9ROMMETHOD_HAS_BACKWARDS_BRANCHES(romMethod) ? true : false);
@@ -150,7 +73,7 @@ TR_Hotness TR::DefaultCompilationStrategy::getInitialOptLevel(J9Method *j9method
 // If the function returns NULL, then the value of *newPlanCreated is
 // undefined and should not be tested
 //---------------------------------------------------------------------
-TR_OptimizationPlan *TR::DefaultCompilationStrategy::processEvent(TR_MethodEvent *event, bool *newPlanCreated)
+TR_OptimizationPlan *J9::CompilationStrategy::processEvent(TR_MethodEvent *event, bool *newPlanCreated)
    {
    TR_OptimizationPlan *plan = NULL, *attachedPlan = NULL;
    TR_Hotness hotnessLevel;
@@ -166,12 +89,12 @@ TR_OptimizationPlan *TR::DefaultCompilationStrategy::processEvent(TR_MethodEvent
       {
       case TR_MethodEvent::JittedMethodSample:
          compInfo->_stats._sampleMessagesReceived++;
-         plan = processJittedSample(event);
+         plan = self()->processJittedSample(event);
          *newPlanCreated = true;
          break;
       case TR_MethodEvent::InterpretedMethodSample:
          compInfo->_stats._sampleMessagesReceived++;
-         plan = processInterpreterSample(event);
+         plan = self()->processInterpreterSample(event);
          *newPlanCreated = true;
          break;
       case TR_MethodEvent::InterpreterCounterTripped:
@@ -184,7 +107,7 @@ TR_OptimizationPlan *TR::DefaultCompilationStrategy::processEvent(TR_MethodEvent
 
          // use the counts to determine the first level of compilation
          // the level of compilation can be changed later on if option subsets are present
-         hotnessLevel = TR::DefaultCompilationStrategy::getInitialOptLevel(event->_j9method);
+         hotnessLevel = self()->getInitialOptLevel(event->_j9method);
          if (hotnessLevel == veryHot && // we probably want to profile
             !TR::Options::getCmdLineOptions()->getOption(TR_DisableProfiling) &&
              TR::Recompilation::countingSupported() &&
@@ -197,7 +120,7 @@ TR_OptimizationPlan *TR::DefaultCompilationStrategy::processEvent(TR_MethodEvent
          // these may change
          break;
       case TR_MethodEvent::JitCompilationInducedByDLT:
-         hotnessLevel = TR::DefaultCompilationStrategy::getInitialOptLevel(event->_j9method);
+         hotnessLevel = self()->getInitialOptLevel(event->_j9method);
          plan = TR_OptimizationPlan::alloc(hotnessLevel);
          if (plan)
             plan->setInducedByDLT(true);
@@ -242,7 +165,7 @@ TR_OptimizationPlan *TR::DefaultCompilationStrategy::processEvent(TR_MethodEvent
       case TR_MethodEvent::ShareableMethodHandleThunk:
       case TR_MethodEvent::CustomMethodHandleThunk:
          // TODO: methodInfo->setWasNeverInterpreted()
-         hotnessLevel = TR::DefaultCompilationStrategy::getInitialOptLevel(event->_j9method);
+         hotnessLevel = self()->getInitialOptLevel(event->_j9method);
          if (hotnessLevel < warm && event->_eventType == TR_MethodEvent::CustomMethodHandleThunk)
             hotnessLevel = warm; // Custom thunks benefit a LOT from warm opts like preexistence and repeated inlining passes
          plan = TR_OptimizationPlan::alloc(hotnessLevel);
@@ -264,13 +187,13 @@ TR_OptimizationPlan *TR::DefaultCompilationStrategy::processEvent(TR_MethodEvent
          break;
       case TR_MethodEvent::HWPRecompilationTrigger:
          {
-         plan = processHWPSample(event);
+         plan = self()->processHWPSample(event);
          }
          break;
       case TR_MethodEvent::CompilationBeforeCheckpoint:
          {
          // use the counts to determine the first level of compilation
-         hotnessLevel = TR::DefaultCompilationStrategy::getInitialOptLevel(event->_j9method);
+         hotnessLevel = self()->getInitialOptLevel(event->_j9method);
          plan = TR_OptimizationPlan::alloc(hotnessLevel);
          *newPlanCreated = true;
          }
@@ -287,11 +210,9 @@ TR_OptimizationPlan *TR::DefaultCompilationStrategy::processEvent(TR_MethodEvent
    return plan;
    }
 
-
-
 //--------------------- processInterpreterSample ----------------------
 TR_OptimizationPlan *
-TR::DefaultCompilationStrategy::processInterpreterSample(TR_MethodEvent *event)
+J9::CompilationStrategy::processInterpreterSample(TR_MethodEvent *event)
    {
    // Sampling an interpreted method. The method could have been already
    // compiled (but we got a sample in the old interpreted body).
@@ -387,7 +308,7 @@ TR::DefaultCompilationStrategy::processInterpreterSample(TR_MethodEvent *event)
                      {
                      if (TR::Options::_compilationDelayTime <= 0 ||
                         compInfo->getPersistentInfo()->getElapsedTime() >= 1000 * TR::Options::_compilationDelayTime)
-                        plan = TR_OptimizationPlan::alloc(getInitialOptLevel(j9method));
+                        plan = TR_OptimizationPlan::alloc(self()->getInitialOptLevel(j9method));
                      }
                   }
                else if (returnIprofilerState() == IPROFILING_STATE_OFF)
@@ -458,7 +379,7 @@ TR::DefaultCompilationStrategy::processInterpreterSample(TR_MethodEvent *event)
                   {
                   if (TR::Options::_compilationDelayTime <= 0 ||
                      compInfo->getPersistentInfo()->getElapsedTime() >= 1000 * TR::Options::_compilationDelayTime)
-                     plan = TR_OptimizationPlan::alloc(getInitialOptLevel(j9method));
+                     plan = TR_OptimizationPlan::alloc(self()->getInitialOptLevel(j9method));
                   }
                }
             else // count==-1
@@ -524,7 +445,7 @@ TR::DefaultCompilationStrategy::processInterpreterSample(TR_MethodEvent *event)
       return plan;
 }
 
-TR::DefaultCompilationStrategy::ProcessJittedSample::ProcessJittedSample(J9JITConfig *jitConfig,
+J9::CompilationStrategy::ProcessJittedSample::ProcessJittedSample(J9JITConfig *jitConfig,
                                                                          J9VMThread *vmThread,
                                                                          TR::CompilationInfo *compInfo,
                                                                          TR_J9VMBase *fe,
@@ -553,7 +474,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::ProcessJittedSample(J9JITCo
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::initializeRecompRelatedFields()
+J9::CompilationStrategy::ProcessJittedSample::initializeRecompRelatedFields()
    {
    _recompile = false;
    _useProfiling = false;
@@ -607,7 +528,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::initializeRecompRelatedFiel
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::logSampleInfoToBuffer()
+J9::CompilationStrategy::ProcessJittedSample::logSampleInfoToBuffer()
    {
    if (_logSampling || TrcEnabled_Trc_JIT_Sampling)
       {
@@ -624,7 +545,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::logSampleInfoToBuffer()
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::printBufferToVLog()
+J9::CompilationStrategy::ProcessJittedSample::printBufferToVLog()
    {
    if (_logSampling)
       {
@@ -644,7 +565,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::printBufferToVLog()
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::yieldToAppThread()
+J9::CompilationStrategy::ProcessJittedSample::yieldToAppThread()
    {
    int32_t sleepNano = _compInfo->getAppSleepNano(); // determine how much I need to sleep
    if (sleepNano != 0) // If I need to sleep at all
@@ -662,7 +583,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::yieldToAppThread()
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::findAndSetBodyAndMethodInfo()
+J9::CompilationStrategy::ProcessJittedSample::findAndSetBodyAndMethodInfo()
    {
    J9::PrivateLinkage::LinkageInfo *linkageInfo = J9::PrivateLinkage::LinkageInfo::get(_startPC);
 
@@ -704,7 +625,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::findAndSetBodyAndMethodInfo
    }
 
 bool
-TR::DefaultCompilationStrategy::ProcessJittedSample::shouldProcessSample()
+J9::CompilationStrategy::ProcessJittedSample::shouldProcessSample()
    {
    bool shouldProcess = true;
    void *currentStartPC
@@ -740,7 +661,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::shouldProcessSample()
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherToRecompileIfCountHitsZero()
+J9::CompilationStrategy::ProcessJittedSample::determineWhetherToRecompileIfCountHitsZero()
    {
    if (!_isAlreadyBeingCompiled)
       {
@@ -803,7 +724,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherToRecompile
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherRecompileIsHotOrScorching(float scalingFactor,
+J9::CompilationStrategy::ProcessJittedSample::determineWhetherRecompileIsHotOrScorching(float scalingFactor,
                                                                                                bool conservativeCase,
                                                                                                bool useAggressiveRecompilations,
                                                                                                bool isBigAppStartup)
@@ -895,7 +816,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherRecompileIs
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherToRecompileBasedOnThreshold()
+J9::CompilationStrategy::ProcessJittedSample::determineWhetherToRecompileBasedOnThreshold()
    {
    _compInfo->_stats._methodsReachingSampleInterval++;
 
@@ -1034,7 +955,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherToRecompile
    }
 
 void
-TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherToRecompileLessOptimizedMethods()
+J9::CompilationStrategy::ProcessJittedSample::determineWhetherToRecompileLessOptimizedMethods()
    {
    if (_bodyInfo->getFastRecompilation() && !_isAlreadyBeingCompiled)
       {
@@ -1124,7 +1045,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::determineWhetherToRecompile
    }
 
 TR_OptimizationPlan *
-TR::DefaultCompilationStrategy::ProcessJittedSample::triggerRecompIfNeeded()
+J9::CompilationStrategy::ProcessJittedSample::triggerRecompIfNeeded()
    {
    TR_OptimizationPlan *plan = NULL;
 
@@ -1193,7 +1114,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::triggerRecompIfNeeded()
    }
 
 TR_OptimizationPlan *
-TR::DefaultCompilationStrategy::ProcessJittedSample::process()
+J9::CompilationStrategy::ProcessJittedSample::process()
    {
    TR_OptimizationPlan *plan = NULL;
 
@@ -1264,7 +1185,7 @@ TR::DefaultCompilationStrategy::ProcessJittedSample::process()
    }
 
 TR_OptimizationPlan *
-TR::DefaultCompilationStrategy::processJittedSample(TR_MethodEvent *event)
+J9::CompilationStrategy::processJittedSample(TR_MethodEvent *event)
    {
    TR::Options *cmdLineOptions   = TR::Options::getCmdLineOptions();
    J9Method *j9method            = event->_j9method;
@@ -1278,7 +1199,7 @@ TR::DefaultCompilationStrategy::processJittedSample(TR_MethodEvent *event)
    }
 
 TR_OptimizationPlan *
-TR::DefaultCompilationStrategy::processHWPSample(TR_MethodEvent *event)
+J9::CompilationStrategy::processHWPSample(TR_MethodEvent *event)
    {
    TR_OptimizationPlan *plan = NULL;
    TR_Hotness hotnessLevel;
@@ -1335,7 +1256,7 @@ TR::DefaultCompilationStrategy::processHWPSample(TR_MethodEvent *event)
 //         the optimization level will be changed and also 2 flags in the
 //         optimization plan may be changed (OptLevelDowngraded, AddToUpgradeQueue)
 //----------------------------------------------------------------------------
-bool TR::DefaultCompilationStrategy::adjustOptimizationPlan(TR_MethodToBeCompiled *entry, int32_t optLevelAdjustment)
+bool J9::CompilationStrategy::adjustOptimizationPlan(TR_MethodToBeCompiled *entry, int32_t optLevelAdjustment)
    {
    // Run SmoothCompilation to see if we need to change the opt level and/or priority
    bool shouldAddToUpgradeQueue = false;
@@ -1418,7 +1339,7 @@ bool TR::DefaultCompilationStrategy::adjustOptimizationPlan(TR_MethodToBeCompile
    }
 
 
-void TR::DefaultCompilationStrategy::beforeCodeGen(TR_OptimizationPlan *plan, TR::Recompilation *recomp)
+void J9::CompilationStrategy::beforeCodeGen(TR_OptimizationPlan *plan, TR::Recompilation *recomp)
    {
    // Set up the opt level and counter for the next compilation. This will
    // also decide if there is going to be a next compilation. If there is no
@@ -1488,7 +1409,7 @@ void TR::DefaultCompilationStrategy::beforeCodeGen(TR_OptimizationPlan *plan, TR
       }
    }
 
-void TR::DefaultCompilationStrategy::postCompilation(TR_OptimizationPlan *plan, TR::Recompilation *recomp)
+void J9::CompilationStrategy::postCompilation(TR_OptimizationPlan *plan, TR::Recompilation *recomp)
    {
    if (!TR::CompilationController::getCompilationInfo()->asynchronousCompilation())
       {
@@ -1496,226 +1417,4 @@ void TR::DefaultCompilationStrategy::postCompilation(TR_OptimizationPlan *plan, 
       recomp->getMethodInfo()->_optimizationPlan = NULL;
       TR_OptimizationPlan::_optimizationPlanMonitor->exit();
       }
-   }
-
-
-
-
-
-//============================= ThresholdCompilationStrategy ====================
-
-
-TR::ThresholdCompilationStrategy::ThresholdCompilationStrategy()
-   {
-        // To be safe, clear everything out before setting anything
-   for (int32_t level=noOpt; level <= numHotnessLevels; level++)
-      {
-      _nextLevel[level] = unknownHotness;
-      _samplesNeededToMoveTo[level] = -1;
-      _performInstrumentation[level] = false;
-      }
-
-   // Now, initialize our strategy threshold based strategy
-   //
-   // These could easily be set from command line options or any other
-   // way (maybe from the existing options string?)
-   //
-   // The current strategy uses only noOpt -> warm -> scorching.   (and veryHot if instrumentation-based profiling is used)
-   _samplesNeededToMoveTo[noOpt] = 1;
-   _samplesNeededToMoveTo[warm] = 6;
-   int32_t SCORCHING_THRESH = 20;
-   _samplesNeededToMoveTo[scorching] = SCORCHING_THRESH;
-
-   // If we are doing instrumentation-based profiling
-   if (!TR::Options::getCmdLineOptions()->getOption(TR_DisableProfiling))
-      {
-      // Insert instrumentation in VeryHot
-      _samplesNeededToMoveTo[veryHot] = SCORCHING_THRESH;
-      _performInstrumentation[veryHot] = 1;  // Yes, perform profiling at this level
-
-      _samplesNeededToMoveTo[scorching] = SCORCHING_THRESH + 1;  // Sampling is disable during instrumentation-based profiling,
-                                                                // so this is really just a place holder
-      }
-
-   // Use the information above to setup the "next" pointers.
-   // Go through list backwards, and for each "active" level, set where you'll jump to next.
-   int32_t prevActiveLevel = unknownHotness;
-   for (int32_t curLevel = numHotnessLevels;
-        curLevel >= noOpt;  // should be "> minHotness" if it existed
-        curLevel--)
-      {
-      if (_samplesNeededToMoveTo[curLevel] > 0)
-         {
-         // curLevel is an active level
-         _nextLevel[curLevel] = (TR_Hotness) prevActiveLevel;
-         prevActiveLevel = curLevel;
-         }
-      }
-   // Finally, check unknownHotness (which represents the method still being interpreted) last
-   _nextLevel[unknownHotness] = (TR_Hotness) prevActiveLevel;
-
-   }
-
-
-
-TR_Hotness TR::ThresholdCompilationStrategy::getInitialOptLevel()
-   {
-   return noOpt;
-   }
-
-
-TR_OptimizationPlan *TR::ThresholdCompilationStrategy::processEvent(TR_MethodEvent *event, bool *newPlanCreated)
-{
-   TR_OptimizationPlan *plan = NULL;
-   TR_Hotness hotnessLevel;
-   TR_PersistentJittedBodyInfo *bodyInfo;
-   TR_PersistentMethodInfo *methodInfo;
-   *newPlanCreated = false;
-
-   if (TR::CompilationController::verbose() >= TR::CompilationController::LEVEL3)
-      fprintf(stderr, "Received event %d\n", event->_eventType);
-
-   // first decode the event type
-   switch (event->_eventType)
-      {
-      case TR_MethodEvent::InterpretedMethodSample:
-         // do nothing
-         break;
-      case TR_MethodEvent::InterpreterCounterTripped:
-         TR_ASSERT(event->_oldStartPC == 0, "oldStartPC should be 0 for an interpreted method");
-         // use the counts to determine the first level of compilation
-         // the level of compilation can be changed later on if option subsets are present
-         hotnessLevel = TR::ThresholdCompilationStrategy::getInitialOptLevel();
-         plan = TR_OptimizationPlan::alloc(hotnessLevel);
-         *newPlanCreated = true;
-         break;
-      case TR_MethodEvent::OtherRecompilationTrigger: // sync recompilation through fixMethodCode
-         // For sync re-compilation we attach the plan to the persistentBodyInfo
-         bodyInfo = TR::Recompilation::getJittedBodyInfoFromPC(event->_oldStartPC);
-         methodInfo = bodyInfo->getMethodInfo();
-
-         if (methodInfo->getReasonForRecompilation() == TR_PersistentMethodInfo::RecompDueToInlinedMethodRedefinition)
-            {
-            methodInfo->incrementNumberOfInlinedMethodRedefinition();
-            hotnessLevel = bodyInfo->getHotness();
-            plan = TR_OptimizationPlan::alloc(hotnessLevel);
-            *newPlanCreated = true;
-            }
-         else if (methodInfo->getOptimizationPlan())
-            {
-            TR_ASSERT(!TR::CompilationController::getCompilationInfo()->asynchronousCompilation(), "This case should happen only for sync recompilation");
-            plan = methodInfo->getOptimizationPlan();
-            }
-         else
-            {
-            //hotnessLevel = TR::Recompilation::getNextCompileLevel(event->_oldStartPC);
-            hotnessLevel = getNextOptLevel(bodyInfo->getHotness());
-            plan = TR_OptimizationPlan::alloc(hotnessLevel);
-            *newPlanCreated = true;
-            }
-         break;
-      case TR_MethodEvent::NewInstanceImpl:
-         hotnessLevel = getInitialOptLevel();
-         plan = TR_OptimizationPlan::alloc(hotnessLevel);
-         *newPlanCreated = true;
-         break;
-      case TR_MethodEvent::MethodBodyInvalidated:
-         // keep the same optimization level
-         bodyInfo = TR::Recompilation::getJittedBodyInfoFromPC(event->_oldStartPC);
-         TR_ASSERT(bodyInfo, "A recompilable method should have jittedBodyInfo");
-         hotnessLevel = bodyInfo->getHotness();
-         plan = TR_OptimizationPlan::alloc(hotnessLevel);
-         *newPlanCreated = true;
-         // the following is just for compatibility with older implementation
-         bodyInfo->getMethodInfo()->setNextCompileLevel(hotnessLevel, false); // no profiling
-         break;
-      case TR_MethodEvent::JittedMethodSample:
-         plan = processJittedSample(event);
-         *newPlanCreated = true;
-         break;
-
-      default:
-         TR_ASSERT(0, "Bad event type %d", event->_eventType);
-      }
-
-   if (TR::CompilationController::verbose() >= TR::CompilationController::LEVEL2)
-      fprintf(stderr, "Event %d created plan %p\n", event->_eventType, plan);
-
-   return plan;
-}
-
-
-TR_OptimizationPlan *
-TR::ThresholdCompilationStrategy::processJittedSample(TR_MethodEvent *event)
-   {
-   TR_OptimizationPlan *plan = NULL;
-   TR::Options * cmdLineOptions = TR::Options::getCmdLineOptions();
-   J9Method *j9method = event->_j9method;
-   J9JITConfig *jitConfig = event->_vmThread->javaVM->jitConfig;
-   TR_J9VMBase * fe = TR_J9VMBase::get(jitConfig, event->_vmThread);
-   void *startPC = event->_oldStartPC;
-   // here we may need to write into the vlog
-
-
-   J9::PrivateLinkage::LinkageInfo *linkageInfo = J9::PrivateLinkage::LinkageInfo::get(startPC);
-   TR_PersistentJittedBodyInfo *bodyInfo = NULL;
-
-   if (linkageInfo->hasFailedRecompilation())
-      {
-         //if (logSampling)
-         //   msgLen += sprintf(msg + msgLen, " has already failed a recompilation attempt");
-      }
-   else if (!linkageInfo->isSamplingMethodBody())
-      {
-         //if (logSampling)
-         // msgLen += sprintf(msg + msgLen, " does not use sampling");
-      }
-   else if (debug("disableSamplingRecompilation"))
-      {
-         //if (logSampling)
-         //msgLen += sprintf(msg + msgLen, " sampling disabled");
-      }
-   else
-      bodyInfo = TR::Recompilation::getJittedBodyInfoFromPC(startPC);
-
-   if (bodyInfo && bodyInfo->getDisableSampling())
-      {
-         //if (logSampling)
-         //msgLen += sprintf(msg + msgLen, " uses sampling but sampling disabled (last comp. with prex)");
-         bodyInfo = NULL;
-      }
-
-   if (bodyInfo)
-      {
-      TR_PersistentMethodInfo *methodInfo = bodyInfo->getMethodInfo();
-      fe->acquireCompilationLock();
-      void *currentStartPC = (void *)TR::Compiler->mtd.startPC((TR_OpaqueMethodBlock *) methodInfo->getMethodInfo());
-      if (currentStartPC != startPC) // rare case; sampling an old body
-         {
-         fe->releaseCompilationLock();
-         // do nothing
-         }
-      else if (TR::Options::getCmdLineOptions()->getFixedOptLevel() != -1
-               || TR::Options::getAOTCmdLineOptions()->getFixedOptLevel() != -1) // prevent recompilation when opt level is specified
-         {
-         fe->releaseCompilationLock();
-         // do nothing
-         }
-      else
-         {
-         // increment the CPOcount and see if we need to recompile
-         int32_t sampleCount = methodInfo->cpoIncCounter();
-         fe->releaseCompilationLock();
-         TR_Hotness curOptLevel = bodyInfo->getHotness();
-         TR_Hotness nextOptLevel = getNextOptLevel(curOptLevel);
-
-         if ((nextOptLevel != unknownHotness) && (sampleCount == getSamplesNeeded(nextOptLevel)))
-            {
-            bool useSampling = (getNextOptLevel(nextOptLevel) != unknownHotness);
-            plan = TR_OptimizationPlan::alloc(nextOptLevel,
-                                           getPerformInstrumentation(nextOptLevel), useSampling);
-            }
-         }
-      }
-      return plan;
    }
