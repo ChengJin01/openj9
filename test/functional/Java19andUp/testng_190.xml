@@ -46,6 +46,7 @@
 	</test>
 	<test name="Jep424Tests_testLinkerFfi_UpCall">
 		<classes>
+			<class name="org.openj9.test.jep424.upcall.InvalidUpCallTests"/>
 			<class name="org.openj9.test.jep424.upcall.MultiUpcallMHTests"/>
 			<class name="org.openj9.test.jep424.upcall.MultiUpcallThrdsMHTests1"/>
 			<class name="org.openj9.test.jep424.upcall.MultiUpcallThrdsMHTests2"/>

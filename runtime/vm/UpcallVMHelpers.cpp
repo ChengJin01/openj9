@@ -37,6 +37,7 @@ extern "C" {
 extern void c_cInterpreter(J9VMThread *currentThread);
 extern bool buildCallInStackFrameHelper(J9VMThread *currentThread, J9VMEntryLocalStorage *newELS, bool returnsObject);
 extern void restoreCallInFrameHelper(J9VMThread *currentThread);
+extern void longJumpWrapperForUpall(J9VMThread *downCallThread);
 
 static U_64 JNICALL native2InterpJavaUpcallImpl(J9UpcallMetaData *data, void *argsListPointer);
 static J9VMThread * getCurrentThread(J9UpcallMetaData *data, bool *isCurThrdAllocated);
@@ -332,16 +333,22 @@ done:
 	/* Transfer the exception from the locally created upcall thread to the downcall thread
 	 * as the upcall thread will be cleaned up before the dispatcher exits; otherwise
 	 * the current thread's exception can be brought back to the interpreter in downcall.
+	 *
+	 * Note:
+	 * The exception could be OOM which is set for the downcall thread
+	 * in storeMemArgObjectsToJavaArray().
 	 */
-	if (VM_VMHelpers::exceptionPending(currentThread) && isCurThrdAllocated) {
-		downCallThread->currentException = currentThread->currentException;
-		currentThread->currentException = NULL;
-	}
-
-	if (!throwOOM) {
-		/* Read returnStorage from returnValue (and returnValue2 on 32-bit platforms). */
-		returnStorage = *(U_64 *)&currentThread->returnValue;
-		convertUpcallReturnValue(data, returnType, &returnStorage);
+	if (!VM_VMHelpers::exceptionPending(downCallThread)) {
+		if (VM_VMHelpers::exceptionPending(currentThread)) {
+			if (isCurThrdAllocated) {
+				downCallThread->currentException = currentThread->currentException;
+				currentThread->currentException = NULL;
+			}
+		} else {
+			/* Read returnStorage from returnValue (and returnValue2 on 32-bit platforms). */
+			returnStorage = *(U_64 *)&currentThread->returnValue;
+			convertUpcallReturnValue(data, returnType, &returnStorage);
+		}
 	}
 
 	VM_VMAccess::inlineExitVMToJNI(currentThread);
@@ -358,6 +365,16 @@ done:
 	if (isCurThrdAllocated) {
 		threadCleanup(currentThread, false);
 		currentThread = NULL;
+	}
+
+	/* Restore back to the setjump site in the call-out native
+	 * to handle the captured exception.
+	 *
+	 * See inlInternalDowncallHandlerInvokeNative()
+	 * in BytecodeInterpreter.hpp for details.
+	 */
+	if (VM_VMHelpers::exceptionPending(downCallThread)) {
+		longJumpWrapperForUpall(downCallThread);
 	}
 
 doneAndExit:

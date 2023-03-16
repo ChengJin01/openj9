@@ -184,6 +184,7 @@ public class UpcallMethodHandles {
 	public static final MethodHandle MH_addIntAndIntsFromStructWithNestedStructArray;
 	public static final MethodHandle MH_addIntAndIntsFromStructWithNestedStructArray_reverseOrder;
 	public static final MethodHandle MH_add2IntStructs_returnStruct;
+	public static final MethodHandle MH_add2IntStructs_returnStruct_throwException;
 	public static final MethodHandle MH_add2IntStructs_returnStructPointer;
 	public static final MethodHandle MH_add3IntStructs_returnStruct;
 
@@ -382,6 +383,7 @@ public class UpcallMethodHandles {
 			MH_addIntAndIntsFromStructWithNestedStructArray = lookup.findStatic(UpcallMethodHandles.class, "addIntAndIntsFromStructWithNestedStructArray", MT_Int_Int_MemSegmt); //$NON-NLS-1$
 			MH_addIntAndIntsFromStructWithNestedStructArray_reverseOrder = lookup.findStatic(UpcallMethodHandles.class, "addIntAndIntsFromStructWithNestedStructArray_reverseOrder", MT_Int_Int_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStruct = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
+			MH_add2IntStructs_returnStruct_throwException = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_throwException", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStructPointer = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer", MT_MemAddr_MemAddr_MemSegmt); //$NON-NLS-1$
 			MH_add3IntStructs_returnStruct = lookup.findStatic(UpcallMethodHandles.class, "add3IntStructs_returnStruct", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 
@@ -1584,6 +1586,10 @@ public class UpcallMethodHandles {
 		return intStructSegmt;
 	}
 
+	public static MemorySegment add2IntStructs_returnStruct_throwException(MemorySegment arg1, MemorySegment arg2) {
+		throw new IllegalArgumentException("An exception is thrown from the upcall method");
+	}
+
 	public static MemoryAddress add2IntStructs_returnStructPointer(MemoryAddress arg1Addr, MemorySegment arg2) {
 		GroupLayout structLayout = MemoryLayout.structLayout(C_INT.withName("elem1"), C_INT.withName("elem2"));
 		VarHandle intHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
@@ -2404,14 +2410,13 @@ public class UpcallMethodHandles {
 	}
 
 	public static double addDoubleAndIntDoubleLongFromStruct(double arg1, MemorySegment arg2) {
-		/* The padding in the struct [int, double, long] on AIX/PPC 64-bit is different from
-		 * other platforms as follows:
-		 * 1) there is no padding between int and double.
-		 * 2) there is a 4-byte padding between double and long.
+		/* The size of [int, double, long] on AIX/PPC 64-bit is 20 bytes without padding by default
+		 * while the same struct is 24 bytes with padding on other platforms.
 		 */
-		GroupLayout structLayout = isAixOS ? MemoryLayout.structLayout(C_INT.withName("elem1"), C_DOUBLE.withName("elem2"),
-				MemoryLayout.paddingLayout(32), longLayout.withName("elem3")) : MemoryLayout.structLayout(C_INT.withName("elem1"),
-				MemoryLayout.paddingLayout(32), C_DOUBLE.withName("elem2"), longLayout.withName("elem3"));
+		GroupLayout structLayout = isAixOS ? MemoryLayout.structLayout(C_INT.withName("elem1"),
+				C_DOUBLE.withName("elem2"), longLayout.withName("elem3").withBitAlignment(32))
+				: MemoryLayout.structLayout(C_INT.withName("elem1"), MemoryLayout.paddingLayout(32),
+						C_DOUBLE.withName("elem2"), longLayout.withName("elem3"));
 		VarHandle elemHandle1 = structLayout.varHandle(int.class, PathElement.groupElement("elem1"));
 		VarHandle elemHandle2 = structLayout.varHandle(double.class, PathElement.groupElement("elem2"));
 		VarHandle elemHandle3 = structLayout.varHandle(long.class, PathElement.groupElement("elem3"));
