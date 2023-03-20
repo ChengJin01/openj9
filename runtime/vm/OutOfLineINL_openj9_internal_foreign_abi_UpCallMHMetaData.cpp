@@ -40,19 +40,10 @@ OutOfLineINL_openj9_internal_foreign_abi_UpcallMHMetaData_resolveUpcallDataField
 	J9ConstantPool *jclConstantPool = (J9ConstantPool *)vm->jclConstantPool;
 #if JAVA_SPEC_VERSION >= 20
 	const int cpEntryNum = 8;
-<<<<<<< Upstream, based on upstream/master
 #elif JAVA_SPEC_VERSION >= 18 /* JAVA_SPEC_VERSION >= 20 */
-=======
-#else /* JAVA_SPEC_VERSION >= 20 */
-#if JAVA_SPEC_VERSION >= 18
->>>>>>> 350c0d3 Update the FFI related code for JEP434/JDK20
 	const int cpEntryNum = 9;
 #else /* JAVA_SPEC_VERSION >= 18 */
 	const int cpEntryNum = 10;
-<<<<<<< Upstream, based on upstream/master
-=======
-#endif /* JAVA_SPEC_VERSION >= 18 */
->>>>>>> 350c0d3 Update the FFI related code for JEP434/JDK20
 #endif /* JAVA_SPEC_VERSION >= 20 */
 	U_16 cpIndex[cpEntryNum] = {
 			J9VMCONSTANTPOOL_OPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH,
