@@ -31,13 +31,8 @@ import java.lang.Thread;
 import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-<<<<<<< Upstream, based on upstream/master
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-=======
-import java.util.concurrent.locks.LockSupport;
-import java.util.concurrent.TimeUnit;
->>>>>>> 0dd0fff Update the FFI related code for JEP434/JDK20
 import java.util.stream.IntStream;
 
 /**
