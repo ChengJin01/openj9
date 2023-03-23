@@ -73,4 +73,112 @@ public class InvalidDownCallTests {
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 		fail("Failed to throw out IllegalArgumentException in the case of the invalid MemoryLayout");
 	}
+
+	@Test(expectedExceptions = WrongMethodTypeException.class)
+	public void test_structArgument_nullValue() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
+
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Addressable functionSymbol = nativeLibLookup.lookup("add2IntStructs_returnStruct").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
+
+		try (MemorySession session = MemorySession.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.newNativeArena(session);
+			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt1, 11223344);
+			intHandle2.set(structSegmt1, 55667788);
+
+			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(allocator, structSegmt1, null);
+			fail("Failed to throw out WrongMethodTypeException in the case of the null argument");
+		}
+	}
+
+	@Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "Null segment not allowed.*")
+	public void test_structArgument_nullSegment() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
+
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Addressable functionSymbol = nativeLibLookup.lookup("add2IntStructs_returnStruct").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
+
+		try (MemorySession session = MemorySession.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.newNativeArena(session);
+			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt1, 11223344);
+			intHandle2.set(structSegmt1, 55667788);
+
+			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(allocator, structSegmt1, MemorySegment.NULL);
+			fail("Failed to throw out NullPointerException in the case of the null memory segment);
+		}
+	}
+
+	@Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "Null segment not allowed.*")
+	public void test_ptrArgument_nullSegment() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
+
+		FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, ADDRESS, structLayout);
+		Addressable functionSymbol = nativeLibLookup.lookup("addIntFromPointerAndIntsFromStruct").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
+
+		try (MemorySession session = MemorySession.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.newNativeArena(session);
+			MemorySegment structSegmt = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt, 1234567);
+			intHandle2.set(structSegmt, 2468024);
+
+			int result = (int)mh.invoke(MemorySegment.NULL, structSegmt);
+			fail("Failed to throw out NullPointerException in the case of the null memory segment);
+		}
+	}
+
+	@Test
+	public void test_structArgument_heapSegment() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
+
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout);
+		Addressable functionSymbol = nativeLibLookup.lookup("add2IntStructs_returnStruct").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
+
+		try (MemorySession session = MemorySession.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.newNativeArena(session);
+			MemorySegment structSegmt1 = MemorySegment.ofArray(new int[]{11223344, 55667788});
+			MemorySegment structSegmt2 = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt2, 99001122);
+			intHandle2.set(structSegmt2, 33445566);
+
+			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(allocator, structSegmt1, structSegmt2);
+			Assert.assertEquals(intHandle1.get(resultSegmt), 110224466);
+			Assert.assertEquals(intHandle2.get(resultSegmt), 89113354);
+		}
+	}
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Heap segment not allowed.*")
+	public void test_ptrArgument_heapSegment() throws Throwable {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
+		VarHandle intHandle2 = structLayout.varHandle(PathElement.groupElement("elem2"));
+
+		FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, ADDRESS, structLayout);
+		Addressable functionSymbol = nativeLibLookup.lookup("addIntFromPointerAndIntsFromStruct").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
+
+		try (MemorySession session = MemorySession.openConfined()) {
+			SegmentAllocator allocator = SegmentAllocator.newNativeArena(session);
+			MemorySegment intSegmt = MemorySegment.ofArray(new int[]{7654321});
+			MemorySegment structSegmt = allocator.allocate(structLayout);
+			intHandle1.set(structSegmt, 1234567);
+			intHandle2.set(structSegmt, 2468024);
+
+			int result = (int)mh.invoke(intSegmt, structSegmt);
+			fail("Failed to throw out IllegalArgumentException in the case of the on-heap memory segment);
+		}
+	}
 }

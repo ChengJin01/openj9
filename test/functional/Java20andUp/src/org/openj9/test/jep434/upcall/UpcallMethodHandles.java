@@ -29,15 +29,19 @@ import static java.lang.invoke.MethodType.methodType;
 import java.lang.invoke.VarHandle;
 
 import java.lang.foreign.Arena;
-import static java.lang.foreign.Linker.*;
+import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.GroupLayout;
+import java.lang.foreign.Linker;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemoryLayout.PathElement;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SegmentAllocator;
 import java.lang.foreign.SegmentScope;
 import java.lang.foreign.SequenceLayout;
+import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
+
+import static java.lang.foreign.Linker.*;
 import static java.lang.foreign.ValueLayout.*;
 
 /**
@@ -182,7 +186,13 @@ public class UpcallMethodHandles {
 	public static final MethodHandle MH_addIntAndIntsFromStructWithNestedStructArray_reverseOrder;
 	public static final MethodHandle MH_add2IntStructs_returnStruct;
 	public static final MethodHandle MH_add2IntStructs_returnStruct_throwException;
+	public static final MethodHandle MH_add2IntStructs_returnStruct_nestedUpcall;
+	public static final MethodHandle MH_add2IntStructs_returnStruct_nullValue;
+	public static final MethodHandle MH_add2IntStructs_returnStruct_nullSegmt;
+	public static final MethodHandle MH_add2IntStructs_returnStruct_heapSegmt;
 	public static final MethodHandle MH_add2IntStructs_returnStructPointer;
+	public static final MethodHandle MH_add2IntStructs_returnStructPointer_nullSegmt;
+	public static final MethodHandle MH_add2IntStructs_returnStructPointer_heapSegmt;
 	public static final MethodHandle MH_add3IntStructs_returnStruct;
 
 	public static final MethodHandle MH_addLongAndLongsFromStruct;
@@ -260,7 +270,11 @@ public class UpcallMethodHandles {
 	public static final MethodHandle MH_return254BytesFromStruct;
 	public static final MethodHandle MH_return4KBytesFromStruct;
 
+	private static Linker linker = Linker.nativeLinker();
+
 	static {
+		System.loadLibrary("clinkerffitests");
+
 		try {
 			MH_add2BoolsWithOr = lookup.findStatic(UpcallMethodHandles.class, "add2BoolsWithOr", methodType(boolean.class, boolean.class, boolean.class)); //$NON-NLS-1$
 			MH_addBoolAndBoolFromPointerWithOr = lookup.findStatic(UpcallMethodHandles.class, "addBoolAndBoolFromPointerWithOr", methodType(boolean.class, boolean.class, MemorySegment.class)); //$NON-NLS-1$
@@ -381,7 +395,13 @@ public class UpcallMethodHandles {
 			MH_addIntAndIntsFromStructWithNestedStructArray_reverseOrder = lookup.findStatic(UpcallMethodHandles.class, "addIntAndIntsFromStructWithNestedStructArray_reverseOrder", MT_Int_Int_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStruct = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStruct_throwException = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_throwException", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
+			MH_add2IntStructs_returnStruct_nestedUpcall = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_nestedUpcall", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
+			MH_add2IntStructs_returnStruct_nullValue = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_nullValue", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
+			MH_add2IntStructs_returnStruct_nullSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_nullSegmt", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
+			MH_add2IntStructs_returnStruct_heapSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_heapSegmt", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStructPointer = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer", MT_Segmt_MemSegmt_MemSegmt); //$NON-NLS-1$
+			MH_add2IntStructs_returnStructPointer_nullSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer_nullSegmt", MT_Segmt_MemSegmt_MemSegmt); //$NON-NLS-1$
+			MH_add2IntStructs_returnStructPointer_heapSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer_heapSegmt", MT_Segmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add3IntStructs_returnStruct = lookup.findStatic(UpcallMethodHandles.class, "add3IntStructs_returnStruct", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 
 			MH_addLongAndLongsFromStruct = lookup.findStatic(UpcallMethodHandles.class, "addLongAndLongsFromStruct", MT_Long_Long_MemSegmt); //$NON-NLS-1$
@@ -463,6 +483,7 @@ public class UpcallMethodHandles {
 			throw new InternalError(e);
 		}
 	}
+	private static final SymbolLookup nativeLibLookup = SymbolLookup.loaderLookup();
 
 	public static boolean add2BoolsWithOr(boolean boolArg1, boolean boolArg2) {
 		boolean result = boolArg1 || boolArg2;
@@ -1355,6 +1376,37 @@ public class UpcallMethodHandles {
 		throw new IllegalArgumentException("An exception is thrown from the upcall method");
 	}
 
+	public static MemorySegment add2IntStructs_returnStruct_nestedUpcall(MemorySegment arg1, MemorySegment arg2) {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout, ADDRESS);
+		MemorySegment functionSymbol = nativeLibLookup.find("add2IntStructs_returnStructByUpcallMH").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
+		MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_add2IntStructs_returnStruct_throwException,
+				FunctionDescriptor.of(structLayout, structLayout, structLayout), scope);
+		MemorySegment resultSegmt = null;
+		try {
+			resultSegmt = (MemorySegment)mh.invoke(allocator, arg1, arg2, upcallFuncAddr);
+		} catch (Throwable e) {
+			throw (IllegalArgumentException)e;
+		}
+		return resultSegmt;
+	}
+
+	public static MemorySegment add2IntStructs_returnStruct_nullValue(MemorySegment arg1, MemorySegment arg2) {
+		return null;
+	}
+
+	public static MemorySegment add2IntStructs_returnStruct_nullSegmt(MemorySegment arg1, MemorySegment arg2) {
+		return MemorySegment.NULL;
+	}
+
+	public static MemorySegment add2IntStructs_returnStruct_heapSegmt(MemorySegment arg1, MemorySegment arg2) {
+		int intStruct_Elem1 = arg1.get(JAVA_INT, 0) + arg2.get(JAVA_INT, 0);
+		int intStruct_Elem2 = arg1.get(JAVA_INT, 4) + arg2.get(JAVA_INT, 4);
+		MemorySegment intStructSegmt = MemorySegment.ofArray(new int[]{intStruct_Elem1, intStruct_Elem2});
+		return intStructSegmt;
+	}
+
 	public static MemorySegment add2IntStructs_returnStructPointer(MemorySegment arg1Addr, MemorySegment arg2) {
 		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
 		MemorySegment arg1Segmt = MemorySegment.ofAddress(arg1Addr.address(), structLayout.byteSize(), scope);
@@ -1363,6 +1415,19 @@ public class UpcallMethodHandles {
 		arg1Segmt.set(JAVA_INT, 0, intSum_Elem1);
 		arg1Segmt.set(JAVA_INT, 4, intSum_Elem2);
 		return arg1Addr;
+	}
+
+	public static MemorySegment add2IntStructs_returnStructPointer_nullSegmt(MemorySegment arg1Addr, MemorySegment arg2) {
+		return MemorySegment.NULL;
+	}
+
+	public static MemorySegment add2IntStructs_returnStructPointer_heapSegmt(MemorySegment arg1Addr, MemorySegment arg2) {
+		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
+		MemorySegment arg1Segmt = MemorySegment.ofAddress(arg1Addr.address(), structLayout.byteSize(), scope);
+		int intSum_Elem1 = arg1Segmt.get(JAVA_INT, 0) + arg2.get(JAVA_INT, 0);
+		int intSum_Elem2 = arg1Segmt.get(JAVA_INT, 4) + arg2.get(JAVA_INT, 4);
+		MemorySegment intStructSegmt = MemorySegment.ofArray(new int[]{intSum_Elem1, intSum_Elem2});
+		return intStructSegmt;
 	}
 
 	public static MemorySegment add3IntStructs_returnStruct(MemorySegment arg1, MemorySegment arg2) {
