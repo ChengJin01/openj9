@@ -27,15 +27,18 @@ import java.lang.invoke.MethodType;
 
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemorySegment;
-/*[IF JAVA_SPEC_VERSION >= 20]*/
-import java.lang.foreign.SegmentScope;
-/*[ELSE] JAVA_SPEC_VERSION >= 20 */
-import java.lang.foreign.MemorySession;
-/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 /*[IF JAVA_SPEC_VERSION >= 21]*/
 import jdk.internal.foreign.abi.AbstractLinker.UpcallStubFactory;
+import jdk.internal.foreign.abi.LinkerOptions;
+/*[ELSEIF JAVA_SPEC_VERSION == 20]*/
+import java.lang.foreign.SegmentScope;
+import jdk.internal.foreign.abi.LinkerOptions;
+/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+import java.lang.foreign.MemorySession;
 /*[ENDIF] JAVA_SPEC_VERSION >= 21 */
+/*[IF JAVA_SPEC_VERSION <= 20]*/
 import openj9.internal.foreign.abi.InternalUpcallHandler;
+/*[ENDIF] JAVA_SPEC_VERSION <= 20 */
 
 /**
  * The counterpart in OpenJDK is replaced with this class that wrap up
@@ -43,6 +46,7 @@ import openj9.internal.foreign.abi.InternalUpcallHandler;
  */
 public final class UpcallLinker {
 
+	/*[IF JAVA_SPEC_VERSION <= 20]*/
 	private final long thunkAddr;
 
 	/* The constructor creates an upcall handler specific to the requested java method
@@ -99,6 +103,7 @@ public final class UpcallLinker {
 		UpcallLinker upcallLinker = new UpcallLinker(target, methodType, descriptor, session);
 		return UpcallStubs.makeUpcall(upcallLinker.entryPoint(), session);
 	}
+	/*[ENDIF] JAVA_SPEC_VERSION <= 20 */
 
 	/*[IF JAVA_SPEC_VERSION >= 21]*/
 	/**
@@ -130,11 +135,15 @@ public final class UpcallLinker {
 	 * @param methodType the MethodType of the upcall method handle
 	 * @param descriptor the FunctionDescriptor of the upcall method handle
 	 * @return a factory instance that wraps up the upcall specific code
+	 * @param options The linker options indicating additional linking requirements to the linker
+	 * @throws InternalError as the upcalll specific code is not yet implemented
 	 */
-	public static UpcallStubFactory makeFactory(MethodType methodType, FunctionDescriptor descriptor) {
-		return (target, session) -> {
-			return UpcallLinker.make(target, methodType, descriptor, session);
-		};
+	@SuppressWarnings("nls")
+	public static UpcallStubFactory makeFactory(MethodType methodType, FunctionDescriptor descriptor, LinkerOptions options) {
+		// return (target, arena) -> {
+		//	return UpcallLinker.make(target, methodType, descriptor, options, arena);
+		// };
+		throw new InternalError("Upcall is not yet implemented"); //$NON-NLS-1$
 	}
 	/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
 }

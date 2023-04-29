@@ -29,7 +29,9 @@ import java.lang.foreign.FunctionDescriptor;
 /*[IF JAVA_SPEC_VERSION >= 20]*/
 import jdk.internal.foreign.abi.LinkerOptions;
 /*[ENDIF] JAVA_SPEC_VERSION >= 20 */
+/*[IF JAVA_SPEC_VERSION <= 20]*/
 import openj9.internal.foreign.abi.InternalDowncallHandler;
+/*[ENDIF] JAVA_SPEC_VERSION <= 20 */
 
 /**
  * The counterpart in OpenJDK is replaced with this class that wrap up a method handle
@@ -47,7 +49,11 @@ public class DowncallLinker {
 	 * @return a method handle bound to the native method
 	 */
 	public static MethodHandle getBoundMethodHandle(MethodType functionMethodType, FunctionDescriptor funcDesc, LinkerOptions options) {
+		/*[IF JAVA_SPEC_VERSION >= 21]*/
+		throw new InternalError("Downcall is not yet implemented"); //$NON-NLS-1$
+		/*[ELSE] JAVA_SPEC_VERSION >= 21 */
 		return new InternalDowncallHandler(functionMethodType, funcDesc, options).getBoundMethodHandle();
+		/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
 	}
 	/*[ELSE] JAVA_SPEC_VERSION >= 20 */
 	/**
