@@ -1,4 +1,4 @@
-/*[INCLUDE-IF (JAVA_SPEC_VERSION >= 16) & (JAVA_SPEC_VERSION <= 17)]*/
+/*[INCLUDE-IF JAVA_SPEC_VERSION == 17]*/
 /*******************************************************************************
  * Copyright IBM Corp. and others 2022
  *
@@ -40,7 +40,7 @@ import jdk.incubator.foreign.ValueLayout;
  */
 final class TypeLayoutCheckHelper {
 
-	/* Verify whether the specified layout and the corresponding type are valid and match each other */
+	/* Verify whether the specified layout and the corresponding type are valid and match each other. */
 	static void checkIfValidLayoutAndType(MethodType targetMethodType, MemoryLayout[] argumentLayouts, MemoryLayout returnLayout) {
 		Class<?> retType = targetMethodType.returnType();
 		if (!validateArgRetTypeClass(retType) && (retType != void.class)) {
@@ -66,7 +66,7 @@ final class TypeLayoutCheckHelper {
 		}
 	}
 
-	/* Verify whether the specified type is primitive, MemoryAddress (for pointer) or MemorySegment (for struct) */
+	/* Verify whether the specified type is primitive, MemoryAddress (pointer) or MemorySegment (struct). */
 	private static boolean validateArgRetTypeClass(Class<?> targetType) {
 		if (!targetType.isPrimitive()
 		&& (targetType != MemoryAddress.class)
@@ -77,7 +77,7 @@ final class TypeLayoutCheckHelper {
 		return true;
 	}
 
-	/* Check the validity of the layout against the corresponding type */
+	/* Check the validity of the layout against the corresponding type. */
 	private static void validateLayoutAgainstType(MemoryLayout targetLayout, Class<?> targetType) {
 		if (targetLayout != null) {
 			if (!targetLayout.hasSize()) {
@@ -87,7 +87,7 @@ final class TypeLayoutCheckHelper {
 			}
 		}
 
-		/* The struct (specified by GroupLayout) for MemorySegment corresponds to GroupLayout in terms of layout */
+		/* The struct (specified by GroupLayout) for MemorySegment corresponds to GroupLayout in terms of layout. */
 		if (targetType == MemorySegment.class) {
 			if (!GroupLayout.class.isInstance(targetLayout)) {
 				throw new IllegalArgumentException("GroupLayout is expected: layout = " + targetLayout); //$NON-NLS-1$
@@ -99,26 +99,26 @@ final class TypeLayoutCheckHelper {
 			throw new IllegalArgumentException("Mismatch between the layout and the type: layout = "  //$NON-NLS-1$
 				+ ((targetLayout == null) ? "VOID" : targetLayout) //$NON-NLS-1$
 				+ ", type = " + targetType);  //$NON-NLS-1$
-		/* Check the primitive type and MemoryAddress against the ValueLayout */
+		/* Check the primitive type and MemoryAddress against the ValueLayout. */
 		} else if (targetType != void.class) {
 			if (!ValueLayout.class.isInstance(targetLayout)) {
 				throw new IllegalArgumentException("ValueLayout is expected: layout = " + targetLayout); //$NON-NLS-1$
 			}
-			/* Check the size and kind of the ValueLayout for the primitive types and MemoryAddress */
+			/* Check the size and kind of the ValueLayout for the primitive types and MemoryAddress. */
 			validateValueLayoutSize(targetLayout, targetType);
 			validateValueLayoutKind(targetLayout, targetType);
 		}
 	}
 
-	/* Check the size of the specified primitive layout to determine whether it matches the specified type */
+	/* Check the size of the specified primitive layout to determine whether it matches the specified type. */
 	private static void validateValueLayoutSize(MemoryLayout TypeLayout, Class<?> targetType) {
 		int layoutSize = (int)TypeLayout.bitSize();
 		boolean mismatchedSize = false;
 
 		switch (layoutSize) {
 		case 8:
-			/* The 8-bit layout is shared by boolean and byte
-			 * given the boolean size specified in Java18 is 8 bits.
+			/* The 8-bit layout is shared by boolean and byte given
+			 * the boolean size specified in Java18 is 8 bits.
 			 */
 			if ((targetType != boolean.class) && (targetType != byte.class)) {
 				mismatchedSize = true;
@@ -141,8 +141,8 @@ final class TypeLayoutCheckHelper {
 			}
 			break;
 		case 64:
-			/* The 64-bit layout size is shared by long, double and MemoryAddress
-			 * given the corresponding pointer size for MemoryAddress is 64 bits in C.
+			/* The 64-bit layout size is shared by long, double and MemoryAddress given
+			 * the corresponding pointer size for MemoryAddress is 64 bits in C.
 			 */
 			if ((targetType != long.class)
 			&& (targetType != double.class)
@@ -162,7 +162,7 @@ final class TypeLayoutCheckHelper {
 		}
 	}
 
-	/* Check the kind (type) of the specified primitive layout to determine whether it matches the specified type */
+	/* Check the kind (type) of the specified primitive layout to determine whether it matches the specified type. */
 	private static void validateValueLayoutKind(MemoryLayout targetLayout, Class<?> targetType) {
 		boolean kindAttrFound = false;
 		List<String> layoutAttrList = targetLayout.attributes().toList();
@@ -184,38 +184,38 @@ final class TypeLayoutCheckHelper {
 				.orElseThrow(() -> new IllegalArgumentException("The layout's ABI class is empty")); //$NON-NLS-1$
 		switch (kind) {
 		case CHAR:
-			/* the CHAR layout (8bits) in Java maps to bool or byte in C */
+			/* The CHAR layout (8bits) in Java maps to bool or byte in C. */
 			break;
 		case SHORT:
-			/* the SHORT layout (16bits) in Java maps to char or short in C */
+			/* The SHORT layout (16bits) in Java maps to char or short in C. */
 			break;
 		case INT:
-			/* the INT layout (32bits) in Java maps to int in C */
+			/* The INT layout (32bits) in Java maps to int in C. */
 			if (targetType != int.class) {
 				mismatchType = true;
 			}
 			break;
 		case LONG:
 		case LONG_LONG:
-			/* the LONG/LONG_LONG layout (64bits) in Java only matches long in C */
+			/* The LONG/LONG_LONG layout (64bits) in Java only matches long in C. */
 			if (targetType != long.class) {
 				mismatchType = true;
 			}
 			break;
 		case FLOAT:
-			/* the FLOAT layout (32bits) in Java only matches float in C */
+			/* The FLOAT layout (32bits) in Java only matches float in C. */
 			if (targetType != float.class) {
 				mismatchType = true;
 			}
 			break;
 		case DOUBLE:
-			/* the DOUBLE layout (64bits) in Java only matches double in C */
+			/* The DOUBLE layout (64bits) in Java only matches double in C. */
 			if (targetType != double.class) {
 				mismatchType = true;
 			}
 			break;
 		case POINTER:
-			/* the POINTER layout (64bits) in Java only matches MemoryAddress */
+			/* The POINTER layout (64bits) in Java only matches MemoryAddress. */
 			if (targetType != MemoryAddress.class) {
 				mismatchType = true;
 			}

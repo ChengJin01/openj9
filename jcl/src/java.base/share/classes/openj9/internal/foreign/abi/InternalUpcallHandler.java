@@ -1,4 +1,4 @@
-/*[INCLUDE-IF JAVA_SPEC_VERSION >= 19]*/
+/*[INCLUDE-IF JAVA_SPEC_VERSION == 20]*/
 /*******************************************************************************
  * Copyright IBM Corp. and others 2022
  *
@@ -28,25 +28,16 @@ import java.util.List;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 
-/*[IF JAVA_SPEC_VERSION >= 19]*/
+/*[IF JAVA_SPEC_VERSION >= 20]*/
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
-/*[IF JAVA_SPEC_VERSION >= 20]*/
 import java.lang.foreign.SegmentScope;
-/*[ELSE] JAVA_SPEC_VERSION >= 20 */
-import java.lang.foreign.MemorySession;
-/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
-/*[ELSE] JAVA_SPEC_VERSION >= 19 */
+/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.MemoryLayout;
-/*[IF JAVA_SPEC_VERSION <= 18]*/
-/*[IF JAVA_SPEC_VERSION == 18]*/
-import jdk.incubator.foreign.NativeSymbol;
-/*[ENDIF] JAVA_SPEC_VERSION == 18 */
 import jdk.incubator.foreign.ResourceScope;
-/*[ENDIF] JAVA_SPEC_VERSION <= 18 */
-/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 
 /**
  * The internal implementation of upcall handler wraps up an upcall handle
@@ -71,19 +62,7 @@ public final class InternalUpcallHandler {
 	 * @return an internal upcall handler with the thunk address
 	 */
 	public InternalUpcallHandler(MethodHandle target, MethodType mt, FunctionDescriptor cDesc, SegmentScope session)
-	/*[ELSEIF JAVA_SPEC_VERSION == 19]*/
-	/**
-	 * The constructor creates an upcall handler specific to the requested java method
-	 * by generating a native thunk in upcall on a given platform.
-	 *
-	 * @param target The target method handle in upcall
-	 * @param mt The method type of the target method handle
-	 * @param cDesc The function descriptor of the target method handle
-	 * @param session The memory session related to the upcall handler
-	 * @return an internal upcall handler with the thunk address
-	 */
-	public InternalUpcallHandler(MethodHandle target, MethodType mt, FunctionDescriptor cDesc, MemorySession session)
-	/*[ELSE] JAVA_SPEC_VERSION == 19 */
+	/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 	/**
 	 * The constructor creates an upcall handler specific to the requested java method
 	 * by generating a native thunk in upcall on a given platform.
@@ -101,22 +80,18 @@ public final class InternalUpcallHandler {
 		argLayoutArray = argLayouts.toArray(new MemoryLayout[argLayouts.size()]);
 		realReturnLayout = cDesc.returnLayout().orElse(null); // Set to null for void
 
-		/*[IF JAVA_SPEC_VERSION <= 17]*/
-		/* The layout check against the method type is still required for Java 16 & 17 in that
-		 * both the function descriptor and the method type are passed in as arguments by users.
-		 * Note: skip the validity check on function descriptor in Java 18 as it is done before
-		 * initializing ProgrammableUpcallHandler in OpenJDK. Meanwhile, the method type is
-		 * directly deduced from the function descriptor itself, in which case there is no need
-		 * to check the layout against the method type.
+		/*[IF JAVA_SPEC_VERSION == 17]*/
+		/* The layout check against the method type is still required for Java 17 in that both
+		 * the function descriptor and the method type are passed in as arguments by users.
 		 */
 		TypeLayoutCheckHelper.checkIfValidLayoutAndType(mt, argLayoutArray, realReturnLayout);
-		/*[ENDIF] JAVA_SPEC_VERSION <= 17 */
+		/*[ENDIF] JAVA_SPEC_VERSION == 17 */
 
-		/*[IF JAVA_SPEC_VERSION >= 19]*/
+		/*[IF JAVA_SPEC_VERSION >= 20]*/
 		thunkAddr = getUpcallThunkAddr(target, session);
-		/*[ELSE] JAVA_SPEC_VERSION >= 19 */
+		/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 		thunkAddr = getUpcallThunkAddr(target, scope);
-		/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+		/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 	}
 
 	/**
@@ -132,11 +107,10 @@ public final class InternalUpcallHandler {
 	 * otherwise, call the native to request the JIT to generate an upcall thunk for this
 	 * java method.
 	 */
+	@SuppressWarnings("nls")
 	/*[IF JAVA_SPEC_VERSION >= 20]*/
 	private long getUpcallThunkAddr(MethodHandle target, SegmentScope sessionOrScope)
-	/*[ELSEIF JAVA_SPEC_VERSION == 19]*/
-	private long getUpcallThunkAddr(MethodHandle target, MemorySession sessionOrScope)
-	/*[ELSE] JAVA_SPEC_VERSION == 19 */
+	/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 	private long getUpcallThunkAddr(MethodHandle target, ResourceScope sessionOrScope)
 	/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 	{
@@ -158,10 +132,10 @@ public final class InternalUpcallHandler {
 			nativeSignatureStrs[argLayoutCount] = LayoutStrPreprocessor.getSimplifiedLayoutString(realReturnLayout, false);
 		}
 
-		/* The thunk must be created for each upcall handler given the UpcallMHMetaData object uniquely bound
-		 * to the thunk is only alive for a SegmentScope(JDK20+)/MemorySession(JDK19)/ResourceScope(JDK17/18)
-		 * specified in java, which means the upcall handler and its UpcallMHMetaData object will be cleaned
-		 * up automatically once their session/scope is closed.
+		/* The thunk must be created for each upcall handler given the UpcallMHMetaData object uniquely
+		 * bound to the thunk is only alive for a SegmentScope(JDK20+)/ResourceScope(JDK17) specified in
+		 * java, which means the upcall handler and its UpcallMHMetaData object will be cleaned up
+		 * automatically once their session/scope is closed.
 		 */
 		metaData = new UpcallMHMetaData(target, argLayoutCount, sessionOrScope);
 		return allocateUpcallStub(metaData, nativeSignatureStrs);

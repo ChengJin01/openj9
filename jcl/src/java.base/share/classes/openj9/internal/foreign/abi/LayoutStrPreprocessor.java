@@ -1,4 +1,4 @@
-/*[INCLUDE-IF JAVA_SPEC_VERSION >= 19]*/
+/*[INCLUDE-IF JAVA_SPEC_VERSION == 20]*/
 /*******************************************************************************
  * Copyright IBM Corp. and others 2022
  *
@@ -24,34 +24,25 @@ package openj9.internal.foreign.abi;
 
 import java.util.List;
 
-/*[IF JAVA_SPEC_VERSION >= 19]*/
+/*[IF JAVA_SPEC_VERSION >= 20]*/
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.GroupLayout;
-/*[IF JAVA_SPEC_VERSION == 19]*/
-import java.lang.foreign.MemoryAddress;
-/*[ENDIF] JAVA_SPEC_VERSION == 19 */
 import java.lang.foreign.MemoryLayout;
-/*[IF JAVA_SPEC_VERSION >= 20]*/
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.PaddingLayout;
-/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 import java.lang.foreign.SequenceLayout;
 import java.lang.foreign.ValueLayout;
-/*[IF JAVA_SPEC_VERSION >= 20]*/
 import jdk.internal.foreign.abi.LinkerOptions;
-/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
-/*[ELSE] JAVA_SPEC_VERSION >= 19 */
-/*[IF JAVA_SPEC_VERSION <= 17]*/
+/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 import jdk.incubator.foreign.CLinker.TypeKind;
 import static jdk.incubator.foreign.CLinker.TypeKind.*;
-/*[ENDIF] JAVA_SPEC_VERSION <= 17 */
 import jdk.incubator.foreign.FunctionDescriptor;
 import jdk.incubator.foreign.GroupLayout;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemoryLayout;
 import jdk.incubator.foreign.SequenceLayout;
 import jdk.incubator.foreign.ValueLayout;
-/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 
 /**
  * The methods of the class are used to preprocess the layout specified in the function
@@ -60,7 +51,7 @@ import jdk.incubator.foreign.ValueLayout;
  */
 final class LayoutStrPreprocessor {
 
-	/*[IF JAVA_SPEC_VERSION <= 17]*/
+	/*[IF JAVA_SPEC_VERSION == 17]*/
 	private static final String VARARGS_ATTR_NAME;
 
 	static {
@@ -92,12 +83,12 @@ final class LayoutStrPreprocessor {
 			throw new InternalError("Unsupported platform: " + arch + "_" + osName); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
-	/*[ENDIF] JAVA_SPEC_VERSION <= 17 */
+	/*[ENDIF] JAVA_SPEC_VERSION == 17 */
 
 	/* Get the index of the variadic argument layout in the function descriptor if exists. */
 	/*[IF JAVA_SPEC_VERSION >= 20]*/
 	static int getVarArgIndex(FunctionDescriptor funcDesc, LinkerOptions options)
-	/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+	/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 	static int getVarArgIndex(FunctionDescriptor funcDesc)
 	/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 	{
@@ -108,13 +99,10 @@ final class LayoutStrPreprocessor {
 		 */
 		int varArgIdx = -1;
 
-		/*[IF JAVA_SPEC_VERSION == 19]*/
-		varArgIdx = funcDesc.firstVariadicArgumentIndex();
-		/*[ELSE] JAVA_SPEC_VERSION == 19 */
 		for (int argIndex = 0; argIndex < argLayoutsSize; argIndex++) {
 			/*[IF JAVA_SPEC_VERSION >= 20]*/
 			if (options.isVarargsIndex(argIndex))
-			/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+			/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 			if (argLayouts.get(argIndex).attribute(VARARGS_ATTR_NAME).isPresent())
 			/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 			{
@@ -122,7 +110,6 @@ final class LayoutStrPreprocessor {
 				break;
 			}
 		}
-		/*[ENDIF] JAVA_SPEC_VERSION == 19 */
 
 		return varArgIdx;
 	}
@@ -174,7 +161,7 @@ final class LayoutStrPreprocessor {
 
 	/* Preprocess the layout to generate a concise layout string with all kind symbols
 	 * extracted from the layout to simplify parsing the layout string in native.
-	 * e.g. a struct layout string with nested struct is as follows: (Only for Java <= 17)
+	 * e.g. a struct layout string with nested struct is as follows: (Only for Java 17)
 	 * [
 	 *   [
 	 *    b32(elem1)[abi/kind=INT,layout/name=elem1]
@@ -201,25 +188,23 @@ final class LayoutStrPreprocessor {
 	 *  where "#" denotes the start of struct.
 	 *
 	 *  Note:
-	 *  1) the prefix "ByteSize#CountOfElmemnt" and "#CountOfElmemnt" are not required in
+	 *  The prefix "ByteSize#CountOfElmemnt" and "#CountOfElmemnt" are not required in
 	 *  the upcall given the converted layout stirngs are further parsed for the generated
 	 *  thunk in native, which is logically different from downcall.
-	 *  2) the parsing of primitives in layouts in Java 18 is based on the MemoryLayout.carrier()
-	 *  rather than the CLinker.TypeKind which is entirely removed in OpenJDK.
 	 */
 	private static StringBuilder preprocessLayout(MemoryLayout targetLayout, boolean isDownCall) {
 		StringBuilder targetLayoutString = new StringBuilder(""); //$NON-NLS-1$
 
-		/* Directly obtain the kind symbol of the primitive layout */
+		/* Directly obtain the kind symbol of the primitive layout. */
 		if (targetLayout instanceof ValueLayout valueLayout) {
 			targetLayoutString.append(getPrimitiveTypeSymbol(valueLayout));
-		} else if (targetLayout instanceof SequenceLayout arrayLayout) { // Intended for nested arrays
+		} else if (targetLayout instanceof SequenceLayout arrayLayout) { /* Intended for nested arrays. */
 			MemoryLayout elementLayout = arrayLayout.elementLayout();
-			/*[IF JAVA_SPEC_VERSION >= 19]*/
+			/*[IF JAVA_SPEC_VERSION >= 20]*/
 			long elementCount = arrayLayout.elementCount();
-			/*[ELSE] JAVA_SPEC_VERSION >= 19 */
+			/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 			long elementCount = arrayLayout.elementCount().getAsLong();
-			/*[ENDIF] JAVA_SPEC_VERSION >= 19 */
+			/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 
 			/* The padding bytes is required in the native signature for upcall thunk generation. */
 			if (isPaddingLayout(elementLayout) && !isDownCall) {
@@ -227,7 +212,7 @@ final class LayoutStrPreprocessor {
 			} else {
 				targetLayoutString.append(elementCount).append(':').append(preprocessLayout(elementLayout, isDownCall));
 			}
-		} else if (targetLayout instanceof GroupLayout structLayout) { // Intended for the nested structs
+		} else if (targetLayout instanceof GroupLayout structLayout) { /* Intended for the nested structs. */
 			List<MemoryLayout> elementLayoutList = structLayout.memberLayouts();
 			int structElementCount = elementLayoutList.size();
 			StringBuilder elementLayoutStrs = new StringBuilder(""); //$NON-NLS-1$
@@ -259,44 +244,38 @@ final class LayoutStrPreprocessor {
 	private static boolean isPaddingLayout(MemoryLayout targetLayout) {
 		/*[IF JAVA_SPEC_VERSION >= 20]*/
 		return targetLayout instanceof PaddingLayout;
-		/*[ELSE] JAVA_SPEC_VERSION >= 20 */
+		/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
 		return targetLayout.isPadding();
 		/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 	}
 
-	/* Map the specified primitive layout's kind to the symbol for primitive type in VM Spec
-	 *
-	 * Note:
-	 * CLinker.TypeKind is entirely removed since Java 18, in which case we need to
-	 * reply on MemoryLayout.carrier() (simply the type identified by the layout) for the native
-	 * signature of the layout.
-	 */
-	/*[IF JAVA_SPEC_VERSION >= 18]*/
+	/* Map the specified primitive layout's kind to the symbol for primitive type in VM Spec. */
+	/*[IF JAVA_SPEC_VERSION >= 20]*/
+	@SuppressWarnings("nls")
 	private static String getPrimitiveTypeSymbol(ValueLayout targetLayout) {
 		Class<?> javaType = targetLayout.carrier();
 		String typeSymbol = ""; //$NON-NLS-1$
 
-		if (javaType == byte.class) { // JAVA_BYTE corresponds to C_CHAR (1 byte) in native
+		if (javaType == byte.class) {
+			/* JAVA_BYTE corresponds to C_CHAR (1 byte) in native. */
 			typeSymbol = "C"; //$NON-NLS-1$
-		} else if (javaType == char.class) { // JAVA_CHAR in Java corresponds to C_SHORT (2 bytes) in native
+		} else if (javaType == char.class) {
+			/* JAVA_CHAR in Java corresponds to C_SHORT (2 bytes) in native. */
 			typeSymbol = "S"; //$NON-NLS-1$
-		} else if (javaType == long.class) { // JAVA_CHAR in Java corresponds to C_SHORT (2 bytes) in native
-			typeSymbol = "J"; //$NON-NLS-1$  // Map JAVA_LONG to 'J' so as to keep consistent with the existing VM Spec
-		} else
-		/*[IF JAVA_SPEC_VERSION >= 20]*/
-		if (javaType == MemorySegment.class)
-		/*[ELSE] JAVA_SPEC_VERSION >= 20 */
-		if (javaType == MemoryAddress.class)
-		/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
-		{
+		} else if (javaType == long.class) {
+			/* Map JAVA_LONG to 'J' so as to keep consistent with the existing VM Spec. */
+			typeSymbol = "J"; //$NON-NLS-1$
+		} else if (javaType == MemorySegment.class) {
 			typeSymbol = "P"; //$NON-NLS-1$
 		} else {
 			/* Obtain the 1st character of the type class as the symbol of the native signature. */
 			typeSymbol = javaType.getSimpleName().substring(0, 1).toUpperCase();
 		}
+
 		return typeSymbol;
 	}
-	/*[ELSE] JAVA_SPEC_VERSION >= 18 */
+	/*[ELSEIF JAVA_SPEC_VERSION == 17]*/
+	@SuppressWarnings("nls")
 	private static String getPrimitiveTypeSymbol(ValueLayout targetLayout) {
 		/* Extract the kind from the specified layout with the ATTR_NAME "abi/kind".
 		 * e.g. b32[abi/kind=INT]
@@ -316,7 +295,7 @@ final class LayoutStrPreprocessor {
 			typeSymbol = "I"; //$NON-NLS-1$
 			break;
 		case LONG:
-		case LONG_LONG: // A 8-byte long type on 64bit Windows as specified in the Spec.
+		case LONG_LONG: /* A 8-byte long type on 64bit Windows as specified in the Spec. */
 			/* Map the long layout to 'J' so as to keep consistent with the existing VM Spec. */
 			typeSymbol = "J"; //$NON-NLS-1$
 			break;
@@ -335,5 +314,5 @@ final class LayoutStrPreprocessor {
 
 		return typeSymbol;
 	}
-	/*[ENDIF] JAVA_SPEC_VERSION >= 18 */
+	/*[ENDIF] JAVA_SPEC_VERSION >= 20 */
 }

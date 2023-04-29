@@ -434,6 +434,7 @@ else()
 	jvm_add_exports(jvm
 		JVM_VirtualThreadMount
 		JVM_VirtualThreadUnmount
+		JVM_IsForeignLinkerSupported
 	)
 endif()
 
