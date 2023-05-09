@@ -184,13 +184,7 @@ public class UpcallMethodHandles {
 	public static final MethodHandle MH_add2IntStructs_returnStruct;
 	public static final MethodHandle MH_add2IntStructs_returnStruct_throwException;
 	public static final MethodHandle MH_add2IntStructs_returnStruct_nestedUpcall;
-	public static final MethodHandle MH_add2IntStructs_returnStruct_nullValue;
-	public static final MethodHandle MH_add2IntStructs_returnStruct_nullSegmt;
-	public static final MethodHandle MH_add2IntStructs_returnStruct_heapSegmt;
 	public static final MethodHandle MH_add2IntStructs_returnStructPointer;
-	public static final MethodHandle MH_add2IntStructs_returnStructPointer_nullValue;
-	public static final MethodHandle MH_add2IntStructs_returnStructPointer_nullSegmt;
-	public static final MethodHandle MH_add2IntStructs_returnStructPointer_heapSegmt;
 	public static final MethodHandle MH_add3IntStructs_returnStruct;
 
 	public static final MethodHandle MH_addLongAndLongsFromStruct;
@@ -394,13 +388,7 @@ public class UpcallMethodHandles {
 			MH_add2IntStructs_returnStruct = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStruct_throwException = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_throwException", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStruct_nestedUpcall = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_nestedUpcall", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
-			MH_add2IntStructs_returnStruct_nullValue = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_nullValue", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
-			MH_add2IntStructs_returnStruct_nullSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_nullSegmt", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
-			MH_add2IntStructs_returnStruct_heapSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStruct_heapSegmt", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add2IntStructs_returnStructPointer = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer", MT_Segmt_MemSegmt_MemSegmt); //$NON-NLS-1$
-			MH_add2IntStructs_returnStructPointer_nullValue = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer_nullValue", MT_Segmt_MemSegmt_MemSegmt); //$NON-NLS-1$
-			MH_add2IntStructs_returnStructPointer_nullSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer_nullSegmt", MT_Segmt_MemSegmt_MemSegmt); //$NON-NLS-1$
-			MH_add2IntStructs_returnStructPointer_heapSegmt = lookup.findStatic(UpcallMethodHandles.class, "add2IntStructs_returnStructPointer_heapSegmt", MT_Segmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 			MH_add3IntStructs_returnStruct = lookup.findStatic(UpcallMethodHandles.class, "add3IntStructs_returnStruct", MT_MemSegmt_MemSegmt_MemSegmt); //$NON-NLS-1$
 
 			MH_addLongAndLongsFromStruct = lookup.findStatic(UpcallMethodHandles.class, "addLongAndLongsFromStruct", MT_Long_Long_MemSegmt); //$NON-NLS-1$
@@ -1391,20 +1379,6 @@ public class UpcallMethodHandles {
 		return resultSegmt;
 	}
 
-	public static MemorySegment add2IntStructs_returnStruct_nullValue(MemorySegment arg1, MemorySegment arg2) {
-		return null;
-	}
-
-	public static MemorySegment add2IntStructs_returnStruct_nullSegmt(MemorySegment arg1, MemorySegment arg2) {
-		return MemorySegment.NULL;
-	}
-
-	public static MemorySegment add2IntStructs_returnStruct_heapSegmt(MemorySegment arg1, MemorySegment arg2) {
-		int intStruct_Elem1 = arg1.get(JAVA_INT, 0) + arg2.get(JAVA_INT, 0);
-		int intStruct_Elem2 = arg1.get(JAVA_INT, 4) + arg2.get(JAVA_INT, 4);
-		return MemorySegment.ofArray(new int[]{intStruct_Elem1, intStruct_Elem2});
-	}
-
 	public static MemorySegment add2IntStructs_returnStructPointer(MemorySegment arg1Addr, MemorySegment arg2) {
 		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
 		MemorySegment arg1Segmt = arg1Addr.reinterpret(structLayout.byteSize());
@@ -1413,22 +1387,6 @@ public class UpcallMethodHandles {
 		arg1Segmt.set(JAVA_INT, 0, intSum_Elem1);
 		arg1Segmt.set(JAVA_INT, 4, intSum_Elem2);
 		return arg1Addr;
-	}
-
-	public static MemorySegment add2IntStructs_returnStructPointer_nullValue(MemorySegment arg1Addr, MemorySegment arg2) {
-		return null;
-	}
-
-	public static MemorySegment add2IntStructs_returnStructPointer_nullSegmt(MemorySegment arg1Addr, MemorySegment arg2) {
-		return MemorySegment.NULL;
-	}
-
-	public static MemorySegment add2IntStructs_returnStructPointer_heapSegmt(MemorySegment arg1Addr, MemorySegment arg2) {
-		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
-		MemorySegment arg1Segmt = MemorySegment.ofAddress(arg1Addr.address(), structLayout.byteSize(), scope);
-		int intSum_Elem1 = arg1Segmt.get(JAVA_INT, 0) + arg2.get(JAVA_INT, 0);
-		int intSum_Elem2 = arg1Segmt.get(JAVA_INT, 4) + arg2.get(JAVA_INT, 4);
-		return MemorySegment.ofArray(new int[]{intSum_Elem1, intSum_Elem2});
 	}
 
 	public static MemorySegment add3IntStructs_returnStruct(MemorySegment arg1, MemorySegment arg2) {

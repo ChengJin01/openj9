@@ -36,7 +36,6 @@ import java.lang.foreign.Linker;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemoryLayout.PathElement;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SegmentAllocator;
 import java.lang.foreign.SequenceLayout;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
@@ -65,18 +64,17 @@ public class InvalidUpCallTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("add2IntStructs_returnStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_add2IntStructs_returnStruct_throwException,
-					FunctionDescriptor.of(structLayout, structLayout, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+					FunctionDescriptor.of(structLayout, structLayout, structLayout), arena);
+			MemorySegment structSegmt1 = arena.allocate(structLayout);
 			intHandle1.set(structSegmt1, 11223344);
 			intHandle2.set(structSegmt1, 55667788);
-			MemorySegment structSegmt2 = allocator.allocate(structLayout);
+			MemorySegment structSegmt2 = arena.allocate(structLayout);
 			intHandle1.set(structSegmt2, 99001122);
 			intHandle2.set(structSegmt2, 33445566);
 
-			MemorySegment resultSegmt = (MemorySegment)mh.invoke(allocator, structSegmt1, structSegmt2, upcallFuncAddr);
+			MemorySegment resultSegmt = (MemorySegment)mh.invoke(arena, structSegmt1, structSegmt2, upcallFuncAddr);
 			fail("Failed to throw out IllegalArgumentException from the the upcall method");
 		}
 	}
@@ -91,18 +89,17 @@ public class InvalidUpCallTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("add2IntStructs_returnStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_add2IntStructs_returnStruct_nestedUpcall,
-					FunctionDescriptor.of(structLayout, structLayout, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+					FunctionDescriptor.of(structLayout, structLayout, structLayout), arena);
+			MemorySegment structSegmt1 = arena.allocate(structLayout);
 			intHandle1.set(structSegmt1, 11223344);
 			intHandle2.set(structSegmt1, 55667788);
-			MemorySegment structSegmt2 = allocator.allocate(structLayout);
+			MemorySegment structSegmt2 = arena.allocate(structLayout);
 			intHandle1.set(structSegmt2, 99001122);
 			intHandle2.set(structSegmt2, 33445566);
 
-			MemorySegment resultSegmt = (MemorySegment)mh.invoke(allocator, structSegmt1, structSegmt2, upcallFuncAddr);
+			MemorySegment resultSegmt = (MemorySegment)mh.invoke(arena, structSegmt1, structSegmt2, upcallFuncAddr);
 			fail("Failed to throw out IllegalArgumentException from the nested upcall");
 		}
 	}
