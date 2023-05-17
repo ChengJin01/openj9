@@ -71,11 +71,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addIntAndIntShortFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addIntAndIntShortFromStruct,
-					FunctionDescriptor.of(JAVA_INT, JAVA_INT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_INT, JAVA_INT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 11223344);
 			elemHandle2.set(structSegmt, (short)32766);
 
@@ -95,11 +94,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addIntAndShortIntFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addIntAndShortIntFromStruct,
-					FunctionDescriptor.of(JAVA_INT, JAVA_INT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_INT, JAVA_INT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, (short)32766);
 			elemHandle2.set(structSegmt, 22446688);
 
@@ -119,11 +117,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addIntAndIntLongFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addIntAndIntLongFromStruct,
-					FunctionDescriptor.of(JAVA_LONG, JAVA_INT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_LONG, JAVA_INT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 11223344);
 			elemHandle2.set(structSegmt, 667788990011L);
 
@@ -143,11 +140,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addIntAndLongIntFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addIntAndLongIntFromStruct,
-					FunctionDescriptor.of(JAVA_LONG, JAVA_INT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_LONG, JAVA_INT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 667788990011L);
 			elemHandle2.set(structSegmt, 11223344);
 
@@ -171,11 +167,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndIntDoubleFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndIntDoubleFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 111111111);
 			elemHandle2.set(structSegmt, 619.777D);
 
@@ -194,11 +189,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndDoubleIntFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndDoubleIntFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 218.555D);
 			elemHandle2.set(structSegmt, 111111111);
 
@@ -222,11 +216,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndFloatDoubleFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndFloatDoubleFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 18.444F);
 			elemHandle2.set(structSegmt, 619.777D);
 
@@ -245,11 +238,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndDoubleFloatFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndDoubleFloatFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 218.555D);
 			elemHandle2.set(structSegmt, 19.22F);
 
@@ -268,11 +260,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndDoubleFloatFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndDoubleFloatFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 218.555D);
 			elemHandle2.set(structSegmt, 19.22F);
 
@@ -293,11 +284,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAnd2FloatsDoubleFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAnd2FloatsDoubleFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 11.22F);
 			elemHandle2.set(structSegmt, 22.33F);
 			elemHandle3.set(structSegmt, 333.444D);
@@ -319,11 +309,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndDouble2FloatsFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndDouble2FloatsFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 333.444D);
 			elemHandle2.set(structSegmt, 11.22F);
 			elemHandle3.set(structSegmt, 22.33F);
@@ -345,11 +334,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addFloatAndInt2FloatsFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addFloatAndInt2FloatsFromStruct,
-					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 111111);
 			elemHandle2.set(structSegmt, 11.22F);
 			elemHandle3.set(structSegmt, 22.33F);
@@ -370,11 +358,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addFloatAndFloatIntFloatFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addFloatAndFloatIntFloatFromStruct,
-					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 11.22F);
 			elemHandle2.set(structSegmt, 111111);
 			elemHandle3.set(structSegmt, 22.33F);
@@ -396,11 +383,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndIntFloatDoubleFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndIntFloatDoubleFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 111111111);
 			elemHandle2.set(structSegmt, 22.33F);
 			elemHandle3.set(structSegmt, 333.444D);
@@ -422,11 +408,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndFloatIntDoubleFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndFloatIntDoubleFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 22.33F);
 			elemHandle2.set(structSegmt, 111111111);
 			elemHandle3.set(structSegmt, 333.444D);
@@ -446,11 +431,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndLongDoubleFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndLongDoubleFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 22222222222222L);
 			elemHandle2.set(structSegmt, 33333.444D);
 
@@ -472,11 +456,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addFloatAndInt3FloatsFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addFloatAndInt3FloatsFromStruct,
-					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 77777777);
 			elemHandle2.set(structSegmt, 11.22F);
 			elemHandle3.set(structSegmt, 22.33F);
@@ -499,11 +482,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addLongAndLong2FloatsFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addLongAndLong2FloatsFromStruct,
-					FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 777777777777L);
 			elemHandle2.set(structSegmt, 11.25F);
 			elemHandle3.set(structSegmt, 22.75F);
@@ -526,11 +508,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addFloatAnd3FloatsIntFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addFloatAnd3FloatsIntFromStruct,
-					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 11.22F);
 			elemHandle2.set(structSegmt, 22.33F);
 			elemHandle3.set(structSegmt, 44.55F);
@@ -552,11 +533,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addLongAndFloatLongFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addLongAndFloatLongFromStruct,
-					FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 55.11F);
 			elemHandle2.set(structSegmt, 150000000000L);
 
@@ -577,11 +557,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndDoubleFloatIntFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndDoubleFloatIntFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 333.444D);
 			elemHandle2.set(structSegmt, 22.33F);
 			elemHandle3.set(structSegmt, 111111111);
@@ -601,11 +580,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndDoubleLongFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndDoubleLongFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 33333.444D);
 			elemHandle2.set(structSegmt, 222222222222L);
 
@@ -626,11 +604,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addLongAnd2FloatsLongFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addLongAnd2FloatsLongFromStruct,
-					FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 11.11F);
 			elemHandle2.set(structSegmt, 22.11F);
 			elemHandle3.set(structSegmt, 4444444444L);
@@ -649,11 +626,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addShortAnd3ShortsCharFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addShortAnd3ShortsCharFromStruct,
-					FunctionDescriptor.of(JAVA_SHORT, JAVA_SHORT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_SHORT, JAVA_SHORT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			structSegmt.set(JAVA_SHORT, 0, (short)1000);
 			structSegmt.set(JAVA_SHORT, 2, (short)2000);
 			structSegmt.set(JAVA_SHORT, 4, (short)3000);
@@ -677,11 +653,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addFloatAndIntFloatIntFloatFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addFloatAndIntFloatIntFloatFromStruct,
-					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_FLOAT, JAVA_FLOAT, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 555555555);
 			elemHandle2.set(structSegmt, 11.222F);
 			elemHandle3.set(structSegmt, 666666666);
@@ -707,11 +682,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndIntDoubleFloatFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndIntDoubleFloatFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 7777);
 			elemHandle2.set(structSegmt, 218.555D);
 			elemHandle3.set(structSegmt, 33.444F);
@@ -739,11 +713,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndFloatDoubleIntFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndFloatDoubleIntFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 33.444F);
 			elemHandle2.set(structSegmt, 218.555D);
 			elemHandle3.set(structSegmt, 7777);
@@ -771,11 +744,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndIntDoubleIntFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndIntDoubleIntFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 6666);
 			elemHandle2.set(structSegmt, 218.555D);
 			elemHandle3.set(structSegmt, 7777);
@@ -803,11 +775,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndFloatDoubleFloatFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndFloatDoubleFloatFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 11.222F);
 			elemHandle2.set(structSegmt, 218.555D);
 			elemHandle3.set(structSegmt, 33.444F);
@@ -836,11 +807,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("addDoubleAndIntDoubleLongFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_addDoubleAndIntDoubleLongFromStruct,
-					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena.scope());
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt = allocator.allocate(structLayout);
+					FunctionDescriptor.of(JAVA_DOUBLE, JAVA_DOUBLE, structLayout), arena);
+			MemorySegment structSegmt = arena.allocate(structLayout);
 			elemHandle1.set(structSegmt, 111111111);
 			elemHandle2.set(structSegmt, 619.777D);
 			elemHandle3.set(structSegmt, 888888888888L);
@@ -859,11 +829,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("return254BytesFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_return254BytesFromStruct,
-					FunctionDescriptor.of(structLayout), arena.scope());
-			MemorySegment byteArrStruSegment = (MemorySegment)mh.invoke(allocator, upcallFuncAddr);
+					FunctionDescriptor.of(structLayout), arena);
+			MemorySegment byteArrStruSegment = (MemorySegment)mh.invoke((SegmentAllocator)arena, upcallFuncAddr);
 			for (int i = 0; i < 254; i++) {
 				Assert.assertEquals(byteArrStruSegment.get(JAVA_BYTE, i), (byte)i);
 			}
@@ -879,11 +848,10 @@ public class UpcallMHWithMixedSigStruTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("return4KBytesFromStructByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
+		try (Arena arena = Arena.ofConfined()) {
 			MemorySegment upcallFuncAddr = linker.upcallStub(UpcallMethodHandles.MH_return4KBytesFromStruct,
-					FunctionDescriptor.of(structLayout), arena.scope());
-			MemorySegment byteArrStruSegment = (MemorySegment)mh.invoke(allocator, upcallFuncAddr);
+					FunctionDescriptor.of(structLayout), arena);
+			MemorySegment byteArrStruSegment = (MemorySegment)mh.invoke((SegmentAllocator)arena, upcallFuncAddr);
 			for (int i = 0; i < 4096; i++) {
 				Assert.assertEquals(byteArrStruSegment.get(JAVA_BYTE, i), (byte)i);
 			}

@@ -108,13 +108,12 @@ public class InvalidDownCallTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("add2IntStructs_returnStruct").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment structSegmt1 = arena.allocate(structLayout);
 			intHandle1.set(structSegmt1, 11223344);
 			intHandle2.set(structSegmt1, 55667788);
 
-			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(allocator, structSegmt1, null);
+			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact((SegmentAllocator)arena, structSegmt1, null);
 			fail("Failed to throw out WrongMethodTypeException in the case of the null value");
 		}
 	}
@@ -142,13 +141,12 @@ public class InvalidDownCallTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("add2IntStructs_returnStruct").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment structSegmt1 = arena.allocate(structLayout);
 			intHandle1.set(structSegmt1, 11223344);
 			intHandle2.set(structSegmt1, 55667788);
 
-			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(allocator, structSegmt1, MemorySegment.NULL);
+			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact((SegmentAllocator)arena, structSegmt1, MemorySegment.NULL);
 			fail("Failed to throw out NullPointerException in the case of the null segment");
 		}
 	}
@@ -177,14 +175,13 @@ public class InvalidDownCallTests {
 		MemorySegment functionSymbol = nativeLibLookup.find("add2IntStructs_returnStruct").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
 
-		try (Arena arena = Arena.openConfined()) {
-			SegmentAllocator allocator = SegmentAllocator.nativeAllocator(arena.scope());
-			MemorySegment structSegmt1 = allocator.allocate(structLayout);
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment structSegmt1 = arena.allocate(structLayout);
 			intHandle1.set(structSegmt1, 11223344);
 			intHandle2.set(structSegmt1, 55667788);
 			MemorySegment structSegmt2 = MemorySegment.ofArray(new int[]{99001122, 33445566});
 
-			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact(allocator, structSegmt1, structSegmt2);
+			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact((SegmentAllocator)arena, structSegmt1, structSegmt2);
 			Assert.assertEquals(intHandle1.get(resultSegmt), 110224466);
 			Assert.assertEquals(intHandle2.get(resultSegmt), 89113354);
 		}

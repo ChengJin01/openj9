@@ -1,4 +1,4 @@
-/*[INCLUDE-IF JAVA_SPEC_VERSION == 20]*/
+/*[INCLUDE-IF JAVA_SPEC_VERSION >= 20]*/
 /*******************************************************************************
  * Copyright IBM Corp. and others 2022
  *
@@ -113,6 +113,22 @@ final class LayoutStrPreprocessor {
 
 		return varArgIdx;
 	}
+
+	/*[IF JAVA_SPEC_VERSION >= 21]*/
+	/* Validate the linker options to capture any invalid option for upcall. */
+	@SuppressWarnings("nls")
+	static void validateUpcallLinkerOptions(LinkerOptions options) {
+		if (options.isVariadicFunction()) {
+			throw new IllegalArgumentException("The linker options contain the request to pass the variadic argument layout, which is invalid for upcall"); //$NON-NLS-1$
+		}
+		if (options.hasCapturedCallState()) {
+			throw new IllegalArgumentException("The linker options contain the request to return the status from downcall, which is invalid for upcall"); //$NON-NLS-1$
+		}
+		if (options.isTrivial()) {
+			throw new IllegalArgumentException("The linker options contain the request to optimize the short-lived downcall, which is invalid for upcall"); //$NON-NLS-1$
+		}
+	}
+	/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
 
 	/* Get the simplified layout string prefixed with layout size by parsing the structure of the layout. */
 	static String getSimplifiedLayoutString(MemoryLayout targetLayout, boolean isDownCall) {
