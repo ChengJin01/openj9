@@ -23,9 +23,9 @@
 /**
  * This file contains the native code used by the test cases via a Clinker FFI Upcall in java,
  * which come from:
- * org.openj9.test.jep389.upcall (JDK16/17)
- * org.openj9.test.jep419.upcall (JDK18)
- * org.openj9.test.jep424.upcall (JDK19+)
+ * org.openj9.test.jep389.downcall (JDK17)
+ * org.openj9.test.jep434.downcall (JDK20)
+ * org.openj9.test.jep434.downcall (JDK21+)
  *
  * Created by jincheng@ca.ibm.com
  */
@@ -599,7 +599,7 @@ addDoubleAndDoubleFromPtr_RetPtr_ByUpcallMH(double *doubleArg1, double doubleArg
  * @return the XOR result of booleans
  */
 bool
-addBoolAndBoolsFromStructWithXorByUpcallMH(bool arg1, stru_Bool_Bool arg2, bool (*upcallMH)(bool, stru_Bool_Bool))
+addBoolAndBoolsFromStructWithXorByUpcallMH(bool arg1, stru_2_Bools arg2, bool (*upcallMH)(bool, stru_2_Bools))
 {
 	bool boolSum = (*upcallMH)(arg1, arg2);
 	return boolSum;
@@ -631,7 +631,7 @@ addBoolAnd20BoolsFromStructWithXorByUpcallMH(bool arg1, stru_20_Bools arg2, bool
  * @return the XOR result of booleans
  */
 bool
-addBoolFromPointerAndBoolsFromStructWithXorByUpcallMH(bool *arg1, stru_Bool_Bool arg2, bool (*upcallMH)(bool *, stru_Bool_Bool))
+addBoolFromPointerAndBoolsFromStructWithXorByUpcallMH(bool *arg1, stru_2_Bools arg2, bool (*upcallMH)(bool *, stru_2_Bools))
 {
 	bool boolSum = (*upcallMH)(arg1, arg2);
 	return boolSum;
@@ -647,7 +647,7 @@ addBoolFromPointerAndBoolsFromStructWithXorByUpcallMH(bool *arg1, stru_Bool_Bool
  * @return a pointer to the XOR result of booleans
  */
 bool *
-addBoolFromPointerAndBoolsFromStructWithXor_returnBoolPointerByUpcallMH(bool *arg1, stru_Bool_Bool arg2, bool * (*upcallMH)(bool *, stru_Bool_Bool))
+addBoolFromPointerAndBoolsFromStructWithXor_returnBoolPointerByUpcallMH(bool *arg1, stru_2_Bools arg2, bool * (*upcallMH)(bool *, stru_2_Bools))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -663,7 +663,7 @@ addBoolFromPointerAndBoolsFromStructWithXor_returnBoolPointerByUpcallMH(bool *ar
  * @return the XOR result of booleans
  */
 bool
-addBoolAndBoolsFromStructPointerWithXorByUpcallMH(bool arg1, stru_Bool_Bool *arg2, bool (*upcallMH)(bool, stru_Bool_Bool *))
+addBoolAndBoolsFromStructPointerWithXorByUpcallMH(bool arg1, stru_2_Bools *arg2, bool (*upcallMH)(bool, stru_2_Bools *))
 {
 	bool boolSum = (*upcallMH)(arg1, arg2);
 	return boolSum;
@@ -774,10 +774,10 @@ addBoolAndBoolsFromStructWithNestedStructArray_reverseOrderByUpcallMH(bool arg1,
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with two booleans
  */
-stru_Bool_Bool
-add2BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool arg1, stru_Bool_Bool arg2, stru_Bool_Bool (*upcallMH)(stru_Bool_Bool, stru_Bool_Bool))
+stru_2_Bools
+add2BoolStructsWithXor_returnStructByUpcallMH(stru_2_Bools arg1, stru_2_Bools arg2, stru_2_Bools (*upcallMH)(stru_2_Bools, stru_2_Bools))
 {
-	stru_Bool_Bool boolStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Bools boolStruct = (*upcallMH)(arg1, arg2);
 	return boolStruct;
 }
 
@@ -790,8 +790,8 @@ add2BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool arg1, stru_Bool_Boo
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to struct with two booleans
  */
-stru_Bool_Bool *
-add2BoolStructsWithXor_returnStructPointerByUpcallMH(stru_Bool_Bool *arg1, stru_Bool_Bool arg2, stru_Bool_Bool * (*upcallMH)(stru_Bool_Bool *, stru_Bool_Bool))
+stru_2_Bools *
+add2BoolStructsWithXor_returnStructPointerByUpcallMH(stru_2_Bools *arg1, stru_2_Bools arg2, stru_2_Bools * (*upcallMH)(stru_2_Bools *, stru_2_Bools))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -806,10 +806,10 @@ add2BoolStructsWithXor_returnStructPointerByUpcallMH(stru_Bool_Bool *arg1, stru_
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with three booleans
  */
-stru_Bool_Bool_Bool
-add3BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool_Bool arg1, stru_Bool_Bool_Bool arg2, stru_Bool_Bool_Bool (*upcallMH)(stru_Bool_Bool_Bool, stru_Bool_Bool_Bool))
+stru_3_Bools
+add3BoolStructsWithXor_returnStructByUpcallMH(stru_3_Bools arg1, stru_3_Bools arg2, stru_3_Bools (*upcallMH)(stru_3_Bools, stru_3_Bools))
 {
-	stru_Bool_Bool_Bool boolStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Bools boolStruct = (*upcallMH)(arg1, arg2);
 	return boolStruct;
 }
 
@@ -822,7 +822,7 @@ add3BoolStructsWithXor_returnStructByUpcallMH(stru_Bool_Bool_Bool arg1, stru_Boo
  * @return the sum
  */
 char
-addByteAndBytesFromStructByUpcallMH(char arg1, stru_Byte_Byte arg2, char (*upcallMH)(char, stru_Byte_Byte))
+addByteAndBytesFromStructByUpcallMH(char arg1, stru_2_Bytes arg2, char (*upcallMH)(char, stru_2_Bytes))
 {
 	char byteSum = (*upcallMH)(arg1, arg2);
 	return byteSum;
@@ -853,7 +853,7 @@ addByteAnd20BytesFromStructByUpcallMH(char arg1, stru_20_Bytes arg2, char (*upca
  * @return the sum
  */
 char
-addByteFromPointerAndBytesFromStructByUpcallMH(char *arg1, stru_Byte_Byte arg2, char (*upcallMH)(char *, stru_Byte_Byte))
+addByteFromPointerAndBytesFromStructByUpcallMH(char *arg1, stru_2_Bytes arg2, char (*upcallMH)(char *, stru_2_Bytes))
 {
 	char byteSum = (*upcallMH)(arg1, arg2);
 	return byteSum;
@@ -869,7 +869,7 @@ addByteFromPointerAndBytesFromStructByUpcallMH(char *arg1, stru_Byte_Byte arg2, 
  * @return a pointer to the sum
  */
 char *
-addByteFromPointerAndBytesFromStruct_returnBytePointerByUpcallMH(char *arg1, stru_Byte_Byte arg2, char * (*upcallMH)(char *, stru_Byte_Byte))
+addByteFromPointerAndBytesFromStruct_returnBytePointerByUpcallMH(char *arg1, stru_2_Bytes arg2, char * (*upcallMH)(char *, stru_2_Bytes))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -885,7 +885,7 @@ addByteFromPointerAndBytesFromStruct_returnBytePointerByUpcallMH(char *arg1, str
  * @return the sum
  */
 char
-addByteAndBytesFromStructPointerByUpcallMH(char arg1, stru_Byte_Byte *arg2, char (*upcallMH)(char, stru_Byte_Byte *))
+addByteAndBytesFromStructPointerByUpcallMH(char arg1, stru_2_Bytes *arg2, char (*upcallMH)(char, stru_2_Bytes *))
 {
 	char byteSum = (*upcallMH)(arg1, arg2);
 	return byteSum;
@@ -1012,10 +1012,10 @@ add1ByteStructs_returnStructByUpcallMH(stru_Byte arg1, stru_Byte arg2, stru_Byte
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with two bytes
  */
-stru_Byte_Byte
-add2ByteStructs_returnStructByUpcallMH(stru_Byte_Byte arg1, stru_Byte_Byte arg2, stru_Byte_Byte (*upcallMH)(stru_Byte_Byte, stru_Byte_Byte))
+stru_2_Bytes
+add2ByteStructs_returnStructByUpcallMH(stru_2_Bytes arg1, stru_2_Bytes arg2, stru_2_Bytes (*upcallMH)(stru_2_Bytes, stru_2_Bytes))
 {
-	stru_Byte_Byte byteStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Bytes byteStruct = (*upcallMH)(arg1, arg2);
 	return byteStruct;
 }
 
@@ -1028,8 +1028,8 @@ add2ByteStructs_returnStructByUpcallMH(stru_Byte_Byte arg1, stru_Byte_Byte arg2,
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to struct with two bytes
  */
-stru_Byte_Byte *
-add2ByteStructs_returnStructPointerByUpcallMH(stru_Byte_Byte *arg1, stru_Byte_Byte arg2, stru_Byte_Byte * (*upcallMH)(stru_Byte_Byte *, stru_Byte_Byte))
+stru_2_Bytes *
+add2ByteStructs_returnStructPointerByUpcallMH(stru_2_Bytes *arg1, stru_2_Bytes arg2, stru_2_Bytes * (*upcallMH)(stru_2_Bytes *, stru_2_Bytes))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1044,10 +1044,10 @@ add2ByteStructs_returnStructPointerByUpcallMH(stru_Byte_Byte *arg1, stru_Byte_By
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with three bytes
  */
-stru_Byte_Byte_Byte
-add3ByteStructs_returnStructByUpcallMH(stru_Byte_Byte_Byte arg1, stru_Byte_Byte_Byte arg2, stru_Byte_Byte_Byte (*upcallMH)(stru_Byte_Byte_Byte, stru_Byte_Byte_Byte))
+stru_3_Bytes
+add3ByteStructs_returnStructByUpcallMH(stru_3_Bytes arg1, stru_3_Bytes arg2, stru_3_Bytes (*upcallMH)(stru_3_Bytes, stru_3_Bytes))
 {
-	stru_Byte_Byte_Byte byteStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Bytes byteStruct = (*upcallMH)(arg1, arg2);
 	return byteStruct;
 }
 
@@ -1061,7 +1061,7 @@ add3ByteStructs_returnStructByUpcallMH(stru_Byte_Byte_Byte arg1, stru_Byte_Byte_
  * @return a new char
  */
 short
-addCharAndCharsFromStructByUpcallMH(short arg1, stru_Char_Char arg2, short (*upcallMH)(short, stru_Char_Char))
+addCharAndCharsFromStructByUpcallMH(short arg1, stru_2_Chars arg2, short (*upcallMH)(short, stru_2_Chars))
 {
 	short result = (*upcallMH)(arg1, arg2);
 	return result;
@@ -1094,7 +1094,7 @@ addCharAnd10CharsFromStructByUpcallMH(short arg1, stru_10_Chars arg2, short (*up
  * @return a new char
  */
 short
-addCharFromPointerAndCharsFromStructByUpcallMH(short *arg1, stru_Char_Char arg2, short (*upcallMH)(short *, stru_Char_Char))
+addCharFromPointerAndCharsFromStructByUpcallMH(short *arg1, stru_2_Chars arg2, short (*upcallMH)(short *, stru_2_Chars))
 {
 	short result = (*upcallMH)(arg1, arg2);
 	return result;
@@ -1110,7 +1110,7 @@ addCharFromPointerAndCharsFromStructByUpcallMH(short *arg1, stru_Char_Char arg2,
  * @return a pointer to a new char
  */
 short *
-addCharFromPointerAndCharsFromStruct_returnCharPointerByUpcallMH(short *arg1, stru_Char_Char arg2, short * (*upcallMH)(short *, stru_Char_Char))
+addCharFromPointerAndCharsFromStruct_returnCharPointerByUpcallMH(short *arg1, stru_2_Chars arg2, short * (*upcallMH)(short *, stru_2_Chars))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1126,7 +1126,7 @@ addCharFromPointerAndCharsFromStruct_returnCharPointerByUpcallMH(short *arg1, st
  * @return a new char
  */
 short
-addCharAndCharsFromStructPointerByUpcallMH(short arg1, stru_Char_Char *arg2, short (*upcallMH)(short, stru_Char_Char *))
+addCharAndCharsFromStructPointerByUpcallMH(short arg1, stru_2_Chars *arg2, short (*upcallMH)(short, stru_2_Chars *))
 {
 	short result = (*upcallMH)(arg1, arg2);
 	return result;
@@ -1237,10 +1237,10 @@ addCharAndCharsFromStructWithNestedStructArray_reverseOrderByUpcallMH(short arg1
  * @param upcallMH the function pointer to the upcall method
  * @return a new struct of with two chars
  */
-stru_Char_Char
-add2CharStructs_returnStructByUpcallMH(stru_Char_Char arg1, stru_Char_Char arg2, stru_Char_Char (*upcallMH)(stru_Char_Char, stru_Char_Char))
+stru_2_Chars
+add2CharStructs_returnStructByUpcallMH(stru_2_Chars arg1, stru_2_Chars arg2, stru_2_Chars (*upcallMH)(stru_2_Chars, stru_2_Chars))
 {
-	stru_Char_Char charStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Chars charStruct = (*upcallMH)(arg1, arg2);
 	return charStruct;
 }
 
@@ -1253,8 +1253,8 @@ add2CharStructs_returnStructByUpcallMH(stru_Char_Char arg1, stru_Char_Char arg2,
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to a struct of with two chars
  */
-stru_Char_Char *
-add2CharStructs_returnStructPointerByUpcallMH(stru_Char_Char *arg1, stru_Char_Char arg2, stru_Char_Char * (*upcallMH)(stru_Char_Char *, stru_Char_Char))
+stru_2_Chars *
+add2CharStructs_returnStructPointerByUpcallMH(stru_2_Chars *arg1, stru_2_Chars arg2, stru_2_Chars * (*upcallMH)(stru_2_Chars *, stru_2_Chars))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1269,10 +1269,10 @@ add2CharStructs_returnStructPointerByUpcallMH(stru_Char_Char *arg1, stru_Char_Ch
  * @param upcallMH the function pointer to the upcall method
  * @return a new struct of with three chars
  */
-stru_Char_Char_Char
-add3CharStructs_returnStructByUpcallMH(stru_Char_Char_Char arg1, stru_Char_Char_Char arg2, stru_Char_Char_Char (*upcallMH)(stru_Char_Char_Char, stru_Char_Char_Char))
+stru_3_Chars
+add3CharStructs_returnStructByUpcallMH(stru_3_Chars arg1, stru_3_Chars arg2, stru_3_Chars (*upcallMH)(stru_3_Chars, stru_3_Chars))
 {
-	stru_Char_Char_Char charStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Chars charStruct = (*upcallMH)(arg1, arg2);
 	return charStruct;
 }
 
@@ -1285,7 +1285,7 @@ add3CharStructs_returnStructByUpcallMH(stru_Char_Char_Char arg1, stru_Char_Char_
  * @return the sum
  */
 short
-addShortAndShortsFromStructByUpcallMH(short arg1, stru_Short_Short arg2, short (*upcallMH)(short, stru_Short_Short))
+addShortAndShortsFromStructByUpcallMH(short arg1, stru_2_Shorts arg2, short (*upcallMH)(short, stru_2_Shorts))
 {
 	short shortSum = (*upcallMH)(arg1, arg2);
 	return shortSum;
@@ -1316,7 +1316,7 @@ addShortAnd10ShortsFromStructByUpcallMH(short arg1, stru_10_Shorts arg2, short (
  * @return the sum
  */
 short
-addShortFromPointerAndShortsFromStructByUpcallMH(short *arg1, stru_Short_Short arg2, short (*upcallMH)(short *, stru_Short_Short))
+addShortFromPointerAndShortsFromStructByUpcallMH(short *arg1, stru_2_Shorts arg2, short (*upcallMH)(short *, stru_2_Shorts))
 {
 	short shortSum = (*upcallMH)(arg1, arg2);
 	return shortSum;
@@ -1332,7 +1332,7 @@ addShortFromPointerAndShortsFromStructByUpcallMH(short *arg1, stru_Short_Short a
  * @return a pointer to the sum
  */
 short *
-addShortFromPointerAndShortsFromStruct_returnShortPointerByUpcallMH(short *arg1, stru_Short_Short arg2, short * (*upcallMH)(short *, stru_Short_Short))
+addShortFromPointerAndShortsFromStruct_returnShortPointerByUpcallMH(short *arg1, stru_2_Shorts arg2, short * (*upcallMH)(short *, stru_2_Shorts))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1348,7 +1348,7 @@ addShortFromPointerAndShortsFromStruct_returnShortPointerByUpcallMH(short *arg1,
  * @return the sum
  */
 short
-addShortAndShortsFromStructPointerByUpcallMH(short arg1, stru_Short_Short *arg2, short (*upcallMH)(short, stru_Short_Short *))
+addShortAndShortsFromStructPointerByUpcallMH(short arg1, stru_2_Shorts *arg2, short (*upcallMH)(short, stru_2_Shorts *))
 {
 	short shortSum = (*upcallMH)(arg1, arg2);
 	return shortSum;
@@ -1459,10 +1459,10 @@ addShortAndShortsFromStructWithNestedStructArray_reverseOrderByUpcallMH(short ar
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with two shorts
  */
-stru_Short_Short
-add2ShortStructs_returnStructByUpcallMH(stru_Short_Short arg1, stru_Short_Short arg2, stru_Short_Short (*upcallMH)(stru_Short_Short, stru_Short_Short))
+stru_2_Shorts
+add2ShortStructs_returnStructByUpcallMH(stru_2_Shorts arg1, stru_2_Shorts arg2, stru_2_Shorts (*upcallMH)(stru_2_Shorts, stru_2_Shorts))
 {
-	stru_Short_Short shortStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Shorts shortStruct = (*upcallMH)(arg1, arg2);
 	return shortStruct;
 }
 
@@ -1475,8 +1475,8 @@ add2ShortStructs_returnStructByUpcallMH(stru_Short_Short arg1, stru_Short_Short 
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to struct with two shorts
  */
-stru_Short_Short *
-add2ShortStructs_returnStructPointerByUpcallMH(stru_Short_Short *arg1, stru_Short_Short arg2, stru_Short_Short * (*upcallMH)(stru_Short_Short *, stru_Short_Short))
+stru_2_Shorts *
+add2ShortStructs_returnStructPointerByUpcallMH(stru_2_Shorts *arg1, stru_2_Shorts arg2, stru_2_Shorts * (*upcallMH)(stru_2_Shorts *, stru_2_Shorts))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1491,10 +1491,10 @@ add2ShortStructs_returnStructPointerByUpcallMH(stru_Short_Short *arg1, stru_Shor
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with three shorts
  */
-stru_Short_Short_Short
-add3ShortStructs_returnStructByUpcallMH(stru_Short_Short_Short arg1, stru_Short_Short_Short arg2, stru_Short_Short_Short (*upcallMH)(stru_Short_Short_Short, stru_Short_Short_Short))
+stru_3_Shorts
+add3ShortStructs_returnStructByUpcallMH(stru_3_Shorts arg1, stru_3_Shorts arg2, stru_3_Shorts (*upcallMH)(stru_3_Shorts, stru_3_Shorts))
 {
-	stru_Short_Short_Short shortStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Shorts shortStruct = (*upcallMH)(arg1, arg2);
 	return shortStruct;
 }
 
@@ -1508,7 +1508,7 @@ add3ShortStructs_returnStructByUpcallMH(stru_Short_Short_Short arg1, stru_Short_
  * @return the sum
  */
 int
-addIntAndIntsFromStructByUpcallMH(int arg1, stru_Int_Int arg2, int (*upcallMH)(int, stru_Int_Int))
+addIntAndIntsFromStructByUpcallMH(int arg1, stru_2_Ints arg2, int (*upcallMH)(int, stru_2_Ints))
 {
 	int intSum = (*upcallMH)(arg1, arg2);
 	return intSum;
@@ -1540,7 +1540,7 @@ addIntAnd5IntsFromStructByUpcallMH(int arg1, stru_5_Ints arg2, int (*upcallMH)(i
  * @return the sum
  */
 int
-addIntFromPointerAndIntsFromStructByUpcallMH(int *arg1, stru_Int_Int arg2,  int (*upcallMH)(int *, stru_Int_Int))
+addIntFromPointerAndIntsFromStructByUpcallMH(int *arg1, stru_2_Ints arg2,  int (*upcallMH)(int *, stru_2_Ints))
 {
 	int intSum = (*upcallMH)(arg1, arg2);
 	return intSum;
@@ -1556,7 +1556,7 @@ addIntFromPointerAndIntsFromStructByUpcallMH(int *arg1, stru_Int_Int arg2,  int 
  * @return a pointer to the sum
  */
 int *
-addIntFromPointerAndIntsFromStruct_returnIntPointerByUpcallMH(int *arg1, stru_Int_Int arg2, int *(*upcallMH)(int *, stru_Int_Int))
+addIntFromPointerAndIntsFromStruct_returnIntPointerByUpcallMH(int *arg1, stru_2_Ints arg2, int *(*upcallMH)(int *, stru_2_Ints))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1572,7 +1572,7 @@ addIntFromPointerAndIntsFromStruct_returnIntPointerByUpcallMH(int *arg1, stru_In
  * @return the sum
  */
 int
-addIntAndIntsFromStructPointerByUpcallMH(int arg1, stru_Int_Int *arg2, int (*upcallMH)(int, stru_Int_Int *))
+addIntAndIntsFromStructPointerByUpcallMH(int arg1, stru_2_Ints *arg2, int (*upcallMH)(int, stru_2_Ints *))
 {
 	int intSum = (*upcallMH)(arg1, arg2);
 	return intSum;
@@ -1683,10 +1683,10 @@ addIntAndIntsFromStructWithNestedStructArray_reverseOrderByUpcallMH(int arg1, st
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with two ints
  */
-stru_Int_Int
-add2IntStructs_returnStructByUpcallMH(stru_Int_Int arg1, stru_Int_Int arg2, stru_Int_Int (*upcallMH)(stru_Int_Int, stru_Int_Int))
+stru_2_Ints
+add2IntStructs_returnStructByUpcallMH(stru_2_Ints arg1, stru_2_Ints arg2, stru_2_Ints (*upcallMH)(stru_2_Ints, stru_2_Ints))
 {
-	stru_Int_Int intStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Ints intStruct = (*upcallMH)(arg1, arg2);
 	return intStruct;
 }
 
@@ -1699,8 +1699,8 @@ add2IntStructs_returnStructByUpcallMH(stru_Int_Int arg1, stru_Int_Int arg2, stru
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to struct with two ints
  */
-stru_Int_Int *
-add2IntStructs_returnStructPointerByUpcallMH(stru_Int_Int *arg1, stru_Int_Int arg2, stru_Int_Int * (*upcallMH)(stru_Int_Int *, stru_Int_Int))
+stru_2_Ints *
+add2IntStructs_returnStructPointerByUpcallMH(stru_2_Ints *arg1, stru_2_Ints arg2, stru_2_Ints * (*upcallMH)(stru_2_Ints *, stru_2_Ints))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1715,10 +1715,10 @@ add2IntStructs_returnStructPointerByUpcallMH(stru_Int_Int *arg1, stru_Int_Int ar
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with three ints
  */
-stru_Int_Int_Int
-add3IntStructs_returnStructByUpcallMH(stru_Int_Int_Int arg1, stru_Int_Int_Int arg2, stru_Int_Int_Int (*upcallMH)(stru_Int_Int_Int, stru_Int_Int_Int))
+stru_3_Ints
+add3IntStructs_returnStructByUpcallMH(stru_3_Ints arg1, stru_3_Ints arg2, stru_3_Ints (*upcallMH)(stru_3_Ints, stru_3_Ints))
 {
-	stru_Int_Int_Int intStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Ints intStruct = (*upcallMH)(arg1, arg2);
 	return intStruct;
 }
 
@@ -1731,7 +1731,7 @@ add3IntStructs_returnStructByUpcallMH(stru_Int_Int_Int arg1, stru_Int_Int_Int ar
  * @return the sum
  */
 LONG
-addLongAndLongsFromStructByUpcallMH(LONG arg1, stru_Long_Long arg2, LONG (*upcallMH)(LONG, stru_Long_Long))
+addLongAndLongsFromStructByUpcallMH(LONG arg1, stru_2_Longs arg2, LONG (*upcallMH)(LONG, stru_2_Longs))
 {
 	LONG longSum = (*upcallMH)(arg1, arg2);
 	return longSum;
@@ -1747,7 +1747,7 @@ addLongAndLongsFromStructByUpcallMH(LONG arg1, stru_Long_Long arg2, LONG (*upcal
  * @return the sum
  */
 LONG
-addLongFromPointerAndLongsFromStructByUpcallMH(LONG *arg1, stru_Long_Long arg2, LONG (*upcallMH)(LONG *, stru_Long_Long))
+addLongFromPointerAndLongsFromStructByUpcallMH(LONG *arg1, stru_2_Longs arg2, LONG (*upcallMH)(LONG *, stru_2_Longs))
 {
 	LONG longSum = (*upcallMH)(arg1, arg2);
 	return longSum;
@@ -1763,7 +1763,7 @@ addLongFromPointerAndLongsFromStructByUpcallMH(LONG *arg1, stru_Long_Long arg2, 
  * @return a pointer to the sum
  */
 LONG *
-addLongFromPointerAndLongsFromStruct_returnLongPointerByUpcallMH(LONG *arg1, stru_Long_Long arg2, LONG * (*upcallMH)(LONG *, stru_Long_Long))
+addLongFromPointerAndLongsFromStruct_returnLongPointerByUpcallMH(LONG *arg1, stru_2_Longs arg2, LONG * (*upcallMH)(LONG *, stru_2_Longs))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1779,7 +1779,7 @@ addLongFromPointerAndLongsFromStruct_returnLongPointerByUpcallMH(LONG *arg1, str
  * @return the sum
  */
 LONG
-addLongAndLongsFromStructPointerByUpcallMH(LONG arg1, stru_Long_Long *arg2, LONG (*upcallMH)(LONG, stru_Long_Long *))
+addLongAndLongsFromStructPointerByUpcallMH(LONG arg1, stru_2_Longs *arg2, LONG (*upcallMH)(LONG, stru_2_Longs *))
 {
 	LONG longSum = (*upcallMH)(arg1, arg2);
 	return longSum;
@@ -1890,10 +1890,10 @@ addLongAndLongsFromStructWithNestedStructArray_reverseOrderByUpcallMH(LONG arg1,
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with two longs
  */
-stru_Long_Long
-add2LongStructs_returnStructByUpcallMH(stru_Long_Long arg1, stru_Long_Long arg2, stru_Long_Long (*upcallMH)(stru_Long_Long, stru_Long_Long))
+stru_2_Longs
+add2LongStructs_returnStructByUpcallMH(stru_2_Longs arg1, stru_2_Longs arg2, stru_2_Longs (*upcallMH)(stru_2_Longs, stru_2_Longs))
 {
-	stru_Long_Long longStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Longs longStruct = (*upcallMH)(arg1, arg2);
 	return longStruct;
 }
 
@@ -1906,8 +1906,8 @@ add2LongStructs_returnStructByUpcallMH(stru_Long_Long arg1, stru_Long_Long arg2,
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to struct with two longs
  */
-stru_Long_Long *
-add2LongStructs_returnStructPointerByUpcallMH(stru_Long_Long *arg1, stru_Long_Long arg2, stru_Long_Long * (*upcallMH)(stru_Long_Long *, stru_Long_Long))
+stru_2_Longs *
+add2LongStructs_returnStructPointerByUpcallMH(stru_2_Longs *arg1, stru_2_Longs arg2, stru_2_Longs * (*upcallMH)(stru_2_Longs *, stru_2_Longs))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -1922,10 +1922,10 @@ add2LongStructs_returnStructPointerByUpcallMH(stru_Long_Long *arg1, stru_Long_Lo
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with three longs
  */
-stru_Long_Long_Long
-add3LongStructs_returnStructByUpcallMH(stru_Long_Long_Long arg1, stru_Long_Long_Long arg2, stru_Long_Long_Long (*upcallMH)(stru_Long_Long_Long, stru_Long_Long_Long))
+stru_3_Longs
+add3LongStructs_returnStructByUpcallMH(stru_3_Longs arg1, stru_3_Longs arg2, stru_3_Longs (*upcallMH)(stru_3_Longs, stru_3_Longs))
 {
-	stru_Long_Long_Long longStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Longs longStruct = (*upcallMH)(arg1, arg2);
 	return longStruct;
 }
 
@@ -1938,7 +1938,7 @@ add3LongStructs_returnStructByUpcallMH(stru_Long_Long_Long arg1, stru_Long_Long_
  * @return the sum
  */
 float
-addFloatAndFloatsFromStructByUpcallMH(float arg1, stru_Float_Float arg2, float (*upcallMH)(float, stru_Float_Float))
+addFloatAndFloatsFromStructByUpcallMH(float arg1, stru_2_Floats arg2, float (*upcallMH)(float, stru_2_Floats))
 {
 	float floatSum = (*upcallMH)(arg1, arg2);
 	return floatSum;
@@ -1969,7 +1969,7 @@ addFloatAnd5FloatsFromStructByUpcallMH(float arg1, stru_5_Floats arg2, float (*u
  * @return the sum
  */
 float
-addFloatFromPointerAndFloatsFromStructByUpcallMH(float *arg1, stru_Float_Float arg2, float (*upcallMH)(float *, stru_Float_Float))
+addFloatFromPointerAndFloatsFromStructByUpcallMH(float *arg1, stru_2_Floats arg2, float (*upcallMH)(float *, stru_2_Floats))
 {
 	float floatSum = (*upcallMH)(arg1, arg2);
 	return floatSum;
@@ -1985,7 +1985,7 @@ addFloatFromPointerAndFloatsFromStructByUpcallMH(float *arg1, stru_Float_Float a
  * @return a pointer to the sum
  */
 float *
-addFloatFromPointerAndFloatsFromStruct_returnFloatPointerByUpcallMH(float *arg1, stru_Float_Float arg2, float * (*upcallMH)(float *, stru_Float_Float))
+addFloatFromPointerAndFloatsFromStruct_returnFloatPointerByUpcallMH(float *arg1, stru_2_Floats arg2, float * (*upcallMH)(float *, stru_2_Floats))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -2001,7 +2001,7 @@ addFloatFromPointerAndFloatsFromStruct_returnFloatPointerByUpcallMH(float *arg1,
  * @return the sum
  */
 float
-addFloatAndFloatsFromStructPointerByUpcallMH(float arg1, stru_Float_Float *arg2, float (*upcallMH)(float, stru_Float_Float *))
+addFloatAndFloatsFromStructPointerByUpcallMH(float arg1, stru_2_Floats *arg2, float (*upcallMH)(float, stru_2_Floats *))
 {
 	float floatSum = (*upcallMH)(arg1, arg2);
 	return floatSum;
@@ -2112,10 +2112,10 @@ addFloatAndFloatsFromStructWithNestedStructArray_reverseOrderByUpcallMH(float ar
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with two floats
  */
-stru_Float_Float
-add2FloatStructs_returnStructByUpcallMH(stru_Float_Float arg1, stru_Float_Float arg2, stru_Float_Float (*upcallMH)(stru_Float_Float, stru_Float_Float))
+stru_2_Floats
+add2FloatStructs_returnStructByUpcallMH(stru_2_Floats arg1, stru_2_Floats arg2, stru_2_Floats (*upcallMH)(stru_2_Floats, stru_2_Floats))
 {
-	stru_Float_Float floatStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Floats floatStruct = (*upcallMH)(arg1, arg2);
 	return floatStruct;
 }
 
@@ -2128,8 +2128,8 @@ add2FloatStructs_returnStructByUpcallMH(stru_Float_Float arg1, stru_Float_Float 
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to struct with two floats
  */
-stru_Float_Float *
-add2FloatStructs_returnStructPointerByUpcallMH(stru_Float_Float *arg1, stru_Float_Float arg2, stru_Float_Float * (*upcallMH)(stru_Float_Float *, stru_Float_Float))
+stru_2_Floats *
+add2FloatStructs_returnStructPointerByUpcallMH(stru_2_Floats *arg1, stru_2_Floats arg2, stru_2_Floats * (*upcallMH)(stru_2_Floats *, stru_2_Floats))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -2144,10 +2144,10 @@ add2FloatStructs_returnStructPointerByUpcallMH(stru_Float_Float *arg1, stru_Floa
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with three floats
  */
-stru_Float_Float_Float
-add3FloatStructs_returnStructByUpcallMH(stru_Float_Float_Float arg1, stru_Float_Float_Float arg2, stru_Float_Float_Float (*upcallMH)(stru_Float_Float_Float, stru_Float_Float_Float))
+stru_3_Floats
+add3FloatStructs_returnStructByUpcallMH(stru_3_Floats arg1, stru_3_Floats arg2, stru_3_Floats (*upcallMH)(stru_3_Floats, stru_3_Floats))
 {
-	stru_Float_Float_Float floatStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Floats floatStruct = (*upcallMH)(arg1, arg2);
 	return floatStruct;
 }
 
@@ -2160,7 +2160,7 @@ add3FloatStructs_returnStructByUpcallMH(stru_Float_Float_Float arg1, stru_Float_
  * @return the sum
  */
 double
-addDoubleAndDoublesFromStructByUpcallMH(double arg1, stru_Double_Double arg2, double (*upcallMH)(double, stru_Double_Double))
+addDoubleAndDoublesFromStructByUpcallMH(double arg1, stru_2_Doubles arg2, double (*upcallMH)(double, stru_2_Doubles))
 {
 	double doubleSum = (*upcallMH)(arg1, arg2);
 	return doubleSum;
@@ -2176,7 +2176,7 @@ addDoubleAndDoublesFromStructByUpcallMH(double arg1, stru_Double_Double arg2, do
  * @return the sum
  */
 double
-addDoubleFromPointerAndDoublesFromStructByUpcallMH(double *arg1, stru_Double_Double arg2, double (*upcallMH)(double *, stru_Double_Double))
+addDoubleFromPointerAndDoublesFromStructByUpcallMH(double *arg1, stru_2_Doubles arg2, double (*upcallMH)(double *, stru_2_Doubles))
 {
 	double doubleSum = (*upcallMH)(arg1, arg2);
 	return doubleSum;
@@ -2192,7 +2192,7 @@ addDoubleFromPointerAndDoublesFromStructByUpcallMH(double *arg1, stru_Double_Dou
  * @return a pointer to the sum
  */
 double *
-addDoubleFromPointerAndDoublesFromStruct_returnDoublePointerByUpcallMH(double *arg1, stru_Double_Double arg2, double * (*upcallMH)(double *, stru_Double_Double))
+addDoubleFromPointerAndDoublesFromStruct_returnDoublePointerByUpcallMH(double *arg1, stru_2_Doubles arg2, double * (*upcallMH)(double *, stru_2_Doubles))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -2208,7 +2208,7 @@ addDoubleFromPointerAndDoublesFromStruct_returnDoublePointerByUpcallMH(double *a
  * @return the sum
  */
 double
-addDoubleAndDoublesFromStructPointerByUpcallMH(double arg1, stru_Double_Double *arg2, double (*upcallMH)(double, stru_Double_Double *))
+addDoubleAndDoublesFromStructPointerByUpcallMH(double arg1, stru_2_Doubles *arg2, double (*upcallMH)(double, stru_2_Doubles *))
 {
 	double doubleSum = (*upcallMH)(arg1, arg2);
 	return doubleSum;
@@ -2319,10 +2319,10 @@ addDoubleAndDoublesFromStructWithNestedStructArray_reverseOrderByUpcallMH(double
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with two doubles
  */
-stru_Double_Double
-add2DoubleStructs_returnStructByUpcallMH(stru_Double_Double arg1, stru_Double_Double arg2, stru_Double_Double (*upcallMH)(stru_Double_Double, stru_Double_Double))
+stru_2_Doubles
+add2DoubleStructs_returnStructByUpcallMH(stru_2_Doubles arg1, stru_2_Doubles arg2, stru_2_Doubles (*upcallMH)(stru_2_Doubles, stru_2_Doubles))
 {
-	stru_Double_Double doubleStruct = (*upcallMH)(arg1, arg2);
+	stru_2_Doubles doubleStruct = (*upcallMH)(arg1, arg2);
 	return doubleStruct;
 }
 
@@ -2335,8 +2335,8 @@ add2DoubleStructs_returnStructByUpcallMH(stru_Double_Double arg1, stru_Double_Do
  * @param upcallMH the function pointer to the upcall method
  * @return a pointer to struct with two doubles
  */
-stru_Double_Double *
-add2DoubleStructs_returnStructPointerByUpcallMH(stru_Double_Double *arg1, stru_Double_Double arg2, stru_Double_Double * (*upcallMH)(stru_Double_Double *, stru_Double_Double))
+stru_2_Doubles *
+add2DoubleStructs_returnStructPointerByUpcallMH(stru_2_Doubles *arg1, stru_2_Doubles arg2, stru_2_Doubles * (*upcallMH)(stru_2_Doubles *, stru_2_Doubles))
 {
 	arg1 = (*upcallMH)(arg1, arg2);
 	return arg1;
@@ -2351,10 +2351,10 @@ add2DoubleStructs_returnStructPointerByUpcallMH(stru_Double_Double *arg1, stru_D
  * @param upcallMH the function pointer to the upcall method
  * @return a struct with three doubles
  */
-stru_Double_Double_Double
-add3DoubleStructs_returnStructByUpcallMH(stru_Double_Double_Double arg1, stru_Double_Double_Double arg2, stru_Double_Double_Double (*upcallMH)(stru_Double_Double_Double, stru_Double_Double_Double))
+stru_3_Doubles
+add3DoubleStructs_returnStructByUpcallMH(stru_3_Doubles arg1, stru_3_Doubles arg2, stru_3_Doubles (*upcallMH)(stru_3_Doubles, stru_3_Doubles))
 {
-	stru_Double_Double_Double doubleStruct = (*upcallMH)(arg1, arg2);
+	stru_3_Doubles doubleStruct = (*upcallMH)(arg1, arg2);
 	return doubleStruct;
 }
 
@@ -2496,7 +2496,7 @@ addDoubleAndDoubleFloatFromStructByUpcallMH(double arg1, stru_Double_Float arg2,
  * @return the sum
  */
 double
-addDoubleAnd2FloatsDoubleFromStructByUpcallMH(double arg1, stru_Float_Float_Double arg2, double (*upcallMH)(double, stru_Float_Float_Double))
+addDoubleAnd2FloatsDoubleFromStructByUpcallMH(double arg1, stru_2_Floats_Double arg2, double (*upcallMH)(double, stru_2_Floats_Double))
 {
 	double doubleSum = (*upcallMH)(arg1, arg2);
 	return doubleSum;
@@ -2704,7 +2704,7 @@ addDoubleAndDoubleLongFromStructByUpcallMH(double arg1, stru_Double_Long arg2, d
  * @return the sum
  */
 LONG
-addLongAnd2FloatsLongFromStructByUpcallMH(LONG arg1, stru_Float_Float_Long arg2, LONG (*upcallMH)(LONG, stru_Float_Float_Long))
+addLongAnd2FloatsLongFromStructByUpcallMH(LONG arg1, stru_2_Floats_Long arg2, LONG (*upcallMH)(LONG, stru_2_Floats_Long))
 {
 	LONG longSum = (*upcallMH)(arg1, arg2);
 	return longSum;
@@ -2860,8 +2860,8 @@ return4KBytesFromStructByUpcallMH(stru_4K_Bytes (*upcallMH)())
  * Note:
  * A null pointer is returned from upcallMH().
  */
-stru_Int_Int *
-validateReturnNullAddrByUpcallMH(stru_Int_Int *arg1, stru_Int_Int arg2, stru_Int_Int * (*upcallMH)(stru_Int_Int *, stru_Int_Int))
+stru_2_Ints *
+validateReturnNullAddrByUpcallMH(stru_2_Ints *arg1, stru_2_Ints arg2, stru_2_Ints * (*upcallMH)(stru_2_Ints *, stru_2_Ints))
 {
 	(*upcallMH)(arg1, arg2);
 	return arg1;
@@ -2876,7 +2876,7 @@ validateReturnNullAddrByUpcallMH(stru_Int_Int *arg1, stru_Int_Int arg2, stru_Int
  * @return the sum
  */
 char
-addNegBytesFromStructByUpcallMH(char arg1, stru_Byte_Byte arg2, char (*upcallMH)(char, stru_Byte_Byte, char, char))
+addNegBytesFromStructByUpcallMH(char arg1, stru_2_Bytes arg2, char (*upcallMH)(char, stru_2_Bytes, char, char))
 {
 	char byteSum = (*upcallMH)(arg1, arg2, arg2.elem1, arg2.elem2);
 	return byteSum;
@@ -2891,7 +2891,7 @@ addNegBytesFromStructByUpcallMH(char arg1, stru_Byte_Byte arg2, char (*upcallMH)
  * @return the sum
  */
 short
-addNegShortsFromStructByUpcallMH(short arg1, stru_Short_Short arg2, short (*upcallMH)(short, stru_Short_Short, short, short))
+addNegShortsFromStructByUpcallMH(short arg1, stru_2_Shorts arg2, short (*upcallMH)(short, stru_2_Shorts, short, short))
 {
 	short shortSum = (*upcallMH)(arg1, arg2, arg2.elem1, arg2.elem2);
 	return shortSum;
