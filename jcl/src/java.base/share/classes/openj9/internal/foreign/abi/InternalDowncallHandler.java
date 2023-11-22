@@ -47,9 +47,9 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.MemorySegment.Scope;
 import java.lang.foreign.SegmentAllocator;
 import java.lang.foreign.ValueLayout;
-import jdk.internal.foreign.Utils;
 import jdk.internal.foreign.abi.LinkerOptions;
 import jdk.internal.foreign.MemorySessionImpl;
+import jdk.internal.foreign.Utils;
 /*[ELSE] JAVA_SPEC_VERSION >= 21 */
 import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.FunctionDescriptor;
@@ -254,10 +254,10 @@ public class InternalDowncallHandler {
 	/* Intended for memSegmtOfPtrToLongArgFilter that converts the memory segment
 	 * of the passed-in pointer argument to long.
 	 */
-	private final long memSegmtOfPtrToLongArg(MemorySegment argValue) throws IllegalStateException {
-		UpcallMHMetaData.validateNativeArgRetSegmentOfPtr(argValue);
+	private final long memSegmtOfPtrToLongArg(MemorySegment argValue, LinkerOptions options) throws IllegalStateException {
+		UpcallMHMetaData.validateNativeArgRetSegmentOfPtr(argValue, options);
 		addMemArgScope(argValue.scope());
-		return argValue.address();
+		return UpcallMHMetaData.getNativeAddrOfArgRetPtr(argValue, options);
 	}
 	/*[ELSE] JAVA_SPEC_VERSION >= 21 */
 	/* Intended for memAddrToLongArgFilter that converts the memory address to long. */
@@ -405,7 +405,7 @@ public class InternalDowncallHandler {
 		try {
 			/*[IF JAVA_SPEC_VERSION >= 21]*/
 			longObjToMemSegmtRetFilter = lookup.bind(this, "longObjToMemSegmtRet", methodType(MemorySegment.class, Object.class));
-			memSegmtOfPtrToLongArgFilter = lookup.bind(this, "memSegmtOfPtrToLongArg", methodType(long.class, MemorySegment.class));
+			memSegmtOfPtrToLongArgFilter = lookup.bind(this, "memSegmtOfPtrToLongArg", methodType(long.class, MemorySegment.class, LinkerOptions.class));
 			/*[ELSE] JAVA_SPEC_VERSION >= 21 */
 			memAddrToLongArgFilter = lookup.bind(this, "memAddrToLongArg", methodType(long.class, MemoryAddress.class));
 			/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
@@ -574,7 +574,7 @@ public class InternalDowncallHandler {
 			 * Note: AddressLayout is introduced in JDK21 to replace OfAddress.
 			 */
 			if (argLayout instanceof AddressLayout) {
-				filterMH = memSegmtOfPtrToLongArgFilter;
+				filterMH = MethodHandles.insertArguments(memSegmtOfPtrToLongArgFilter, 1, linkerOpts);
 			} else
 			/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
 			{

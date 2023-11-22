@@ -34,15 +34,24 @@ import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment.Scope;
-import jdk.internal.foreign.Utils;
 import jdk.internal.foreign.abi.LinkerOptions;
+import jdk.internal.foreign.AbstractMemorySegmentImpl;
 import jdk.internal.foreign.MemorySessionImpl;
+import jdk.internal.foreign.Utils;
+/*[IF JAVA_SPEC_VERSION >= 22]*/
+import jdk.internal.misc.Unsafe;
+/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
 /*[ELSE] JAVA_SPEC_VERSION >= 21 */
 import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.MemoryAddress;
 import jdk.incubator.foreign.MemorySegment;
 import jdk.incubator.foreign.ResourceScope;
 /*[ENDIF] JAVA_SPEC_VERSION >= 21 */
+
+/*[IF JAVA_SPEC_VERSION >= 22]*/
+import static java.lang.foreign.ValueLayout.*;
+/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
+
 
 /**
  * The meta data consists of the callee MH and a cache of 2 elements for MH resolution,
@@ -77,6 +86,7 @@ final class UpcallMHMetaData {
 	/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
 
 	private static synchronized native void resolveUpcallDataInfo();
+	private static final Unsafe unSafe = Unsafe.getUnsafe();
 
 	static {
 		/* Resolve the methods/fields (offset in the JCL constant pool of VM) related to the metadata
@@ -133,11 +143,15 @@ final class UpcallMHMetaData {
 	 * The method is shared in downcall and upcall.
 	 */
 	/*[IF JAVA_SPEC_VERSION >= 21]*/
-	static void validateNativeArgRetSegmentOfPtr(MemorySegment argRetSegmentOfPtr) {
+	static void validateNativeArgRetSegmentOfPtr(MemorySegment argRetSegmentOfPtr, LinkerOptions options) {
 		if (argRetSegmentOfPtr == null) {
 			throw new NullPointerException("A null pointer is not allowed.");
 		}
-		if (!argRetSegmentOfPtr.isNative()) {
+		if (!argRetSegmentOfPtr.isNative()
+		/*[IF JAVA_SPEC_VERSION >= 22]*/
+			&& !options.allowsHeapAccess()
+		/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
+		) {
 			throw new IllegalArgumentException("Heap segment not allowed: " + argRetSegmentOfPtr);
 		}
 	}
@@ -149,6 +163,39 @@ final class UpcallMHMetaData {
 		if (!argRetAddrOfPtr.isNative()) {
 			throw new IllegalArgumentException("A heap address is not allowed: " + argRetAddrOfPtr);
 		}
+	}
+	/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
+
+	/*[IF JAVA_SPEC_VERSION >= 21]*/
+	/* Determine whether the passed-in/returned segment for pointer is allocated in the native memory
+	 * or not and return the segment if valid; otherwise, return the on-heap address if it is allowed
+	 * to be accessed in native.
+	 */
+	static long getNativeAddrOfArgRetPtr(MemorySegment argRetSegment, LinkerOptions options) {
+		long nativeAddr = 0;
+		if (argRetSegment.isNative()) {
+			nativeAddr = argRetSegment.address();
+		} 
+		/*[IF JAVA_SPEC_VERSION >= 22]*/
+		else if (options.allowsHeapAccess()) {
+			AbstractMemorySegmentImpl heapSegment = (AbstractMemorySegmentImpl)argRetSegment;
+			Object heapAddrBase = heapSegment.unsafeGetBase(); 
+			System.out.println("getNativeAddrOfArgRetPtr: heapAddrBase = " + heapAddrBase);
+			long heapAddrOffset = heapSegment.unsafeGetOffset();
+			System.out.println("getNativeAddrOfArgRetPtr: heapAddrOffset = " + heapAddrOffset);
+			//long heapAddr = heapSegment.address();
+			long heapAddr = unSafe.getAddress(heapAddrBase, heapAddrOffset);
+			System.out.println("getNativeAddrOfArgRetPtr: heapAddr = " + heapAddr);
+			//MemorySegment heapAddrSeg = MemorySegment.ofAddress(heapAddr);
+			//System.out.println("getNativeAddrOfArgRetPtr: heapAddrSeg.address = " + heapAddrSeg.address());
+			//MemorySegment argSeg = Arena.global().allocate(JAVA_LONG);
+			//argSeg.set(ADDRESS, 0, heapAddrSeg);
+			//nativeAddr = argSeg.address();
+			//System.out.println("getNativeAddrOfArgRetPtr: heapAddr = " + heapAddr);
+		}
+		/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
+
+		return nativeAddr;
 	}
 	/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
 

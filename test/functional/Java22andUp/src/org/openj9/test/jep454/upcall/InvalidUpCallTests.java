@@ -287,7 +287,7 @@ public class InvalidUpCallTests {
 	}
 
 	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Not supported for upcall.*")
-	public void test_InvalidLinkerOptions_isTrivial_1() throws Throwable {
+	public void test_InvalidLinkerOptions_isCritical_1() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
 
 		FunctionDescriptor fd = FunctionDescriptor.of(structLayout, structLayout, structLayout, ADDRESS);
@@ -302,7 +302,7 @@ public class InvalidUpCallTests {
 	}
 
 	@Test(expectedExceptions = IllegalThreadStateException.class, expectedExceptionsMessageRegExp = ".* wrong thread state for upcall")
-	public void test_InvalidLinkerOptions_isTrivial_2() throws Throwable {
+	public void test_InvalidLinkerOptions_isCritical_2() throws Throwable {
 		FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS);
 		MemorySegment functionSymbol = nativeLibLookup.find("captureTrivialOptionByUpcallMH").get();
 		MethodHandle mh = linker.downcallHandle(functionSymbol, fd, Linker.Option.critical(false));
