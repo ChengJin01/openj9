@@ -143,17 +143,6 @@ public class InvalidDownCallTests {
 		}
 	}
 
-	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Heap segment not allowed.*")
-	public void test_heapSegmentForPtrArgument() throws Throwable {
-		FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS);
-		MemorySegment functionSymbol = nativeLibLookup.find("addIntAndIntsFromStructPointer").get();
-		MethodHandle mh = linker.downcallHandle(functionSymbol, fd);
-
-		MemorySegment structSegmt = MemorySegment.ofArray(new int[]{11121314, 15161718});
-		int result = (int)mh.invoke(19202122, structSegmt);
-		fail("Failed to throw out IllegalArgumentException in the case of the heap segment");
-	}
-
 	public void test_heapSegmentForStructArgument() throws Throwable {
 		GroupLayout structLayout = MemoryLayout.structLayout(JAVA_INT.withName("elem1"), JAVA_INT.withName("elem2"));
 		VarHandle intHandle1 = structLayout.varHandle(PathElement.groupElement("elem1"));
@@ -172,6 +161,29 @@ public class InvalidDownCallTests {
 			MemorySegment resultSegmt = (MemorySegment)mh.invokeExact((SegmentAllocator)arena, structSegmt1, structSegmt2);
 			Assert.assertEquals(intHandle1.get(resultSegmt, 0L), 110224466);
 			Assert.assertEquals(intHandle2.get(resultSegmt, 0L), 89113354);
+		}
+	}
+
+	@Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Heap segment not allowed.*")
+	public void test_disallowedHeapSegmentForPtrArgument() throws Throwable {
+		FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS);
+		MemorySegment functionSymbol = nativeLibLookup.find("addIntAndIntsFromStructPointer").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd, Linker.Option.critical(false));
+
+		MemorySegment structSegmt = MemorySegment.ofArray(new int[]{11121314, 15161718});
+		int result = (int)mh.invoke(19202122, structSegmt);
+		fail("Failed to throw out IllegalArgumentException when the heap segment is disallowed in native");
+	}
+
+	public void test_allowedHeapSegmentForPtrArgument() throws Throwable {
+		FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS);
+		MemorySegment functionSymbol = nativeLibLookup.find("addIntAndIntsFromStructPointer").get();
+		MethodHandle mh = linker.downcallHandle(functionSymbol, fd, Linker.Option.critical(true));
+
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment structSegmt = MemorySegment.ofArray(new int[]{11121314, 15161718});
+			int result = (int)mh.invoke(19202122, structSegmt);
+			Assert.assertEquals(result, 45485154);
 		}
 	}
 }

@@ -34,9 +34,10 @@ import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment.Scope;
-import jdk.internal.foreign.Utils;
 import jdk.internal.foreign.abi.LinkerOptions;
+import jdk.internal.foreign.AbstractMemorySegmentImpl;
 import jdk.internal.foreign.MemorySessionImpl;
+import jdk.internal.foreign.Utils;
 /*[ELSE] JAVA_SPEC_VERSION >= 21 */
 import jdk.incubator.foreign.Addressable;
 import jdk.incubator.foreign.MemoryAddress;
@@ -133,11 +134,15 @@ final class UpcallMHMetaData {
 	 * The method is shared in downcall and upcall.
 	 */
 	/*[IF JAVA_SPEC_VERSION >= 21]*/
-	static void validateNativeArgRetSegmentOfPtr(MemorySegment argRetSegmentOfPtr) {
+	static void validateNativeArgRetSegmentOfPtr(MemorySegment argRetSegmentOfPtr, LinkerOptions options) {
 		if (argRetSegmentOfPtr == null) {
 			throw new NullPointerException("A null pointer is not allowed.");
 		}
-		if (!argRetSegmentOfPtr.isNative()) {
+		if (!argRetSegmentOfPtr.isNative()
+		/*[IF JAVA_SPEC_VERSION >= 22]*/
+			&& !options.allowsHeapAccess()
+		/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
+		) {
 			throw new IllegalArgumentException("Heap segment not allowed: " + argRetSegmentOfPtr);
 		}
 	}
@@ -151,6 +156,23 @@ final class UpcallMHMetaData {
 		}
 	}
 	/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
+
+	/*[IF JAVA_SPEC_VERSION >= 22]*/
+	/* Determine whether the passed-in/returned segment for pointer is allocated in the native memory
+	 * or not and return the segment if valid; otherwise, return the on-heap address if it is allowed
+	 * to be accessed in native.
+	 */
+	static long getNativeAddrOfArgRetPtr(MemorySegment argRetSegment, LinkerOptions options) {
+		if (argRetSegment == null) {
+			throw new NullPointerException("A null value is not allowed for pointer.");
+		}
+		/*[IF JAVA_SPEC_VERSION >= 21]*/
+
+		return (!argRetSegment.isNative() && options.allowsHeapAccess())
+				? argRetSegment.address()
+				: ((AbstractMemorySegmentImpl)argRetSegment).unsafeGetOffset();
+	}
+	/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
 
 	/* Determine whether the passed-in/returned segment is allocated in the native memory or not
 	 * and return the segment if valid; otherwise, return the newly allocated native segment with
