@@ -47,6 +47,9 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.MemorySegment.Scope;
 import java.lang.foreign.SegmentAllocator;
 import java.lang.foreign.ValueLayout;
+/*[IF JAVA_SPEC_VERSION >= 22]*/
+import jdk.internal.access.SharedSecrets;
+/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
 import jdk.internal.foreign.Utils;
 import jdk.internal.foreign.abi.LinkerOptions;
 import jdk.internal.foreign.MemorySessionImpl;
@@ -136,6 +139,10 @@ public class InternalDowncallHandler {
 	private static final MethodHandle longObjToMemAddrRetFilter;
 	/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
 	private static final MethodHandle objToMemSegmtRetFilter;
+	/*[IF JAVA_SPEC_VERSION >= 22]*/
+	private static boolean isJitOn;
+	private static native boolean isJitEnabled();
+	/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
 
 	private static synchronized native void resolveRequiredFields();
 	private native void initCifNativeThunkData(String[] argLayouts, String retLayout, boolean newArgTypes, int varArgIndex);
@@ -178,6 +185,8 @@ public class InternalDowncallHandler {
 		} catch (IllegalAccessException | NoSuchMethodException e) {
 			throw new InternalError(e);
 		}
+
+		isJitOn = isJitEnabled();
 
 		/* Resolve the required fields (specifically their offset in the jcl constant pool of VM)
 		 * which can be shared in multiple calls or across threads given the generated macros
@@ -499,7 +508,17 @@ public class InternalDowncallHandler {
 
 			/* Replace the original handle with the specified types of the C function. */
 			boundHandle = permuteMH(boundHandle, funcMethodType);
+
+			/*[IF JAVA_SPEC_VERSION >= 22]*/
+			/*
+			return (isJitOn == true)
+					? SharedSecrets.getJavaLangInvokeAccess().nativeMethodHandle(boundHandle)
+					: boundHandle;
+			*/
 			return boundHandle;
+			/*[ELSE] JAVA_SPEC_VERSION >= 22 */
+			return boundHandle;
+			/*[ENDIF] JAVA_SPEC_VERSION >= 22 */
 		} catch (ReflectiveOperationException e) {
 			throw new InternalError(e);
 		}

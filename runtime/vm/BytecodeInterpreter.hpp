@@ -9404,6 +9404,53 @@ done:
 		return rc;
 	}
 
+#if JAVA_SPEC_VERSION >= 22
+	VMINLINE VM_BytecodeAction
+	linkToNative(REGISTER_ARGS_LIST)
+	{
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+		bool fromJIT = J9_ARE_ANY_BITS_SET(jitStackFrameFlags(REGISTER_ARGS, 0), J9_SSF_JIT_NATIVE_TRANSITION_FRAME);
+
+		/* Pop the NEP Object (the bounded MH) from the stack. */
+		j9object_t nepObject = *(j9object_t *)_sp++;
+		j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(_currentThread, nepObject);
+		UDATA methodArgCount = VM_VMHelpers::methodTypeParameterSlotCount(_currentThread, methodType);
+
+		j9object_t receiverObject = (fromJIT) ? ((j9object_t *)_sp)[methodArgCount] : nepObject;
+		if (J9_UNEXPECTED(NULL == receiverObject)) {
+			if (fromJIT) {
+				/* Restore SP to before popping the NEP Object. */
+				_sp -= 1;
+				buildJITResolveFrame(REGISTER_ARGS);
+			}
+			return THROW_NPE;
+		}
+
+		// We will need to resolve the nativeMethodHandle/boundedMethodHandle prior to obtain the memberName
+		// The related code is missing here.
+
+		j9object_t lambdaForm = J9VMJAVALANGINVOKEMETHODHANDLE_FORM(_currentThread, receiverObject);
+		j9object_t memberName = J9VMJAVALANGINVOKELAMBDAFORM_VMENTRY(_currentThread, lambdaForm);
+		_sendMethod = (J9Method *)(UDATA)J9OBJECT_U64_LOAD(_currentThread, memberName, _vm->vmtargetOffset);
+
+		if (fromJIT) {
+			/* Restore SP to before popping the NEP Object. */
+			_sp -= 1;
+
+			/* Shift arguments by 1 and place NEP object as the placeholder before the first argument
+			 * given the fixed-size arguments are popped out by JIT
+			 */
+			memmove(_sp, _sp + 1, methodArgCount * sizeof(UDATA));
+			_sp[methodArgCount] = (UDATA)receiverObject;
+
+			VM_JITInterface::restoreJITReturnAddress(_currentThread, _sp, (void *)_literals);
+			rc = j2iTransition(REGISTER_ARGS, true);
+		}
+
+		return rc;
+	}
+#endif /* JAVA_SPEC_VERSION >= 22 */
+
 	VMINLINE VM_BytecodeAction
 	throwDefaultConflictForMemberName(REGISTER_ARGS_LIST)
 	{
@@ -10249,6 +10296,9 @@ public:
 		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTOSTATICSPECIAL),
 		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTOVIRTUAL),
 		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTOINTERFACE),
+#if JAVA_SPEC_VERSION >= 22
+		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTONATIVE),
+#endif /* JAVA_SPEC_VERSION >= 22 */
 		JUMP_TABLE_ENTRY(J9_BCLOOP_SEND_TARGET_MEMBERNAME_DEFAULT_CONFLICT),
 #endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 #if JAVA_SPEC_VERSION >= 16
@@ -10897,6 +10947,10 @@ runMethod: {
 		PERFORM_ACTION(linkToVirtual(REGISTER_ARGS));
 	JUMP_TARGET(J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTOINTERFACE):
 		PERFORM_ACTION(linkToInterface(REGISTER_ARGS));
+#if JAVA_SPEC_VERSION >= 22
+JUMP_TARGET(J9_BCLOOP_SEND_TARGET_METHODHANDLE_LINKTONATIVE):
+	PERFORM_ACTION(linkToNative(REGISTER_ARGS));
+#endif /* JAVA_SPEC_VERSION >= 22 */
 	JUMP_TARGET(J9_BCLOOP_SEND_TARGET_MEMBERNAME_DEFAULT_CONFLICT):
 		PERFORM_ACTION(throwDefaultConflictForMemberName(REGISTER_ARGS));
 #endif /* defined(J9VM_OPT_OPENJDK_METHODHANDLE) */

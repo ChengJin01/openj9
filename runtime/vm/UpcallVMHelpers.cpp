@@ -160,8 +160,8 @@ getReturnTypeFromMetaData(J9UpcallMetaData *data)
 {
 	J9JavaVM *vm = data->vm;
 	J9VMThread *currentThread = currentVMThread(vm);
-	j9object_t methodType = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEETYPE(currentThread,
-			J9_JNI_UNWRAP_REFERENCE(data->mhMetaData));
+	j9object_t methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread,
+			J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, J9_JNI_UNWRAP_REFERENCE(data->mhMetaData)));
 	J9Class *retTypeClass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread,
 			J9VMJAVALANGINVOKEMETHODTYPE_RTYPE(currentThread, methodType));
 	J9UpcallNativeSignature *nativeSig = data->nativeFuncSignature;
@@ -318,6 +318,7 @@ native2InterpJavaUpcallImpl(J9UpcallMetaData *data, void *argsListPointer)
 
 	if (buildCallInStackFrameHelper(currentThread, &newELS, returnsObject)) {
 		j9object_t mhMetaData = NULL;
+		j9object_t upcallMH = NULL;
 		j9object_t nativeArgArray = NULL;
 		j9object_t methodType = NULL;
 		j9object_t argTypes = NULL;
@@ -328,14 +329,15 @@ native2InterpJavaUpcallImpl(J9UpcallMetaData *data, void *argsListPointer)
 		}
 
 		mhMetaData = J9_JNI_UNWRAP_REFERENCE(data->mhMetaData);
+		upcallMH = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
 		nativeArgArray = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_NATIVEARGARRAY(currentThread, mhMetaData);
-		methodType = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEETYPE(currentThread, mhMetaData);
+		methodType = J9VMJAVALANGINVOKEMETHODHANDLE_TYPE(currentThread, upcallMH);
 		argTypes = J9VMJAVALANGINVOKEMETHODTYPE_PTYPES(currentThread, methodType);
 
 		/* The argument list of the upcall method handle on the stack includes the target method handle,
-		 * the method arguments and the appendix which is set via MethodHandleResolver.upcallLinkCallerMethod().
+		 * the method arguments and the appendix which is set via MethodHandleResolver.ffiCallLinkCallerMethod().
 		 */
-		*(j9object_t*)--(currentThread->sp) = J9VMOPENJ9INTERNALFOREIGNABIUPCALLMHMETADATA_CALLEEMH(currentThread, mhMetaData);
+		*(j9object_t*)--(currentThread->sp) = upcallMH;
 
 		for (I_32 argIndex = 0; argIndex < paramCount; argIndex++) {
 			U_8 argSigType = sigArray[argIndex].type & J9_FFI_UPCALL_SIG_TYPE_MASK;
