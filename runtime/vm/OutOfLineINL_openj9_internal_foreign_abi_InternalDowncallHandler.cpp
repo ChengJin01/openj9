@@ -30,6 +30,20 @@
 
 extern "C" {
 
+#if JAVA_SPEC_VERSION >= 22
+/* openj9.internal.foreign.abi.InternalDowncallHandler: private static native boolean isJitEnabled(); */
+VM_BytecodeAction
+OutOfLineINL_openj9_internal_foreign_abi_InternalDowncallHandler_isJitEnabled(J9VMThread *currentThread, J9Method *method)
+{
+	VM_BytecodeAction rc = EXECUTE_BYTECODE;
+	J9JavaVM *vm = currentThread->javaVM;
+	bool isJitOn = (NULL != vm->jitConfig) ? true : false;
+
+	VM_OutOfLineINL_Helpers::returnSingle(currentThread, isJitOn, 0);
+	return rc;
+}
+#endif /* JAVA_SPEC_VERSION >= 22 */
+
 #if JAVA_SPEC_VERSION >= 16
 /* openj9.internal.foreign.abi.InternalDowncallHandler: private static synchronized native void resolveRequiredFields(); */
 VM_BytecodeAction
