@@ -129,13 +129,18 @@ isMethodHandleINL(U_8 *methodName, U_16 methodNameLength)
 		}
 		break;
 	case 12:
-		if (J9UTF8_LITERAL_EQUALS(methodName, methodNameLength, "linkToStatic")) {
+		if (J9UTF8_LITERAL_EQUALS(methodName, methodNameLength, "linkToStatic")
+#if JAVA_SPEC_VERSION >= 22
+			|| J9UTF8_LITERAL_EQUALS(methodName, methodNameLength, "linkToNative")
+#endif /* JAVA_SPEC_VERSION >= 22 */
+		) {
 			isMethodHandle = TRUE;
 		}
 		break;
 	case 13:
 		if (J9UTF8_LITERAL_EQUALS(methodName, methodNameLength, "linkToSpecial")
-		||  J9UTF8_LITERAL_EQUALS(methodName, methodNameLength, "linkToVirtual")) {
+			|| J9UTF8_LITERAL_EQUALS(methodName, methodNameLength, "linkToVirtual")
+		) {
 			isMethodHandle = TRUE;
 		}
 		break;
