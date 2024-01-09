@@ -779,7 +779,7 @@ J9::CodeGenerator::lowerTreeIfNeeded(
    if (node->getOpCode().isCall() &&
        !node->getSymbol()->castToMethodSymbol()->isHelper())
       {
-      TR::RecognizedMethod rm = node->getSymbol()->castToMethodSymbol()->getRecognizedMethod();
+      TR::RecognizedMethod rm = node->getSymbol()->castToMethodSymbol()->getMandatoryRecognizedMethod();
 
       if(rm == TR::java_lang_invoke_MethodHandle_invokeBasic ||
         rm == TR::java_lang_invoke_MethodHandle_linkToStatic ||
@@ -844,6 +844,11 @@ J9::CodeGenerator::lowerTreeIfNeeded(
             TR::TreeTop::create(self()->comp(), tt->getPrevTreeTop(), floatTemp1StoreNode);
             }
          }
+         else if (rm == TR::java_lang_invoke_MethodHandle_linkToNative)
+              {
+              TR::Node *dummyNull = TR::Node::aconst(node, 0);
+              node->addChildren(&dummyNull, 1);
+              }
       }
 
    if (node->getOpCode().isCall() &&
