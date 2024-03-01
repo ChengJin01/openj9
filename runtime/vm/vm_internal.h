@@ -553,8 +553,58 @@ void
 freeAllStructFFITypes(J9VMThread *currentThread, void *cifNode);
 #endif /* JAVA_SPEC_VERSION >= 16 */
 
+/* ------------------- jnimisc.cpp ----------------- */
+
+#if defined(J9VM_OPT_JAVA_OFFLOAD_SUPPORT)
+
+#define JAVA_OFFLOAD_SWITCH_ON_WITH_REASON_IF_LIMIT_EXCEEDED(currentThread, reason, length) \
+	do { \
+		if ((length) > J9_JNI_OFFLOAD_SWITCH_THRESHOLD) { \
+			javaOffloadSwitchOnWithReason(currentThread, reason); \
+		} \
+	} while (0)
+
+#define JAVA_OFFLOAD_SWITCH_OFF_WITH_REASON_IF_LIMIT_EXCEEDED(currentThread, reason, length) \
+	do { \
+		if ((length) > J9_JNI_OFFLOAD_SWITCH_THRESHOLD) { \
+			javaOffloadSwitchOffWithReason(currentThread, reason); \
+		} \
+	} while (0)
+
+#else /* defined(J9VM_OPT_JAVA_OFFLOAD_SUPPORT) */
+
+#define JAVA_OFFLOAD_SWITCH_ON_WITH_REASON_IF_LIMIT_EXCEEDED(currentThread, reason, length)
+#define JAVA_OFFLOAD_SWITCH_OFF_WITH_REASON_IF_LIMIT_EXCEEDED(currentThread, reason, length)
+
+#endif /* defined(J9VM_OPT_JAVA_OFFLOAD_SUPPORT) */
+
+/**
+ * @brief The helper method performs a memcpy from an object array to the native array.
+ *
+ * @param currentThread the thread performing the arraycopy
+ * @param arrayObject the object array to copy from
+ * @param isCopy a flag denoting the copy is completed upon return
+ * @param ensureMem32 a flag specific to the zOS/31bit
+ *
+ * @return the native array with the copied content
+ */
+void *
+memcpyFromObjectArray(J9VMThread *currentThread, j9object_t arrayObject, jboolean *isCopy, jboolean ensureMem32);
+
+/**
+ * @brief The helper method performs a memcpy to an object array from the native array.
+ *
+ * @param currentThread the thread performing the arraycopy
+ * @param arrayObject the object array to copy into
+ * @param elems the native array to copy to
+ * @param mode a code denoting whether to copy/release the native memory
+ * @param ensureMem32 a flag specific to the zOS/31bit
+*/
+void
+memcpyToObjectArray(J9VMThread *currentThread, j9object_t arrayObject, void *elems, jint mode, jboolean ensureMem32);
+
 #ifdef __cplusplus
-}
+} /* extern "C" */
 #endif
 
 #endif /* vm_internal_h */
