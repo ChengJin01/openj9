@@ -57,7 +57,7 @@ final class LayoutStrPreprocessor {
 	private static final String osName = System.getProperty("os.name").toLowerCase();
 	private static final String arch = System.getProperty("os.arch").toLowerCase();
 	private static final boolean isX86_64 = arch.equals("amd64") || arch.equals("x86_64");
-	private static final boolean isLinuxS390x = arch.equals("s390x") && osName.startsWith("linux");
+	private static final boolean isS390x = arch.equals("s390x") && (osName.startsWith("linux") || osName.startsWith("z/os"));
 
 	/*[IF JAVA_SPEC_VERSION == 17]*/
 	private static final String VARARGS_ATTR_NAME;
@@ -82,7 +82,7 @@ final class LayoutStrPreprocessor {
 			} else {
 				VARARGS_ATTR_NAME = "abi/ppc64/aix/varargs";
 			}
-		} else if (isLinuxS390x) {
+		} else if (isS390x) {
 			VARARGS_ATTR_NAME = "abi/s390x/sysv/varargs";
 		} else {
 			throw new InternalError("Unsupported platform: " + arch + "_" + osName);
@@ -353,9 +353,9 @@ final class LayoutStrPreprocessor {
 		boolean isPrimTypeForGPROrStack;
 
 		if (carrier == float.class) {
-			isPrimTypeForGPROrStack = isLinuxS390x || ((8 == byteAlignment) && !isX86_64);
+			isPrimTypeForGPROrStack = isS390x || ((8 == byteAlignment) && !isX86_64);
 		} else if (carrier == double.class) {
-			isPrimTypeForGPROrStack = isLinuxS390x;
+			isPrimTypeForGPROrStack = isS390x;
 		} else {
 			isPrimTypeForGPROrStack = true;
 		}
