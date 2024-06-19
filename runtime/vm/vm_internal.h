@@ -541,6 +541,7 @@ UDATA initializeExclusiveAccess(J9JavaVM *vm);
 void shutDownExclusiveAccess(J9JavaVM *vm);
 
 #if JAVA_SPEC_VERSION >= 16
+
 /* ------------------- LayoutFFITypeHelpers.cpp ----------------- */
 
 /**
@@ -551,6 +552,20 @@ void shutDownExclusiveAccess(J9JavaVM *vm);
  */
 void
 freeAllStructFFITypes(J9VMThread *currentThread, void *cifNode);
+
+/* ------------------- LayoutFFITypeTable.cpp ----------------- */
+
+J9HashTable *
+createLayouStrFFITypeTable(J9JavaVM *vm);
+
+J9LayoutStrFFITypeEntry *
+findLayouStrFFIType(J9HashTable *hashtable, J9LayoutStrFFITypeEntry *entry);
+
+J9LayoutStrFFITypeEntry *
+addLayouStrFFIType(J9HashTable *hashtable, J9LayoutStrFFITypeEntry *entry);
+
+void
+cleanUpLayouStrFFITypeTable(J9JavaVM *vm);
 
 /* ------------------- UpcallThunkMem.cpp ----------------- */
 

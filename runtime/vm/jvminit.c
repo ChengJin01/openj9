@@ -663,6 +663,11 @@ freeJavaVM(J9JavaVM * vm)
 		vm->cifArgumentTypesCache = NULL;
 	}
 
+	/* Delete the layout string hashtable if exists. */
+	if (NULL != vm->layoutStrFFITypeTable) {
+		cleanUpLayouStrFFITypeTable(vm);
+	}
+
 	/* Empty the thunk heap list if exists. */
 	if (NULL != vm->thunkHeapHead) {
 		releaseThunkHeap(vm);
