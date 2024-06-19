@@ -233,7 +233,39 @@ final class LayoutStrPreprocessor {
 		return targetLayoutStr;
 	}
 
-	/* Encode the types in the struct layout to a symbol string to simplify the further processing in native. */
+	/* Compose the new struct layout string by prepending the computed length digits to the original layout string. */
+	private static StringBuilder composeStructLayoutStr(StringBuilder targetLayoutStr, int elemCount, int elemLayoutStrsLength) {
+		/* Count '#', '&', '[' and ']' (4 chars) plus the length digits of the element count and the length digits
+		 * of the element layout string in computing the length of the
+		 * struct layout string which is intended to hash the layout string in native in that
+		 * 1) we need to compute the length of layout string to determine the boundary of the specified layout string in native
+		 * when caching/searching the layout string (for struct or nested struct).
+		 * 2) it's easy and straightforward to move the next layout (element) within the struct by skipping over the identified
+		 * layout string (nested struct) with the computed layout length if it is found or cached in the hashtable.
+		 *
+		 * See LayoutFFITypeHelpers::getStructFFIType() for more details as to how this works in native.
+		 */
+		int layoutStrLength = elemLayoutStrsLength + String.valueOf(elemCount).length() + 4;
+		/* If the original layout string length is 9, 99, 999, etc, we must re-count the length digits
+		 * when composing the new layout string.
+		 * e.g.
+		 * Before inserting the length digits, the layout string is "#?&...]" and its length is 9.
+		 * After inserting the length digits, the layout string is #11&...] and its length is 11
+		 * which includes the original layout string length plus the computed length digits.
+		 */
+		int lengthDigitsSize = String.valueOf(layoutStrLength).length();
+		int totalDigitsSize = String.valueOf(layoutStrLength + lengthDigitsSize).length();
+		layoutStrLength += (totalDigitsSize > lengthDigitsSize) ? totalDigitsSize : lengthDigitsSize;
+
+		/* Prefix "#" to denote the length of this layout string for comparison in native. */
+		targetLayoutStr.append('#').append(layoutStrLength);
+		/* Prefix "&" to denote the count of the struct element. */
+		targetLayoutStr.append('&').append(elemCount);
+
+		return targetLayoutStr;
+	}
+
+	/* Encode the types in the struct layout to a symbol string to simplify the '/further processing in native. */
 	private static StringBuilder encodeStructLayoutStr(GroupLayout structLayout, StringBuilder targetLayoutStr, boolean isDownCall) {
 		List<MemoryLayout> elementLayoutList = structLayout.memberLayouts();
 		int structElementCount = elementLayoutList.size();
@@ -253,9 +285,8 @@ final class LayoutStrPreprocessor {
 			}
 		}
 
-		/* Prefix "#" to denote the start of this layout string in the case of downcall. */
 		if (isDownCall) {
-			targetLayoutStr.append('#').append(structElementCount - paddingElements);
+			targetLayoutStr = composeStructLayoutStr(targetLayoutStr, structElementCount - paddingElements, elementLayoutStrs.length());
 		}
 		targetLayoutStr.append('[').append(elementLayoutStrs).append(']');
 
@@ -309,9 +340,8 @@ final class LayoutStrPreprocessor {
 				: sequenceElement;
 		elementLayoutStrs.append(preprocessLayout(sequenceLayout, isDownCall));
 
-		/* Prefix "#" to denote the start of this layout string in the case of downcall. */
 		if (isDownCall) {
-			targetLayoutStr.append('#').append(1);
+			targetLayoutStr = composeStructLayoutStr(targetLayoutStr, 1, elementLayoutStrs.length());
 		}
 		targetLayoutStr.append('[').append(elementLayoutStrs).append(']');
 
