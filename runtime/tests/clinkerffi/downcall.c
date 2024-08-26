@@ -6074,3 +6074,16 @@ addDoubleStruct1AndNestedDoubleStructArrayStruct2_returnStruct2_dupStruct(stru_2
 	doubleStruct.elem2 = arg1.elem2 + arg2.elem2;
 	return doubleStruct;
 }
+
+/**
+ * Add 3 integers of a struct at the specified index.
+ *
+ * @param arg a struct with a nested 3-dimensional integer array
+ * @return the sum of integers
+ */
+int
+add3IntsFromStructWithNested3DIntArray(stru_Nested3DIntArray arg)
+{
+	int intSum = arg.elem[0][0] + arg.elem[1][1] + arg.elem[2][2];
+	return intSum;
+}

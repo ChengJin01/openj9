@@ -1432,4 +1432,8 @@ typedef union union_Double_NestedStruct_2_Floats {
 	stru_2_Floats elem2;
 } union_Double_NestedStruct_2_Floats;
 
+typedef struct stru_Nested3DIntArray {
+	int elem[3][3];
+} stru_Nested3DIntArray;
+
 #endif /* DOWNCALL_H */

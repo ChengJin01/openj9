@@ -3174,4 +3174,24 @@ public class StructTests2 {
 			Assert.assertEquals((double)doubleHandle2.get(resultSegmt, 0L), 155.887D, 0.001D);
 		}
 	}
+
+	@Test
+	public void test_add3IntsFromStructWithNested3DIntArray_2() throws Throwable {
+		SequenceLayout intArray1 = MemoryLayout.sequenceLayout(3, JAVA_INT);
+		SequenceLayout intArray2 = MemoryLayout.sequenceLayout(3, intArray1);
+		GroupLayout structLayout = MemoryLayout.structLayout(intArray2);
+		FunctionDescriptor fd = FunctionDescriptor.of(JAVA_INT, structLayout);
+		MemorySegment functionSymbol = nativeLibLookup.find("add3IntsFromStructWithNested3DIntArray").get();
+		MethodHandle mh = linker.downcallHandle(fd);
+
+		try (Arena arena = Arena.ofConfined()) {
+			MemorySegment structSegmt = arena.allocate(structLayout);
+			structSegmt.set(JAVA_INT, 0, 1111111);
+			structSegmt.set(JAVA_INT, 16, 2222222);
+			structSegmt.set(JAVA_INT, 32, 3333333);
+
+			int result = (int)mh.invokeExact(functionSymbol, structSegmt);
+			Assert.assertEquals(result, 6666666);
+		}
+	}
 }

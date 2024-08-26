@@ -22,6 +22,8 @@
  */
 package openj9.internal.foreign.abi;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 /*[IF JAVA_SPEC_VERSION >= 21]*/
@@ -209,19 +211,7 @@ final class LayoutStrPreprocessor {
 		if (targetLayout instanceof ValueLayout valueLayout) {
 			targetLayoutStr.append(getPrimitiveTypeSymbol(valueLayout));
 		} else if (targetLayout instanceof SequenceLayout arrayLayout) { /* Intended for nested arrays. */
-			MemoryLayout elementLayout = arrayLayout.elementLayout();
-			/*[IF JAVA_SPEC_VERSION >= 21]*/
-			long elementCount = arrayLayout.elementCount();
-			/*[ELSE] JAVA_SPEC_VERSION >= 21 */
-			long elementCount = arrayLayout.elementCount().getAsLong();
-			/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
-
-			/* The padding bytes is required in the native signature for upcall thunk generation. */
-			if (isPaddingLayout(elementLayout) && !isDownCall) {
-				targetLayoutStr.append('(').append(arrayLayout.byteSize()).append(')');
-			} else {
-				targetLayoutStr.append(elementCount).append(':').append(preprocessLayout(elementLayout, isDownCall));
-			}
+			targetLayoutStr = encodeSequenceLayoutStr(arrayLayout, targetLayoutStr, isDownCall);
 		/*[IF JAVA_SPEC_VERSION >= 21]*/
 		} else if (targetLayout instanceof UnionLayout unionLayout) { /* Intended for the nested union since JDK21. */
 			targetLayoutStr = encodeUnionLayoutStr(unionLayout, targetLayoutStr, isDownCall);
@@ -231,6 +221,43 @@ final class LayoutStrPreprocessor {
 		}
 
 		return targetLayoutStr;
+	}
+
+	/* Encode the types in the array layout to a symbol string to simplify the further processing in native. */
+	private static StringBuilder encodeSequenceLayoutStr(SequenceLayout sequenceLayout, StringBuilder targetLayoutStr, boolean isDownCall) {
+		MemoryLayout elementLayout = sequenceLayout.elementLayout();
+
+		/* The padding bytes is required in the native signature for upcall thunk generation. */
+		if (isPaddingLayout(elementLayout) && !isDownCall) {
+			targetLayoutStr.append('(').append(sequenceLayout.byteSize()).append(')');
+		} else {
+			/* The stack only stores a non-SequenceLayout element of the outer array layout. */
+			Deque<MemoryLayout> layoutStack = new ArrayDeque<MemoryLayout>();
+			long elementSum = computeTotalElementCountOfArray(sequenceLayout, layoutStack);
+			targetLayoutStr.append(elementSum).append(':').append(preprocessLayout(layoutStack.removeFirst(), isDownCall));
+		}
+
+		return targetLayoutStr;
+	}
+
+	/* Compute the total element number of multi-dimensional arrays. */
+	private static long computeTotalElementCountOfArray(SequenceLayout sequenceLayout, Deque<MemoryLayout> stack) {
+		MemoryLayout elementLayout = sequenceLayout.elementLayout();
+
+		/*[IF JAVA_SPEC_VERSION >= 21]*/
+		long elementCount = sequenceLayout.elementCount();
+		/*[ELSE] JAVA_SPEC_VERSION >= 21 */
+		long elementCount = sequenceLayout.elementCount().getAsLong();
+		/*[ENDIF] JAVA_SPEC_VERSION >= 21 */
+
+		if (elementLayout instanceof SequenceLayout arrayLayout) {
+			elementCount = elementCount * computeTotalElementCountOfArray(arrayLayout, stack);
+		} else {
+			/* Store the non-SequenceLayout in the stack upon return. */
+			stack.addFirst(elementLayout);
+		}
+
+		return elementCount;
 	}
 
 	/* Encode the types in the struct layout to a symbol string to simplify the further processing in native. */
